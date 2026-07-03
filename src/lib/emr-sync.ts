@@ -23,8 +23,8 @@ const writeQueue: Record<string, string> = {};
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let isHydrated = false;
 
-let _origSetItem: typeof Storage.prototype.setItem | null = null;
-let _origRemoveItem: typeof Storage.prototype.removeItem | null = null;
+let _origSetItem: ((key: string, value: string) => void) | null = null;
+let _origRemoveItem: ((key: string) => void) | null = null;
 
 function isEmrKey(key: string): boolean {
   return (
@@ -32,16 +32,6 @@ function isEmrKey(key: string): boolean {
     key.startsWith('emr_custom_rx_') ||
     key.startsWith('emr_')
   );
-}
-
-function getOrigSetItem() {
-  if (!_origSetItem) _origSetItem = Storage.prototype.setItem;
-  return _origSetItem;
-}
-
-function getOrigRemoveItem() {
-  if (!_origRemoveItem) _origRemoveItem = Storage.prototype.removeItem;
-  return _origRemoveItem;
 }
 
 async function flushToServer() {
@@ -71,8 +61,8 @@ function scheduleFlush() {
   }, 500);
 }
 
-function patchedSetItem(key: string, value: string) {
-  getOrigSetItem().call(localStorage, key, value);
+function patchedSetItem(this: Storage, key: string, value: string) {
+  _origSetItem!.call(this, key, value);
 
   if (isHydrated && isEmrKey(key)) {
     writeQueue[key] = value;
@@ -80,8 +70,8 @@ function patchedSetItem(key: string, value: string) {
   }
 }
 
-function patchedRemoveItem(key: string) {
-  getOrigRemoveItem().call(localStorage, key);
+function patchedRemoveItem(this: Storage, key: string) {
+  _origRemoveItem!.call(this, key);
 
   if (isHydrated && isEmrKey(key)) {
     writeQueue[key] = '';
@@ -91,6 +81,9 @@ function patchedRemoveItem(key: string) {
 
 export async function hydrateFromServer() {
   if (isHydrated || typeof window === 'undefined') return;
+
+  _origSetItem = Storage.prototype.setItem;
+  _origRemoveItem = Storage.prototype.removeItem;
 
   try {
     const res = await fetch('/api/emr/data');
@@ -102,7 +95,7 @@ export async function hydrateFromServer() {
         const existing = localStorage.getItem(key);
         const serverVal = typeof value === 'string' ? value : JSON.stringify(value);
         if (existing !== serverVal) {
-          getOrigSetItem().call(localStorage, key, serverVal);
+          _origSetItem.call(localStorage, key, serverVal);
         }
       }
     }

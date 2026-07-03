@@ -210,6 +210,15 @@ export default function SettingsPage() {
       setCustomRxHeader(localStorage.getItem(rxHeaderKey) || null);
       setCustomRxFooter(localStorage.getItem(rxFooterKey) || null);
     } catch { /* ignore */ }
+    if (clinicId) {
+      fetch(`/api/emr/letterhead?clinicId=${clinicId}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.header) setCustomRxHeader(d.header);
+          if (d.footer) setCustomRxFooter(d.footer);
+        })
+        .catch(() => {});
+    }
     setBilling(loadBillingSettings());
     setBillingLoaded(true);
   }, [clinicId]);
@@ -348,21 +357,22 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
-    try {
-      if (customRxHeader) localStorage.setItem(rxHeaderKey, customRxHeader);
-      else localStorage.removeItem(rxHeaderKey);
-      if (customRxFooter) localStorage.setItem(rxFooterKey, customRxFooter);
-      else localStorage.removeItem(rxFooterKey);
-    } catch (err) {
-      alert('Failed to save letterhead images. They may be too large for browser storage. Try using smaller images.');
-      return;
-    }
     if (clinicId) {
       try {
-        await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'header', data: customRxHeader || '' }) });
-        await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'footer', data: customRxFooter || '' }) });
-      } catch { /* server save failed, localStorage still works locally */ }
+        const res1 = await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'header', data: customRxHeader || '' }) });
+        const res2 = await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'footer', data: customRxFooter || '' }) });
+        if (!res1.ok || !res2.ok) throw new Error('server save failed');
+      } catch {
+        alert('Failed to save letterhead to server. Please try again.');
+        return;
+      }
     }
+    try {
+      if (customRxHeader && customRxHeader.length < 100000) localStorage.setItem(rxHeaderKey, customRxHeader);
+      else localStorage.removeItem(rxHeaderKey);
+      if (customRxFooter && customRxFooter.length < 100000) localStorage.setItem(rxFooterKey, customRxFooter);
+      else localStorage.removeItem(rxFooterKey);
+    } catch { /* localStorage full, server has it */ }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
