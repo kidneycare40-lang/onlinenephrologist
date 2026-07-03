@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, readFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
+import { getSupabase } from '@/lib/supabase';
 
-const DATA_DIR = path.join(process.cwd(), 'data', 'letterhead');
-
-async function ensureDir() {
-  if (!existsSync(DATA_DIR)) {
-    await mkdir(DATA_DIR, { recursive: true });
-  }
-}
-
-function getFilePath(clinicId: string, type: string) {
-  return path.join(DATA_DIR, `${clinicId}-${type}.dat`);
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const clinicId = req.nextUrl.searchParams.get('clinicId');
@@ -22,18 +10,25 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    await ensureDir();
+    const supabase = getSupabase();
     const result: { header?: string; footer?: string } = {};
 
-    const headerPath = getFilePath(clinicId, 'header');
-    if (existsSync(headerPath)) {
-      result.header = await readFile(headerPath, 'utf-8');
-    }
+    const headerKey = `letterhead_header_${clinicId}`;
+    const footerKey = `letterhead_footer_${clinicId}`;
 
-    const footerPath = getFilePath(clinicId, 'footer');
-    if (existsSync(footerPath)) {
-      result.footer = await readFile(footerPath, 'utf-8');
-    }
+    const { data: headerData } = await supabase
+      .from('emr_store')
+      .select('value')
+      .eq('key', headerKey)
+      .single();
+    if (headerData) result.header = headerData.value;
+
+    const { data: footerData } = await supabase
+      .from('emr_store')
+      .select('value')
+      .eq('key', footerKey)
+      .single();
+    if (footerData) result.footer = footerData.value;
 
     return NextResponse.json(result);
   } catch {
@@ -48,18 +43,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'clinicId and type required' }, { status: 400 });
     }
 
-    await ensureDir();
-    const filePath = getFilePath(clinicId, type);
+    const supabase = getSupabase();
+    const key = `letterhead_${type}_${clinicId}`;
 
     if (data) {
-      await writeFile(filePath, data, 'utf-8');
-    } else if (existsSync(filePath)) {
-      const { unlink } = await import('fs/promises');
-      await unlink(filePath);
+      await supabase.from('emr_store').upsert(
+        { key, value: data },
+        { onConflict: 'key' }
+      );
+    } else {
+      await supabase.from('emr_store').delete().eq('key', key);
     }
 
     return NextResponse.json({ ok: true });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
   }
 }

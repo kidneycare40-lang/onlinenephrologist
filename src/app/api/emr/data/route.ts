@@ -1,76 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-
-function getStorePath() {
-  return path.join(process.cwd(), 'data', 'emr-store.json');
-}
-
-let storeCache: Record<string, unknown> = {};
-let lastRead = 0;
-
-async function readStore(): Promise<Record<string, unknown>> {
-  const now = Date.now();
-  if (Object.keys(storeCache).length > 0 && now - lastRead < 2000) return storeCache;
-  try {
-    const { readFile, mkdir } = await import('fs/promises');
-    const { existsSync } = await import('fs');
-    const dir = path.dirname(getStorePath());
-    if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-    const filePath = getStorePath();
-    if (!existsSync(filePath)) { storeCache = {}; lastRead = now; return storeCache; }
-    const raw = await readFile(filePath, 'utf-8');
-    storeCache = JSON.parse(raw);
-    lastRead = now;
-    return storeCache;
-  } catch {
-    storeCache = {};
-    return storeCache;
-  }
-}
-
-async function writeStore(data: Record<string, unknown>) {
-  try {
-    const { writeFile, mkdir } = await import('fs/promises');
-    const { existsSync } = await import('fs');
-    const dir = path.dirname(getStorePath());
-    if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-    await writeFile(getStorePath(), JSON.stringify(data, null, 2), 'utf-8');
-    storeCache = data;
-  } catch {
-    // fs not available on this host - silently skip server persistence
-  }
-}
+import { getSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const key = req.nextUrl.searchParams.get('key');
-  const store = await readStore();
-  if (key) return NextResponse.json({ value: store[key] ?? null });
-  return NextResponse.json(store);
+  try {
+    const key = req.nextUrl.searchParams.get('key');
+    const supabase = getSupabase();
+
+    if (key) {
+      const { data, error } = await supabase
+        .from('emr_store')
+        .select('value')
+        .eq('key', key)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        return NextResponse.json({ value: null });
+      }
+      return NextResponse.json({ value: data?.value ?? null });
+    }
+
+    const { data, error } = await supabase
+      .from('emr_store')
+      .select('key, value');
+
+    if (error) {
+      return NextResponse.json({});
+    }
+
+    const store: Record<string, string> = {};
+    for (const row of data || []) {
+      store[row.key] = row.value;
+    }
+    return NextResponse.json(store);
+  } catch {
+    return NextResponse.json({});
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const store = await readStore();
+    const supabase = getSupabase();
 
     if (body.flush && body.queue) {
-      for (const [k, v] of Object.entries(body.queue) as [string, string][]) {
-        if (v === '' || v === null || v === undefined) delete store[k];
-        else store[k] = v;
+      const entries = Object.entries(body.queue) as [string, string][];
+      const upserts = entries
+        .filter(([, v]) => v !== '' && v !== null && v !== undefined)
+        .map(([k, v]) => ({ key: k, value: v }));
+      const deletes = entries
+        .filter(([, v]) => v === '' || v === null || v === undefined)
+        .map(([k]) => k);
+
+      if (upserts.length > 0) {
+        await supabase.from('emr_store').upsert(upserts, { onConflict: 'key' });
       }
-      await writeStore(store);
+      for (const k of deletes) {
+        await supabase.from('emr_store').delete().eq('key', k);
+      }
       return NextResponse.json({ ok: true });
     }
 
     const { key, value } = body;
     if (!key) return NextResponse.json({ error: 'key required' }, { status: 400 });
 
-    if (value === null || value === undefined || value === '') delete store[key];
-    else store[key] = value;
+    if (value === null || value === undefined || value === '') {
+      await supabase.from('emr_store').delete().eq('key', key);
+    } else {
+      await supabase.from('emr_store').upsert(
+        { key, value: typeof value === 'string' ? value : JSON.stringify(value) },
+        { onConflict: 'key' }
+      );
+    }
 
-    await writeStore(store);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });
