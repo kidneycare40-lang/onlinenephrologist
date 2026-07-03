@@ -20,7 +20,7 @@ export default function TelemedicinePage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isCallActive, setIsCallActive] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState(filteredWaitingRoom[0]);
+  const [selectedPatient, setSelectedPatient] = useState(filteredWaitingRoom[0] || null);
 
   return (
     <div className="space-y-6">
@@ -49,9 +49,9 @@ export default function TelemedicinePage() {
             ) : (
               <div className="text-center">
                 <div className="w-24 h-24 rounded-full bg-[#0A75BB]/20 flex items-center justify-center mx-auto mb-4 border-2 border-[#0A75BB]">
-                  <span className="text-2xl font-bold text-[#0A75BB]">{selectedPatient.name.split(' ').map(n => n[0]).join('')}</span>
+                  <span className="text-2xl font-bold text-[#0A75BB]">{selectedPatient?.name.split(' ').map(n => n[0]).join('')}</span>
                 </div>
-                <p className="text-white font-medium">{selectedPatient.name}</p>
+                <p className="text-white font-medium">{selectedPatient?.name}</p>
                 <p className="text-gray-400 text-sm mt-1">Connected</p>
               </div>
             )}
@@ -108,8 +108,8 @@ export default function TelemedicinePage() {
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Patient Info</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium text-gray-900">{selectedPatient.name}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-gray-700">{selectedPatient.type}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium text-gray-900">{selectedPatient?.name}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-gray-700">{selectedPatient?.type}</span></div>
               </div>
             </div>
           )}
@@ -122,7 +122,7 @@ export default function TelemedicinePage() {
               {filteredWaitingRoom.map((p) => (
                 <button key={p.id} onClick={() => setSelectedPatient(p)}
                   className={cn('w-full text-left p-3 rounded-xl border transition-all',
-                    selectedPatient.id === p.id ? 'border-[#0A75BB] bg-[#0A75BB]/5' : 'border-gray-100 hover:bg-gray-50')}>
+                    selectedPatient?.id === p.id ? 'border-[#0A75BB] bg-[#0A75BB]/5' : 'border-gray-100 hover:bg-gray-50')}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-[#0A75BB]/10 flex items-center justify-center">

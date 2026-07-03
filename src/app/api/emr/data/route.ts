@@ -35,7 +35,8 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('emr_store')
-      .select('key, value');
+      .select('key, value')
+      .limit(500);
 
     if (error) {
       return NextResponse.json({});
@@ -72,8 +73,8 @@ export async function POST(req: NextRequest) {
       if (upserts.length > 0) {
         await supabase.from('emr_store').upsert(upserts, { onConflict: 'key' });
       }
-      for (const k of deletes) {
-        await supabase.from('emr_store').delete().eq('key', k);
+      if (deletes.length > 0) {
+        await supabase.from('emr_store').delete().in('key', deletes);
       }
       return NextResponse.json({ ok: true });
     }

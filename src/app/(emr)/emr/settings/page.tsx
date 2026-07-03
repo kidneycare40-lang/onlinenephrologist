@@ -1103,7 +1103,7 @@ export default function SettingsPage() {
                     <Input label="PSRI Delhi Fee (₹)" type="number" value={String(billing.clinicFees['psri-delhi'] || 0)} onChange={(v) => setBilling({ ...billing, clinicFees: { ...billing.clinicFees, 'psri-delhi': Number(v) } })} />
                     <Input label="Online Consultation Fee (₹)" type="number" value={String(billing.clinicFees['online'] || 0)} onChange={(v) => setBilling({ ...billing, clinicFees: { ...billing.clinicFees, 'online': Number(v) } })} />
                     <Input label="International Video Fee ($)" type="number" value={String(billing.clinicFees['online-intl'] || 0)} onChange={(v) => setBilling({ ...billing, clinicFees: { ...billing.clinicFees, 'online-intl': Number(v) } })} />
-                    <Input label="Hospital Visit Fee (₹)" type="number" value={String(billing.clinicFees['psri-delhi'] || 0)} onChange={(v) => setBilling({ ...billing, clinicFees: { ...billing.clinicFees, 'psri-delhi': Number(v) } })} />
+                    <Input label="Hospital Visit Fee (₹)" type="number" value={String(billing.clinicFees['psri-hospital'] || 0)} onChange={(v) => setBilling({ ...billing, clinicFees: { ...billing.clinicFees, 'psri-hospital': Number(v) } })} />
                   </div>
                 </div>
               </div>
@@ -1196,7 +1196,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex justify-end">
-                <button onClick={() => { saveBillingSettings(billing); alert('Billing settings saved!'); }} className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors shadow-sm">
+                <button onClick={() => { saveBillingSettings(billing); setSaved(true); setTimeout(() => setSaved(false), 3000); }} className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors shadow-sm">
                   <Save className="h-4 w-4" /> Save Billing Settings
                 </button>
               </div>

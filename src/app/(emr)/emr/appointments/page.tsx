@@ -295,7 +295,7 @@ export default function AppointmentsPage() {
       type: 'ONLINE' as AppointmentType,
       status: (b.status === 'confirmed' ? 'COMPLETED' : 'WAITING') as AppointmentStatus,
       reason: b.reason,
-      payment: 'PAID' as const,
+      payment: (b.paymentStatus === 'paid' ? 'PAID' : 'UNPAID') as 'PAID' | 'UNPAID',
       amount: b.consultationFee,
       clinicId: BOOKING_CLINIC_MAP[b.clinicId] || '',
     })) as EMRAppointment[];

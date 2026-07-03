@@ -28,6 +28,7 @@ import { deleteOnlineBooking } from '@/lib/emr-delete';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
   'online': '',
+  'online-intl': '',
   'faridabad': 'kcc-faridabad',
   'psri': 'psri-delhi',
   'saket': 'kcc-saket',
@@ -181,7 +182,7 @@ export default function EMRDashboardPage() {
       patientId: '',
       time: b.time,
       type: 'ONLINE' as AppointmentType,
-      status: (b.status === 'pending' ? 'WAITING' : b.status === 'confirmed' ? 'COMPLETED' : 'WAITING') as AppointmentStatus,
+      status: (b.status === 'pending' ? 'WAITING' : b.status === 'confirmed' ? 'COMPLETED' : b.status === 'cancelled' ? 'CANCELLED' : 'WAITING') as AppointmentStatus,
       payment: b.paymentStatus === 'paid' ? 'PAID' as const : 'UNPAID' as const,
       amount: b.consultationFee,
       reason: b.reason,

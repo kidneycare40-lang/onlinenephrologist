@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-async function getDb() {
+function getDb() {
   try {
-    const { getSupabase } = await import('@/lib/supabase');
     return getSupabase();
   } catch {
     return null;
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const supabase = await getDb();
+    const supabase = getDb();
     if (!supabase) return NextResponse.json({ header: '', footer: '' });
 
     const result: { header?: string; footer?: string } = {};
@@ -53,7 +53,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'clinicId and type required' }, { status: 400 });
     }
 
-    const supabase = await getDb();
+    if (type !== 'header' && type !== 'footer') {
+      return NextResponse.json({ error: 'type must be header or footer' }, { status: 400 });
+    }
+
+    const supabase = getDb();
     if (!supabase) return NextResponse.json({ ok: true, note: 'no database' });
 
     const key = `letterhead_${type}_${clinicId}`;

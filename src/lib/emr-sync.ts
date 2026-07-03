@@ -9,9 +9,11 @@ const EMR_KEYS = [
   'emr_custom_rx_header_psri-delhi',
   'emr_custom_rx_footer_psri-delhi',
   'kcc_billing_settings',
+  'emr_billing_settings',
   'kcc_consultation_settings',
   'kcc_clinic_settings',
   'kcc_booking_settings',
+  'emr_booking_settings',
   'kcc_calculator_settings',
   'kcc_custom_templates',
   'kcc_advice_templates',
@@ -29,7 +31,6 @@ let _origRemoveItem: ((key: string) => void) | null = null;
 function isEmrKey(key: string): boolean {
   return (
     EMR_KEYS.includes(key) ||
-    key.startsWith('emr_custom_rx_') ||
     key.startsWith('emr_')
   );
 }
@@ -115,7 +116,8 @@ export function initEmrSync() {
 
   window.addEventListener('beforeunload', () => {
     if (Object.keys(writeQueue).length > 0) {
-      navigator.sendBeacon('/api/emr/data', JSON.stringify({ flush: true, queue: writeQueue }));
+      const blob = new Blob([JSON.stringify({ flush: true, queue: writeQueue })], { type: 'application/json' });
+      navigator.sendBeacon('/api/emr/data', blob);
     }
   });
 }
