@@ -28,13 +28,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: 'article',
       siteName: SITE_CONFIG.name,
       locale: 'en_US',
-      images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.png`, width: 1200, height: 630, alt: condition.title }],
+      images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: condition.title }],
     },
     twitter: {
       card: 'summary_large_image',
       title: condition.metaTitle,
       description: condition.metaDescription,
-      images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.png`],
+      images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
     },
     robots: { index: true, follow: true },
   };

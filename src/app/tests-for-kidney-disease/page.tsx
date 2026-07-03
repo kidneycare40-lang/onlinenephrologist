@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     authors: ['Dr Rajesh Goel'],
     images: [
       {
-        url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.png`,
+        url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`,
         width: 1200,
         height: 630,
         alt: 'Dr Rajesh Goel - Kidney Disease Tests and Diagnosis',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Tests for Kidney Disease | eGFR, Creatinine, Urine Test Guide',
     description: 'Complete guide to kidney disease screening tests. Learn about eGFR, creatinine, urine albumin, ultrasound and biopsy. Book consultation with Dr Rajesh Goel.',
-    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.png`],
+    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
     creator: '@kidneycarecentre',
     site: '@kidneycarecentre',
   },
@@ -308,7 +308,7 @@ export default function TestsForKidneyDiseasePage() {
         headline: 'Tests for Kidney Disease - Complete Guide to Kidney Screening',
         description: 'Comprehensive guide to all kidney disease tests including eGFR, serum creatinine, urine albumin (uACR), BUN, cystatin C, kidney ultrasound, and kidney biopsy.',
         url: `${SITE_CONFIG.url}/tests-for-kidney-disease`,
-        image: `${SITE_CONFIG.url}/images/dr-rajesh-goel.png`,
+        image: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`,
         datePublished: '2025-01-15T00:00:00+05:30',
         dateModified: new Date().toISOString(),
         author: {

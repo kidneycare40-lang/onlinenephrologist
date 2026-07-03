@@ -13,13 +13,13 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     type: 'website',
     locale: 'en_US',
-    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.png`, width: 1200, height: 630, alt: 'Dr Rajesh Goel - Online Kidney Consultation' }],
+    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: 'Dr Rajesh Goel - Online Kidney Consultation' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Book Online Kidney Consultation | Video Call | Dr Rajesh Goel Delhi',
     description: 'Book online video consultation with Dr Rajesh Goel, Senior Nephrologist in Delhi. Get expert kidney care from home for CKD, dialysis, kidney stones, and transplant. ₹1000.',
-    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.png`],
+    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
   },
   robots: { index: true, follow: true },
 };

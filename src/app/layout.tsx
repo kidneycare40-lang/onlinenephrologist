@@ -50,6 +50,8 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="preload" href="/images/dr-rajesh-goel.jpg" as="image" />
+        <link rel="preload" href="/images/kidney_logo.png" as="image" />
       </head>
       <body className="min-h-screen flex flex-col font-sans">
         <Providers>

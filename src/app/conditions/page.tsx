@@ -21,14 +21,14 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     type: 'website',
     locale: 'en_US',
-    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.png`, width: 1200, height: 630, alt: 'Kidney Conditions and Treatments' }],
+    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: 'Kidney Conditions and Treatments' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kidney Conditions & Treatments | Nephrologist Delhi',
     description:
       'Comprehensive guide to kidney conditions including CKD, kidney stones, dialysis, kidney transplant, diabetic nephropathy, and hypertension. Expert nephrology care by Dr Rajesh Goel, Delhi.',
-    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.png`],
+    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
   },
 };
 

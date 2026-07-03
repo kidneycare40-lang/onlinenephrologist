@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     type: 'website',
     locale: 'en_US',
-    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.png`, width: 1200, height: 630, alt: 'Online Nephrologist Privacy Policy' }],
+    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: 'Online Nephrologist Privacy Policy' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Privacy Policy | Online Nephrologist',
     description: 'Privacy policy for Online Nephrologist. Learn how we collect, use, and protect your personal and medical information.',
-    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.png`],
+    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
   },
 };
 

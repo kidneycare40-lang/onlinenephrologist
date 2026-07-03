@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { SITE_CONFIG } from '@/lib/constants';
 import { FAQSchema } from '@/components/seo/JsonLd';
 import { Navbar } from '@/components/layout/Navbar';
@@ -30,13 +31,13 @@ export const metadata: Metadata = {
     title: 'Medical Tourism India | Best Nephrologist Online Consultation',
     description: 'Consult Dr Rajesh Goel, top nephrologist in India, from anywhere in the world. Online video consultation for kidney diseases, CKD, dialysis, and kidney transplant.',
     url: `${SITE_CONFIG.url}/medical-tourism`,
-    images: [{ url: '/images/dr-rajesh-goel.png', width: 1200, height: 630, alt: 'Dr Rajesh Goel - Nephrologist India' }],
+    images: [{ url: '/images/dr-rajesh-goel.jpg', width: 1200, height: 630, alt: 'Dr Rajesh Goel - Nephrologist India' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Medical Tourism India | Best Nephrologist Online Consultation',
     description: 'Consult Dr Rajesh Goel, top nephrologist in India, from anywhere in the world. Online video consultation for kidney diseases, CKD, dialysis, and kidney transplant.',
-    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.png`],
+    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
   },
   alternates: { canonical: `${SITE_CONFIG.url}/medical-tourism` },
   robots: { index: true, follow: true },
@@ -155,7 +156,7 @@ export default function MedicalTourismPage() {
             </div>
             <div className="hidden md:block">
               <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-                <img src="/images/dr-rajesh-goel.png" alt="Dr Rajesh Goel - Best Nephrologist India" className="w-full h-auto" />
+                <Image src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Best Nephrologist India" width={400} height={500} className="w-full h-auto" />
               </div>
             </div>
           </div>

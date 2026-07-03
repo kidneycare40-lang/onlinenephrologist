@@ -13,13 +13,13 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     type: 'website',
     locale: 'en_US',
-    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.png`, width: 1200, height: 630, alt: 'Dr Rajesh Goel - Kidney Health Videos' }],
+    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: 'Dr Rajesh Goel - Kidney Health Videos' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kidney Health Videos | Nephrologist Delhi | Dr Rajesh Goel',
     description: 'Watch educational videos about kidney disease, CKD, dialysis, kidney transplant, and kidney health by Dr Rajesh Goel, Senior Nephrologist in Delhi.',
-    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.png`],
+    images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
   },
   robots: { index: true, follow: true },
 };
