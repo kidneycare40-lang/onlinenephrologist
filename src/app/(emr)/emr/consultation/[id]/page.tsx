@@ -553,47 +553,55 @@ export default function ConsultationPage() {
 
     try {
       const html2pdf = (await import('html2pdf.js')).default;
-      const { createRoot } = await import('react-dom/client');
-      const React = await import('react');
-      const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
 
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.left = '0';
-      tempDiv.style.top = '0';
-      tempDiv.style.width = '210mm';
-      tempDiv.style.zIndex = '-1';
-      tempDiv.style.opacity = '0';
-      tempDiv.style.pointerEvents = 'none';
-      tempDiv.style.background = '#fff';
-      document.body.appendChild(tempDiv);
+      const printPreview = document.querySelector<HTMLElement>('[data-prescription-html]');
 
-      const root = createRoot(tempDiv);
-      root.render(
-        React.createElement(PrescriptionPrint, {
-          patient,
-          consultation: consultation!,
-          consultationDate: new Date().toLocaleDateString('en-IN'),
-          testRequests,
-          testRequestByWhen,
-          labResults: patientLabResults,
-          clinicId: clinicId ?? undefined,
-        })
-      );
-
-      await new Promise((r) => setTimeout(r, 500));
+      let sourceEl: HTMLElement;
+      if (printPreview) {
+        sourceEl = printPreview;
+      } else {
+        const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
+        const { renderToStaticMarkup } = await import('react-dom/server');
+        const React = await import('react');
+        const html = renderToStaticMarkup(
+          React.createElement(PrescriptionPrint, {
+            patient,
+            consultation: consultation!,
+            consultationDate: new Date().toLocaleDateString('en-IN'),
+            testRequests,
+            testRequestByWhen,
+            labResults: patientLabResults,
+            clinicId: clinicId ?? undefined,
+          })
+        );
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '0';
+        tempDiv.style.width = '210mm';
+        tempDiv.style.background = '#fff';
+        tempDiv.style.fontFamily = 'Arial, Helvetica, sans-serif';
+        tempDiv.style.fontSize = '10pt';
+        tempDiv.style.lineHeight = '1.35';
+        tempDiv.style.color = '#000';
+        document.body.appendChild(tempDiv);
+        sourceEl = tempDiv;
+      }
 
       const opt = {
         margin: [5, 8, 5, 8] as [number, number, number, number],
         filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
       };
 
-      const pdfBlob = await html2pdf().set(opt).from(tempDiv).outputPdf('blob');
-      root.unmount();
-      document.body.removeChild(tempDiv);
+      const pdfBlob = await html2pdf().set(opt).from(sourceEl).outputPdf('blob');
+
+      if (sourceEl !== printPreview) {
+        document.body.removeChild(sourceEl);
+      }
 
       const pdfFile = new File([pdfBlob], `Prescription_${patient.firstName}_${patient.lastName}.pdf`, { type: 'application/pdf' });
 
