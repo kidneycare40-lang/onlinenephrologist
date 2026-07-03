@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+
+async function getDb() {
+  try {
+    const { getSupabase } = await import('@/lib/supabase');
+    return getSupabase();
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(req: NextRequest) {
   try {
     const key = req.nextUrl.searchParams.get('key');
-    const supabase = getSupabase();
+    const supabase = await getDb();
+
+    if (!supabase) {
+      return NextResponse.json(key ? { value: null } : {});
+    }
 
     if (key) {
       const { data, error } = await supabase
@@ -42,7 +54,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const supabase = getSupabase();
+    const supabase = await getDb();
+
+    if (!supabase) {
+      return NextResponse.json({ ok: true, note: 'no database' });
+    }
 
     if (body.flush && body.queue) {
       const entries = Object.entries(body.queue) as [string, string][];

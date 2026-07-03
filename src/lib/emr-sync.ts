@@ -92,8 +92,10 @@ export async function hydrateFromServer() {
 
   isHydrated = true;
 
-  Storage.prototype.setItem = patchedSetItem as typeof Storage.prototype.setItem;
-  Storage.prototype.removeItem = patchedRemoveItem as typeof Storage.prototype.removeItem;
+  try {
+    Storage.prototype.setItem = patchedSetItem as typeof Storage.prototype.setItem;
+    Storage.prototype.removeItem = patchedRemoveItem as typeof Storage.prototype.removeItem;
+  } catch { /* browser blocked prototype patching, sync disabled */ }
 }
 
 export function initEmrSync() {
