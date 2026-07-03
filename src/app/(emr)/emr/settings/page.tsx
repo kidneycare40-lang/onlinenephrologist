@@ -58,13 +58,18 @@ function ImageUpload({ label, sublabel, image, onUpload, onRemove }: { label: st
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be under 5MB');
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File size must be under 2MB (base64 encoding increases size by ~33%)');
       return;
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      onUpload(ev.target?.result as string);
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl.length > 4.5 * 1024 * 1024) {
+        alert('Image is too large for browser storage after encoding. Please use a smaller image.');
+        return;
+      }
+      onUpload(dataUrl);
     };
     reader.readAsDataURL(file);
   }
@@ -344,9 +349,14 @@ export default function SettingsPage() {
 
   function handleSave() {
     try {
-      localStorage.setItem(rxHeaderKey, customRxHeader || '');
-      localStorage.setItem(rxFooterKey, customRxFooter || '');
-    } catch { /* ignore */ }
+      if (customRxHeader) localStorage.setItem(rxHeaderKey, customRxHeader);
+      else localStorage.removeItem(rxHeaderKey);
+      if (customRxFooter) localStorage.setItem(rxFooterKey, customRxFooter);
+      else localStorage.removeItem(rxFooterKey);
+    } catch (err) {
+      alert('Failed to save letterhead images. They may be too large for browser storage. Try using smaller images.');
+      return;
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }

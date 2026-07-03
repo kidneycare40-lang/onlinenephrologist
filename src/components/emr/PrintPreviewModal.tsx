@@ -39,8 +39,13 @@ export default function PrintPreviewModal({
 
   useEffect(() => {
     try {
-      setCustomHeaderImg(clinicId ? (localStorage.getItem(`emr_custom_rx_header_${clinicId}`) || '') : '');
-      setCustomFooterImg(clinicId ? (localStorage.getItem(`emr_custom_rx_footer_${clinicId}`) || '') : '');
+      const hdr = clinicId ? (localStorage.getItem(`emr_custom_rx_header_${clinicId}`) || '') : '';
+      const ftr = clinicId ? (localStorage.getItem(`emr_custom_rx_footer_${clinicId}`) || '') : '';
+      setCustomHeaderImg(hdr);
+      setCustomFooterImg(ftr);
+      if (hdr || ftr) {
+        setLetterheadMode('custom');
+      }
     } catch { /* ignore */ }
   }, [clinicId]);
 
