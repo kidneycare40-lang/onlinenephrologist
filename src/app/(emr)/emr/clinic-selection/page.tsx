@@ -48,6 +48,7 @@ export default function ClinicSelectionPage() {
   const { setClinicId } = useClinic();
   const [selectedClinic, setSelectedClinic] = useState<string | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [navigating, setNavigating] = useState(false);
 
   const activeClinic = clinics.find((c) => c.id === selectedClinic);
 
@@ -56,6 +57,8 @@ export default function ClinicSelectionPage() {
   }
 
   function handleLocationSelect(locationId: string) {
+    if (navigating) return;
+    setNavigating(true);
     setClinicId(locationId);
     router.push('/emr/dashboard');
   }
@@ -141,32 +144,19 @@ export default function ClinicSelectionPage() {
                   <button
                     key={clinic.id}
                     onClick={() => handleClinicSelect(clinic.id)}
-                    onMouseEnter={() => setHoveredItem(clinic.id)}
-                    onMouseLeave={() => setHoveredItem(null)}
                     className={cn(
-                      'w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left',
-                      'hover:border-[#0A75BB]/40 hover:shadow-md hover:shadow-[#0A75BB]/5',
-                      hoveredItem === clinic.id
-                        ? 'border-[#0A75BB]/40 bg-[#0A75BB]/[0.03]'
-                        : 'border-gray-200 bg-white'
+                      'w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 bg-white transition-all duration-200 text-left',
+                      'active:bg-[#0A75BB]/[0.06] active:scale-[0.98] hover:border-[#0A75BB]/40 hover:shadow-md hover:shadow-[#0A75BB]/5'
                     )}
                   >
-                    <div className={cn(
-                      'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-200',
-                      hoveredItem === clinic.id
-                        ? 'bg-[#0A75BB] text-white'
-                        : 'bg-[#0A75BB]/10 text-[#0A75BB]'
-                    )}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-[#0A75BB]/10 text-[#0A75BB]">
                       <Building2 className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">{clinic.name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{clinic.locations.length} location{clinic.locations.length > 1 ? 's' : ''}</p>
                     </div>
-                    <ArrowRight className={cn(
-                      'h-5 w-5 shrink-0 transition-all duration-200',
-                      hoveredItem === clinic.id ? 'text-[#0A75BB] translate-x-0.5' : 'text-gray-300'
-                    )} />
+                    <ArrowRight className="h-5 w-5 shrink-0 text-gray-300" />
                   </button>
                 ))}
               </div>
@@ -188,22 +178,14 @@ export default function ClinicSelectionPage() {
                   <button
                     key={location.id}
                     onClick={() => handleLocationSelect(location.id)}
-                    onMouseEnter={() => setHoveredItem(location.id)}
-                    onMouseLeave={() => setHoveredItem(null)}
+                    disabled={navigating}
                     className={cn(
                       'w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left',
-                      'hover:border-[#0A75BB]/40 hover:shadow-md hover:shadow-[#0A75BB]/5',
-                      hoveredItem === location.id
-                        ? 'border-[#0A75BB]/40 bg-[#0A75BB]/[0.03]'
-                        : 'border-gray-200 bg-white'
+                      'active:bg-[#0A75BB]/[0.06] active:scale-[0.98]',
+                      navigating ? 'opacity-60 pointer-events-none' : 'border-gray-200 bg-white hover:border-[#0A75BB]/40 hover:shadow-md hover:shadow-[#0A75BB]/5'
                     )}
                   >
-                    <div className={cn(
-                      'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-200',
-                      hoveredItem === location.id
-                        ? 'bg-[#0A75BB] text-white'
-                        : 'bg-[#0A75BB]/10 text-[#0A75BB]'
-                    )}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-[#0A75BB]/10 text-[#0A75BB]">
                       <MapPin className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -213,10 +195,11 @@ export default function ClinicSelectionPage() {
                         <p className="text-xs text-gray-500 truncate">{location.address}</p>
                       </div>
                     </div>
-                    <ArrowRight className={cn(
-                      'h-5 w-5 shrink-0 transition-all duration-200',
-                      hoveredItem === location.id ? 'text-[#0A75BB] translate-x-0.5' : 'text-gray-300'
-                    )} />
+                    {navigating ? (
+                      <div className="h-5 w-5 shrink-0 border-2 border-[#0A75BB] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <ArrowRight className="h-5 w-5 shrink-0 text-gray-300" />
+                    )}
                   </button>
                 ))}
               </div>

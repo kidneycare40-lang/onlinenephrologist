@@ -77,7 +77,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <img src="/favicon.png" alt="Online Nephrologist" className="h-8 w-8 sm:h-9 sm:w-9" />
-            <span className="text-sm sm:text-[15px] font-bold text-[#0A75BB] hidden sm:block leading-tight">Online<br className="hidden lg:block" /> Nephrologist</span>
+            <span className="text-sm sm:text-[15px] font-bold text-[#0A75BB] leading-tight">Online<br className="hidden lg:block" /> Nephrologist</span>
           </Link>
 
           {/* Right side — nav + CTA */}
