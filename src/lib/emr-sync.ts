@@ -23,8 +23,8 @@ const writeQueue: Record<string, string> = {};
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let isHydrated = false;
 
-const _origSetItem = Storage.prototype.setItem;
-const _origRemoveItem = Storage.prototype.removeItem;
+let _origSetItem: typeof Storage.prototype.setItem | null = null;
+let _origRemoveItem: typeof Storage.prototype.removeItem | null = null;
 
 function isEmrKey(key: string): boolean {
   return (
@@ -32,6 +32,16 @@ function isEmrKey(key: string): boolean {
     key.startsWith('emr_custom_rx_') ||
     key.startsWith('emr_')
   );
+}
+
+function getOrigSetItem() {
+  if (!_origSetItem) _origSetItem = Storage.prototype.setItem;
+  return _origSetItem;
+}
+
+function getOrigRemoveItem() {
+  if (!_origRemoveItem) _origRemoveItem = Storage.prototype.removeItem;
+  return _origRemoveItem;
 }
 
 async function flushToServer() {
@@ -62,7 +72,7 @@ function scheduleFlush() {
 }
 
 function patchedSetItem(key: string, value: string) {
-  _origSetItem.call(localStorage, key, value);
+  getOrigSetItem().call(localStorage, key, value);
 
   if (isHydrated && isEmrKey(key)) {
     writeQueue[key] = value;
@@ -71,7 +81,7 @@ function patchedSetItem(key: string, value: string) {
 }
 
 function patchedRemoveItem(key: string) {
-  _origRemoveItem.call(localStorage, key);
+  getOrigRemoveItem().call(localStorage, key);
 
   if (isHydrated && isEmrKey(key)) {
     writeQueue[key] = '';
@@ -92,7 +102,7 @@ export async function hydrateFromServer() {
         const existing = localStorage.getItem(key);
         const serverVal = typeof value === 'string' ? value : JSON.stringify(value);
         if (existing !== serverVal) {
-          _origSetItem.call(localStorage, key, serverVal);
+          getOrigSetItem().call(localStorage, key, serverVal);
         }
       }
     }
