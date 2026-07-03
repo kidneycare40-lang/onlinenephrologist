@@ -544,7 +544,7 @@ export default function ConsultationPage() {
   };
 
   const handleWhatsAppPrescription = async () => {
-    if (!patient?.phone) {
+    if (!patient?.phone || !consultation) {
       showToastMessage('No phone number available', 'error');
       return;
     }
@@ -553,49 +553,46 @@ export default function ConsultationPage() {
 
     try {
       const html2pdf = (await import('html2pdf.js')).default;
+      const { createRoot } = await import('react-dom/client');
+      const React = await import('react');
+      const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
 
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'fixed';
-      tempDiv.style.left = '-9999px';
+      tempDiv.style.left = '0';
       tempDiv.style.top = '0';
       tempDiv.style.width = '210mm';
+      tempDiv.style.zIndex = '-1';
+      tempDiv.style.opacity = '0';
+      tempDiv.style.pointerEvents = 'none';
       tempDiv.style.background = '#fff';
-      tempDiv.style.fontFamily = 'Arial, Helvetica, sans-serif';
-      tempDiv.style.fontSize = '10pt';
-      tempDiv.style.lineHeight = '1.35';
-      tempDiv.style.color = '#000';
-
-      const printPreview = document.querySelector('[data-prescription-html]');
-      if (printPreview) {
-        tempDiv.innerHTML = printPreview.getAttribute('data-prescription-html') || '';
-      } else if (consultation) {
-        const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
-        const { renderToStaticMarkup } = await import('react-dom/server');
-        const React = await import('react');
-        const html = renderToStaticMarkup(
-          React.createElement(PrescriptionPrint, {
-            patient,
-            consultation,
-            consultationDate: new Date().toLocaleDateString('en-IN'),
-            testRequests,
-            testRequestByWhen,
-            labResults: patientLabResults,
-            clinicId: clinicId ?? undefined,
-          })
-        );
-        tempDiv.innerHTML = html;
-      }
       document.body.appendChild(tempDiv);
+
+      const root = createRoot(tempDiv);
+      root.render(
+        React.createElement(PrescriptionPrint, {
+          patient,
+          consultation: consultation!,
+          consultationDate: new Date().toLocaleDateString('en-IN'),
+          testRequests,
+          testRequestByWhen,
+          labResults: patientLabResults,
+          clinicId: clinicId ?? undefined,
+        })
+      );
+
+      await new Promise((r) => setTimeout(r, 500));
 
       const opt = {
         margin: [5, 8, 5, 8] as [number, number, number, number],
         filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
       };
 
       const pdfBlob = await html2pdf().set(opt).from(tempDiv).outputPdf('blob');
+      root.unmount();
       document.body.removeChild(tempDiv);
 
       const pdfFile = new File([pdfBlob], `Prescription_${patient.firstName}_${patient.lastName}.pdf`, { type: 'application/pdf' });
