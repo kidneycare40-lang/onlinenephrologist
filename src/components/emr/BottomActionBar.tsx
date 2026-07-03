@@ -22,7 +22,7 @@ export default function BottomActionBar({
   isSaving,
 }: BottomActionBarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg no-print safe-area-bottom">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-lg no-print safe-area-bottom">
       <div className="h-14 flex items-center justify-end px-3 sm:px-4 max-w-[1800px] mx-auto">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <button
