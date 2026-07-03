@@ -38,15 +38,32 @@ export default function PrintPreviewModal({
   const [customFooterImg, setCustomFooterImg] = useState('');
 
   useEffect(() => {
-    try {
-      const hdr = clinicId ? (localStorage.getItem(`emr_custom_rx_header_${clinicId}`) || '') : '';
-      const ftr = clinicId ? (localStorage.getItem(`emr_custom_rx_footer_${clinicId}`) || '') : '';
-      setCustomHeaderImg(hdr);
-      setCustomFooterImg(ftr);
-      if (hdr || ftr) {
-        setLetterheadMode('custom');
+    if (!clinicId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/emr/letterhead?clinicId=${clinicId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) {
+            const hdr = data.header || localStorage.getItem(`emr_custom_rx_header_${clinicId}`) || '';
+            const ftr = data.footer || localStorage.getItem(`emr_custom_rx_footer_${clinicId}`) || '';
+            setCustomHeaderImg(hdr);
+            setCustomFooterImg(ftr);
+            if (hdr || ftr) setLetterheadMode('custom');
+            return;
+          }
+        }
+      } catch { /* fall through to localStorage */ }
+      if (!cancelled) {
+        const hdr = localStorage.getItem(`emr_custom_rx_header_${clinicId}`) || '';
+        const ftr = localStorage.getItem(`emr_custom_rx_footer_${clinicId}`) || '';
+        setCustomHeaderImg(hdr);
+        setCustomFooterImg(ftr);
+        if (hdr || ftr) setLetterheadMode('custom');
       }
-    } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
   }, [clinicId]);
 
   const isCustom = letterheadMode === 'custom';

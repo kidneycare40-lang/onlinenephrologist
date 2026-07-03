@@ -347,7 +347,7 @@ export default function SettingsPage() {
     setConfirmDeleteTestId(null);
   }
 
-  function handleSave() {
+  async function handleSave() {
     try {
       if (customRxHeader) localStorage.setItem(rxHeaderKey, customRxHeader);
       else localStorage.removeItem(rxHeaderKey);
@@ -356,6 +356,12 @@ export default function SettingsPage() {
     } catch (err) {
       alert('Failed to save letterhead images. They may be too large for browser storage. Try using smaller images.');
       return;
+    }
+    if (clinicId) {
+      try {
+        await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'header', data: customRxHeader || '' }) });
+        await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'footer', data: customRxFooter || '' }) });
+      } catch { /* server save failed, localStorage still works locally */ }
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
