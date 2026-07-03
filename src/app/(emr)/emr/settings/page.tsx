@@ -55,23 +55,46 @@ function Toggle({ enabled, onChange, label, description }: { enabled: boolean; o
 function ImageUpload({ label, sublabel, image, onUpload, onRemove }: { label: string; sublabel?: string; image: string | null; onUpload: (dataUrl: string) => void; onRemove: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function compressImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxW = 800;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW) { h = (h * maxW) / w; w = maxW; }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(ev.target?.result as string); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(compressed);
+        };
+        img.onerror = () => resolve(ev.target?.result as string);
+        img.src = ev.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size must be under 2MB (base64 encoding increases size by ~33%)');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      if (dataUrl.length > 4.5 * 1024 * 1024) {
-        alert('Image is too large for browser storage after encoding. Please use a smaller image.');
+    try {
+      const dataUrl = await compressImage(file);
+      if (dataUrl.length > 3 * 1024 * 1024) {
+        alert('Image is still too large after compression. Please use a smaller image.');
         return;
       }
       onUpload(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      alert('Failed to process image.');
+    }
   }
 
   return (

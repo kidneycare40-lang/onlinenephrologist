@@ -23,22 +23,26 @@ export async function GET(req: NextRequest) {
 
     const result: { header?: string; footer?: string } = {};
 
-    const headerKey = `letterhead_header_${clinicId}`;
-    const footerKey = `letterhead_footer_${clinicId}`;
+    const keys = [
+      `letterhead_header_${clinicId}`,
+      `emr_custom_rx_header_${clinicId}`,
+    ];
+    const footerKeys = [
+      `letterhead_footer_${clinicId}`,
+      `emr_custom_rx_footer_${clinicId}`,
+    ];
 
     const { data: headerData } = await supabase
       .from('emr_store')
       .select('value')
-      .eq('key', headerKey)
-      .single();
-    if (headerData) result.header = headerData.value;
+      .in('key', keys);
+    if (headerData && headerData.length > 0) result.header = headerData[0].value;
 
     const { data: footerData } = await supabase
       .from('emr_store')
       .select('value')
-      .eq('key', footerKey)
-      .single();
-    if (footerData) result.footer = footerData.value;
+      .in('key', footerKeys);
+    if (footerData && footerData.length > 0) result.footer = footerData[0].value;
 
     return NextResponse.json(result);
   } catch {
@@ -61,14 +65,18 @@ export async function POST(req: NextRequest) {
     if (!supabase) return NextResponse.json({ ok: true, note: 'no database' });
 
     const key = `letterhead_${type}_${clinicId}`;
+    const syncKey = `emr_custom_rx_${type}_${clinicId}`;
 
     if (data) {
       await supabase.from('emr_store').upsert(
-        { key, value: data },
+        [
+          { key, value: data },
+          { key: syncKey, value: data },
+        ],
         { onConflict: 'key' }
       );
     } else {
-      await supabase.from('emr_store').delete().eq('key', key);
+      await supabase.from('emr_store').delete().in('key', [key, syncKey]);
     }
 
     return NextResponse.json({ ok: true });

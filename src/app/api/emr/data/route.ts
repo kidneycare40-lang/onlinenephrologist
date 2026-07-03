@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase
       .from('emr_store')
       .select('key, value')
-      .limit(500);
+      .limit(1000);
 
     if (error) {
       return NextResponse.json({});
