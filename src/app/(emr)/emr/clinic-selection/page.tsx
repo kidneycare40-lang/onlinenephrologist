@@ -57,7 +57,7 @@ export default function ClinicSelectionPage() {
 
   function handleLocationSelect(locationId: string) {
     setClinicId(locationId);
-    router.push('/emr/dashboard');
+    window.location.href = '/emr/dashboard';
   }
 
   function handleBack() {
