@@ -13,7 +13,6 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['@radix-ui/react-icons'],
   },
-  output: 'standalone',
 };
 
 module.exports = nextConfig;
