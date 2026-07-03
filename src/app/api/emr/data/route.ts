@@ -5,12 +5,12 @@ function getStorePath() {
   return path.join(process.cwd(), 'data', 'emr-store.json');
 }
 
-let storeCache: Record<string, unknown> | null = null;
+let storeCache: Record<string, unknown> = {};
 let lastRead = 0;
 
 async function readStore(): Promise<Record<string, unknown>> {
   const now = Date.now();
-  if (storeCache && now - lastRead < 2000) return storeCache;
+  if (Object.keys(storeCache).length > 0 && now - lastRead < 2000) return storeCache;
   try {
     const { readFile, mkdir } = await import('fs/promises');
     const { existsSync } = await import('fs');
