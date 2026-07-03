@@ -23,19 +23,30 @@ const writeQueue: Record<string, string> = {};
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let isHydrated = false;
 
+const _origSetItem = Storage.prototype.setItem;
+const _origRemoveItem = Storage.prototype.removeItem;
+
+function isEmrKey(key: string): boolean {
+  return (
+    EMR_KEYS.includes(key) ||
+    key.startsWith('emr_custom_rx_') ||
+    key.startsWith('emr_')
+  );
+}
+
 async function flushToServer() {
   const entries = Object.entries(writeQueue);
   if (entries.length === 0) return;
 
-  for (const [key, value] of entries) {
-    try {
-      await fetch('/api/emr/data', {
+  await Promise.allSettled(
+    entries.map(([key, value]) =>
+      fetch('/api/emr/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value }),
-      });
-    } catch { /* server sync failed, will retry */ }
-  }
+      }).catch(() => {})
+    )
+  );
 
   for (const key of Object.keys(writeQueue)) {
     delete writeQueue[key];
@@ -51,20 +62,18 @@ function scheduleFlush() {
 }
 
 function patchedSetItem(key: string, value: string) {
-  const originalSetItem = Storage.prototype.setItem;
-  originalSetItem.call(localStorage, key, value);
+  _origSetItem.call(localStorage, key, value);
 
-  if (isHydrated && (EMR_KEYS.includes(key) || key.startsWith('emr_custom_rx_') || key.startsWith('emr_'))) {
+  if (isHydrated && isEmrKey(key)) {
     writeQueue[key] = value;
     scheduleFlush();
   }
 }
 
 function patchedRemoveItem(key: string) {
-  const originalRemoveItem = Storage.prototype.removeItem;
-  originalRemoveItem.call(localStorage, key);
+  _origRemoveItem.call(localStorage, key);
 
-  if (isHydrated && (EMR_KEYS.includes(key) || key.startsWith('emr_custom_rx_') || key.startsWith('emr_'))) {
+  if (isHydrated && isEmrKey(key)) {
     writeQueue[key] = '';
     scheduleFlush();
   }
@@ -77,14 +86,13 @@ export async function hydrateFromServer() {
     const res = await fetch('/api/emr/data');
     if (!res.ok) return;
     const store = await res.json();
-    const originalSetItem = Storage.prototype.setItem;
 
     for (const [key, value] of Object.entries(store)) {
       if (value !== null && value !== undefined) {
         const existing = localStorage.getItem(key);
         const serverVal = typeof value === 'string' ? value : JSON.stringify(value);
         if (existing !== serverVal) {
-          originalSetItem.call(localStorage, key, serverVal);
+          _origSetItem.call(localStorage, key, serverVal);
         }
       }
     }

@@ -56,8 +56,10 @@ export default function ClinicSelectionPage() {
   }
 
   function handleLocationSelect(locationId: string) {
-    setClinicId(locationId);
-    window.location.href = '/emr/dashboard';
+    try {
+      localStorage.setItem('emr-clinic-id', locationId);
+    } catch {}
+    window.location.replace('/emr/dashboard');
   }
 
   function handleBack() {
