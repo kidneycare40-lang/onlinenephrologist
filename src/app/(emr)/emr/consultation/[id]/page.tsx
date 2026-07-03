@@ -553,17 +553,29 @@ export default function ConsultationPage() {
 
     try {
       const html2pdf = (await import('html2pdf.js')).default;
+      const { createRoot } = await import('react-dom/client');
+      const React = await import('react');
+      const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
+
+      const existing = document.querySelector<HTMLElement>('[data-prescription-html]');
       let sourceEl: HTMLElement;
       let cleanup: (() => void) | null = null;
 
-      const existing = document.querySelector<HTMLElement>('[data-prescription-html]');
       if (existing) {
         sourceEl = existing;
       } else {
-        const { renderToStaticMarkup } = await import('react-dom/server');
-        const React = await import('react');
-        const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
-        const html = renderToStaticMarkup(
+        const wrapper = document.createElement('div');
+        wrapper.setAttribute('data-prescription-html', 'true');
+        wrapper.style.position = 'fixed';
+        wrapper.style.left = '0';
+        wrapper.style.top = '0';
+        wrapper.style.width = '210mm';
+        wrapper.style.background = '#fff';
+        wrapper.style.zIndex = '99999';
+        document.body.appendChild(wrapper);
+
+        const root = createRoot(wrapper);
+        root.render(
           React.createElement(PrescriptionPrint, {
             patient,
             consultation: consultation!,
@@ -574,28 +586,34 @@ export default function ConsultationPage() {
             clinicId: clinicId ?? undefined,
           })
         );
-        const wrapper = document.createElement('div');
-        wrapper.setAttribute('data-prescription-html', 'true');
-        wrapper.innerHTML = html;
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '0';
-        wrapper.style.top = '0';
-        wrapper.style.width = '210mm';
-        wrapper.style.zIndex = '2147483647';
-        wrapper.style.background = '#fff';
-        wrapper.style.pointerEvents = 'none';
-        document.body.appendChild(wrapper);
-        sourceEl = wrapper;
-        cleanup = () => { document.body.removeChild(wrapper); };
-      }
 
-      await new Promise((r) => setTimeout(r, 200));
+        await new Promise<void>((resolve) => {
+          let attempts = 0;
+          const check = () => {
+            attempts++;
+            const imgs = wrapper.querySelectorAll('img');
+            const allLoaded = Array.from(imgs).every((img) => img.complete || img.naturalWidth > 0);
+            if (allLoaded || attempts > 40) {
+              resolve();
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        });
+
+        sourceEl = wrapper;
+        cleanup = () => {
+          root.unmount();
+          document.body.removeChild(wrapper);
+        };
+      }
 
       const opt = {
         margin: [5, 8, 5, 8] as [number, number, number, number],
         filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff' },
+        html2canvas: { scale: 2, useCORS: true, logging: true, allowTaint: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
       };
 

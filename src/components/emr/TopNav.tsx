@@ -38,6 +38,8 @@ export default function TopNav() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [clinicSwitchOpen, setClinicSwitchOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string; phone: string; uhid: string }[]>([]);
 
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [patientPrefix, setPatientPrefix] = useState('Mr');
@@ -118,10 +120,58 @@ export default function TopNav() {
         setProfileOpen(false);
         setClinicSwitchOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchFocused(false);
+      }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) { setSearchResults([]); return; }
+
+    const allPatients: { id: string; name: string; phone: string; uhid: string }[] = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+      if (Array.isArray(stored)) {
+        for (const p of stored) {
+          allPatients.push({ id: p.id, name: `${p.firstName || ''} ${p.lastName || ''}`.trim(), phone: p.phone || '', uhid: p.uhid || '' });
+        }
+      }
+    } catch {}
+    try {
+      const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+      if (Array.isArray(bookings)) {
+        for (const b of bookings) {
+          if (b.patientData?.firstName) {
+            const id = b.patientId || 'obp-' + b.bookingId;
+            if (!allPatients.some((p) => p.id === id)) {
+              allPatients.push({ id, name: `${b.patientData.firstName || ''} ${b.patientData.lastName || ''}`.trim(), phone: b.patientData.phone || '', uhid: 'OB-' + id.slice(4) });
+            }
+          }
+        }
+      }
+    } catch {}
+    try {
+      const mock = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+      if (Array.isArray(mock)) {
+        for (const c of mock) {
+          if (c.patientId && !allPatients.some((p) => p.id === c.patientId)) {
+            allPatients.push({ id: c.patientId, name: c.patientName || '', phone: '', uhid: '' });
+          }
+        }
+      }
+    } catch {}
+
+    const matched = allPatients.filter((p) => {
+      const searchPhone = q.replace(/\D/g, '');
+      const phone = (p.phone || '').replace(/\D/g, '');
+      return p.name.toLowerCase().includes(q) || (searchPhone.length >= 3 && phone.includes(searchPhone)) || (p.uhid && p.uhid.toLowerCase().includes(q));
+    }).slice(0, 8);
+    setSearchResults(matched);
+  }, [searchQuery]);
 
   function resetPatientForm() {
     setPatientPrefix('Mr');
@@ -263,17 +313,40 @@ export default function TopNav() {
             <span className="hidden sm:inline">New</span>
           </button>
 
-          <div className={cn('relative flex items-center transition-all duration-200', searchFocused ? 'w-52 lg:w-64' : 'w-9 lg:w-44')}>
+          <div ref={searchRef} className={cn('relative flex items-center transition-all duration-200', searchFocused ? 'w-52 lg:w-64' : 'w-9 lg:w-44')}>
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/50 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
               placeholder="Search Patient"
               className="w-full h-9 pl-8 pr-2 rounded-lg bg-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus:bg-white/15 focus:ring-1 focus:ring-white/20 transition-all duration-200 touch-target"
             />
+            {searchFocused && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 max-h-80 overflow-y-auto">
+                {searchResults.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => { setSearchQuery(''); setSearchFocused(false); router.push(`/emr/consultation/${r.id}`); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#0A75BB]/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-[#0A75BB]">{r.name.charAt(0) || '?'}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
+                      <p className="text-[11px] text-gray-500">{r.phone || r.uhid || 'No phone'}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchFocused && searchQuery.length >= 2 && searchResults.length === 0 && (
+              <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-4 px-3 z-50">
+                <p className="text-xs text-gray-400 text-center">No patients found</p>
+              </div>
+            )}
           </div>
 
           <button className="relative p-2 rounded-lg hover:bg-white/10 transition-colors">
