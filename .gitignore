@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+*.log
+dev.log
+dev-new.log
+next-dev.log
+next-dev-err.log
+tsc-check.txt
+tsconfig.tsbuildinfo

@@ -1,0 +1,474 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { Search, Play, Eye, Phone, CreditCard, Trash2 } from 'lucide-react';
+import { cn, calculateAge } from '@/lib/utils';
+import { todayAppointments, patients, consultations } from '@/lib/data/emr-mock';
+import { useClinic } from '@/lib/emr-clinic-context';
+import { EMRPatient, EMRConsultation } from '@/types/emr';
+import { deleteOnlineBooking } from '@/lib/emr-delete';
+
+type StatusFilter = 'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
+
+const statusConfig: Record<string, { label: string; color: string }> = {
+  WAITING: { label: 'Waiting', color: 'bg-amber-100 text-amber-700' },
+  IN_PROGRESS: { label: 'In Progress', color: 'bg-blue-100 text-blue-700' },
+  COMPLETED: { label: 'Completed', color: 'bg-emerald-100 text-emerald-700' },
+};
+
+interface OnlineBooking {
+  bookingId: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  age: string;
+  gender: string;
+  consultationType: string;
+  clinicId: string;
+  date: string;
+  time: string;
+  reason: string;
+  createdAt: string;
+  status: string;
+  consultationFee: number;
+  paymentStatus?: string;
+}
+
+export default function ConsultationListPage() {
+  const { clinicId } = useClinic();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
+  const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
+  const [onlineBookings, setOnlineBookings] = useState<OnlineBooking[]>([]);
+  const [savedConsultations, setSavedConsultations] = useState<EMRConsultation[]>([]);
+  const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      setAddedPatients(JSON.parse(localStorage.getItem('emr_added_patients') || '[]'));
+    } catch { /* ignore */ }
+    try {
+      setOnlineBookings(JSON.parse(localStorage.getItem('emr_bookings') || '[]'));
+    } catch { /* ignore */ }
+    try {
+      const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const allPats = [...patients, ...JSON.parse(localStorage.getItem('emr_added_patients') || '[]') as EMRPatient[]];
+      const phoneToPatient = new Map<string, EMRPatient>();
+      for (const p of allPats) {
+        if (p.phone) phoneToPatient.set(p.phone, p);
+      }
+      // Deduplicate by phone (if available) or patientId
+      const byKey = new Map<string, EMRConsultation>();
+      for (const sc of stored) {
+        const pat = allPats.find((p) => p.id === sc.patientId);
+        const key = pat?.phone || sc.patientId;
+        const existing = byKey.get(key);
+        if (!existing || ((sc as any).updatedAt || sc.date) > ((existing as any).updatedAt || existing.date)) {
+          byKey.set(key, sc);
+        }
+      }
+      const deduped = Array.from(byKey.values());
+      if (deduped.length < stored.length) {
+        localStorage.setItem('emr_consultations', JSON.stringify(deduped));
+      }
+      setSavedConsultations(deduped);
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleDeleteBooking = () => {
+    if (!deleteBookingId) return;
+    deleteOnlineBooking(deleteBookingId);
+    setOnlineBookings((prev) => prev.filter((b) => b.bookingId !== deleteBookingId));
+    setDeleteBookingId(null);
+  };
+
+  const allPatients = [...patients, ...addedPatients];
+  const clinicPatients = clinicId ? allPatients.filter((p) => !p.clinicId || p.clinicId === clinicId) : allPatients;
+  const clinicPatientIds = new Set(clinicPatients.map((p) => p.id));
+  const clinicAppointments = clinicId ? todayAppointments.filter((a) => clinicPatientIds.has(a.patientId)) : [];
+
+  // Deduplicate: keep only the latest consultation per phone (or patientId)
+  const savedClinicConsultations = useMemo(() => {
+    const byKey = new Map<string, EMRConsultation>();
+    for (const sc of savedConsultations) {
+      // Clinic filter
+      if (clinicId && sc.clinicId && sc.clinicId !== clinicId) continue;
+      const pat = allPatients.find((p) => p.id === sc.patientId);
+      const key = pat?.phone || sc.patientId;
+      const existing = byKey.get(key);
+      if (!existing || (sc.updatedAt || sc.date) > (existing.updatedAt || existing.date)) {
+        byKey.set(key, sc);
+      }
+    }
+    return Array.from(byKey.values());
+  }, [savedConsultations, allPatients, clinicId]);
+
+  const filtered = clinicAppointments.filter((a) => {
+    const patient = clinicPatients.find((p) => p.id === a.patientId);
+    const name = patient ? `${patient.firstName} ${patient.lastName}`.toLowerCase() : '';
+    const matchesSearch = !search || name.includes(search.toLowerCase()) || a.id.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'ALL' || a.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredOnline = onlineBookings.filter((b) => {
+    // Clinic filter for online bookings
+    if (clinicId) {
+      const BOOKING_CLINIC_MAP: Record<string, string> = { 'online': '', 'faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'saket': 'kcc-saket' };
+      const mappedId = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId;
+      if (mappedId !== clinicId) return false;
+    }
+    const name = `${b.firstName} ${b.lastName}`.toLowerCase();
+    const matchesSearch = !search || name.includes(search.toLowerCase()) || b.bookingId.toLowerCase().includes(search.toLowerCase());
+    const bookingStatus = b.status === 'pending' ? 'WAITING' : 'COMPLETED';
+    const matchesStatus = statusFilter === 'ALL' || bookingStatus === statusFilter;
+    const matchesDate = !dateFilter || b.date === dateFilter;
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const filteredSaved = savedClinicConsultations.filter((sc) => {
+    const pat = allPatients.find((p) => p.id === sc.patientId);
+    const name = pat ? `${pat.firstName} ${pat.lastName}`.toLowerCase() : sc.patientId.toLowerCase();
+    const matchesSearch = !search || name.includes(search.toLowerCase()) || sc.id.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'ALL' || sc.status === statusFilter;
+    const matchesDate = !dateFilter || sc.date === dateFilter;
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const waiting = filtered.filter((a) => a.status === 'WAITING').length + filteredOnline.filter((b) => b.status === 'pending').length;
+  const inProgress = filtered.filter((a) => a.status === 'IN_PROGRESS').length + filteredSaved.filter((sc) => sc.status === 'IN_PROGRESS').length;
+  const completed = filtered.filter((a) => a.status === 'COMPLETED').length + filteredOnline.filter((b) => b.status !== 'pending').length + filteredSaved.filter((sc) => sc.status === 'COMPLETED').length;
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Consultations</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Today&apos;s consultation queue</p>
+        </div>
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30"
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-center">
+          <p className="text-2xl font-bold text-amber-600">{waiting}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Waiting</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-center">
+          <p className="text-2xl font-bold text-blue-600">{inProgress}</p>
+          <p className="text-xs text-gray-500 mt-0.5">In Progress</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-center">
+          <p className="text-2xl font-bold text-emerald-600">{completed}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Completed</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search patient name or ID..."
+            className="w-full h-9 pl-9 pr-4 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30"
+          />
+        </div>
+        <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden">
+          {(['ALL', 'WAITING', 'IN_PROGRESS', 'COMPLETED'] as StatusFilter[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors',
+                statusFilter === s ? 'bg-[#0A75BB] text-white' : 'text-gray-600 hover:bg-gray-50'
+              )}
+            >
+              {s === 'ALL' ? 'All' : s === 'IN_PROGRESS' ? 'Active' : s.charAt(0) + s.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Token</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Patient</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Phone</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Time</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Payment</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Status</th>
+              <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filtered.map((a) => {
+              const patient = allPatients.find((p) => p.id === a.patientId);
+              const name = patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown';
+              const age = patient ? calculateAge(new Date(patient.dateOfBirth)) : 0;
+              const gender = patient?.gender === 'Male' ? 'M' : patient?.gender === 'Female' ? 'F' : 'O';
+              const status = statusConfig[a.status] || statusConfig.WAITING;
+
+              return (
+                <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-bold text-[#0A75BB]">#{a.tokenId}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0A75BB] to-[#085D94] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{name}</p>
+                        <p className="text-xs text-gray-500">{age}Y, {gender}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <span className="text-sm text-gray-600">{patient?.phone || '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <span className="text-sm text-gray-600">{a.time}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn(
+                      'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full',
+                      a.payment === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                    )}>
+                      {a.payment === 'PAID' ? <CreditCard className="h-3 w-3" /> : null}
+                      {a.payment === 'PAID' ? `₹${a.amount || '—'}` : 'Free'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-full', status.color)}>
+                      {status.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {patient?.phone && (
+                        <a href={`tel:${patient.phone}`} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                          <Phone className="h-4 w-4" />
+                        </a>
+                      )}
+                      <Link
+                        href={`/emr/consultation/${(() => {
+                          const mockConsult = consultations.find((c) => c.patientId === a.patientId);
+                          if (mockConsult) return mockConsult.id;
+                          const savedConsult = savedConsultations.find((c) => c.patientId === a.patientId);
+                          if (savedConsult) return savedConsult.id;
+                          return a.patientId;
+                        })()}`}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors',
+                          a.status === 'WAITING' ? 'bg-[#0A75BB] text-white hover:bg-[#085D94]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        )}
+                      >
+                        {a.status === 'WAITING' ? <><Play className="h-3 w-3" /> Start</> : <><Eye className="h-3 w-3" /> Open</>}
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {filteredOnline.length > 0 && (
+          <>
+            <div className="px-4 py-2 bg-cyan-50/50 border-t border-gray-200">
+              <p className="text-[11px] font-semibold text-cyan-600 uppercase">Online Bookings from Website ({filteredOnline.length})</p>
+            </div>
+            <tbody className="divide-y divide-gray-100">
+              {filteredOnline.map((b) => {
+                const name = `${b.firstName} ${b.lastName}`;
+                const status = b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
+
+                return (
+                  <tr key={b.bookingId} className="hover:bg-cyan-50/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-bold text-cyan-600">#{b.bookingId.slice(-6).toUpperCase()}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{name}</p>
+                          <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <span className="text-sm text-gray-600">{b.phone}</span>
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <span className="text-sm text-gray-600">{b.time}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn(
+                        'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full',
+                        b.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      )}>
+                        <CreditCard className="h-3 w-3" />
+                        ₹{b.consultationFee} {b.paymentStatus === 'paid' ? '' : '(Unpaid)'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-full', status.color)}>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {b.phone && (
+                          <a href={`tel:${b.phone}`} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                            <Phone className="h-4 w-4" />
+                          </a>
+                        )}
+                        <Link
+                          href={`/emr/consultation/${b.bookingId}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#0A75BB] text-white hover:bg-[#085D94] transition-colors"
+                        >
+                          <Play className="h-3 w-3" /> Start Rx
+                        </Link>
+                        <button
+                          onClick={() => setDeleteBookingId(b.bookingId)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete booking"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </>
+        )}
+
+        {filteredSaved.length > 0 && (
+          <>
+            <div className="px-4 py-2 bg-purple-50/50 border-t border-gray-200">
+              <p className="text-[11px] font-semibold text-purple-600 uppercase">Saved Consultations ({filteredSaved.length})</p>
+            </div>
+            <tbody className="divide-y divide-gray-100">
+              {filteredSaved.map((sc) => {
+                const pat = allPatients.find((p) => p.id === sc.patientId);
+                const name = pat ? `${pat.firstName} ${pat.lastName}` : 'Unknown Patient';
+                const age = pat ? calculateAge(new Date(pat.dateOfBirth)) : 0;
+                const gender = pat?.gender?.[0] || '?';
+                const status = statusConfig[sc.status] || statusConfig.COMPLETED;
+                const diagStr = sc.diagnoses?.map((d) => d.name).join(', ') || '';
+                const medCount = sc.prescriptions?.length || 0;
+
+                return (
+                  <tr key={sc.id} className="hover:bg-purple-50/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-bold text-purple-600">#{sc.id.slice(-7).toUpperCase()}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                          {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{name}</p>
+                          <p className="text-xs text-gray-500">{age}Y, {gender}{diagStr ? ` · ${diagStr}` : ''}{medCount > 0 ? ` · ${medCount} Rx` : ''}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <span className="text-sm text-gray-600">{pat?.phone || '—'}</span>
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <span className="text-sm text-gray-600">{sc.date}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                        Saved
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-full', status.color)}>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {pat?.phone && (
+                          <a href={`tel:${pat.phone}`} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                            <Phone className="h-4 w-4" />
+                          </a>
+                        )}
+                        <Link
+                          href={`/emr/consultation/${sc.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                        >
+                          <Eye className="h-3 w-3" /> View Rx
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </>
+        )}
+
+        {filtered.length === 0 && filteredOnline.length === 0 && filteredSaved.length === 0 && (
+          <div className="text-center py-12 text-gray-400">
+            <p className="text-sm">No consultations found</p>
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-gray-400 text-center">
+        Showing {filtered.length + filteredOnline.length + filteredSaved.length} consultations ({filtered.length} in-clinic + {filteredOnline.length} online + {filteredSaved.length} saved)
+      </p>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteBookingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <Trash2 className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Delete Booking?</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              Are you sure you want to delete this online booking? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteBookingId(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteBooking}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
