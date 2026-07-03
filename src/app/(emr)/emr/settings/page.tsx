@@ -381,19 +381,33 @@ export default function SettingsPage() {
 
   async function handleSave() {
     if (clinicId) {
-      try {
-        const res1 = await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'header', data: customRxHeader || '' }) });
-        const res2 = await fetch('/api/emr/letterhead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clinicId, type: 'footer', data: customRxFooter || '' }) });
-        if (!res1.ok || !res2.ok) throw new Error('server save failed');
-      } catch {
-        alert('Failed to save letterhead to server. Please try again.');
-        return;
+      const headerData = customRxHeader || '';
+      const footerData = customRxFooter || '';
+      if (headerData) {
+        try {
+          const res = await fetch('/api/emr/letterhead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clinicId, type: 'header', data: headerData }),
+          });
+          if (!res.ok) console.warn('Letterhead header server save failed:', res.status);
+        } catch (e) { console.warn('Letterhead header save error:', e); }
+      }
+      if (footerData) {
+        try {
+          const res = await fetch('/api/emr/letterhead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clinicId, type: 'footer', data: footerData }),
+          });
+          if (!res.ok) console.warn('Letterhead footer server save failed:', res.status);
+        } catch (e) { console.warn('Letterhead footer save error:', e); }
       }
     }
     try {
-      if (customRxHeader && customRxHeader.length < 100000) localStorage.setItem(rxHeaderKey, customRxHeader);
+      if (customRxHeader) localStorage.setItem(rxHeaderKey, customRxHeader);
       else localStorage.removeItem(rxHeaderKey);
-      if (customRxFooter && customRxFooter.length < 100000) localStorage.setItem(rxFooterKey, customRxFooter);
+      if (customRxFooter) localStorage.setItem(rxFooterKey, customRxFooter);
       else localStorage.removeItem(rxFooterKey);
     } catch { /* localStorage full, server has it */ }
     setSaved(true);

@@ -241,7 +241,7 @@ export default function PrintPreviewModal({
 
         {/* Prescription content */}
         <div className="p-3 overflow-y-auto max-h-[calc(100vh-120px)]">
-          <div className="border border-slate-200 rounded-lg shadow-sm">
+          <div className="border border-slate-200 rounded-lg shadow-sm" data-prescription-html="true">
             <PrescriptionPrint
               ref={prescriptionRef}
               patient={patient}
