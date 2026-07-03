@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import type { Metadata } from 'next';
 import { SITE_CONFIG, DOCTOR_INFO, CONSULTATION_FEE } from '@/lib/constants';
 import {
@@ -183,7 +182,7 @@ export default function HomePage() {
             <div className="hidden md:flex justify-center">
               <div className="relative">
                 <div className="w-80 h-80 rounded-3xl bg-white/10 backdrop-blur-sm border border-white/20 overflow-hidden shadow-2xl">
-                  <Image src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation India" width={320} height={320} className="w-full h-full object-cover" priority />
+                  <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation India" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute -bottom-4 -left-4 bg-white rounded-xl px-4 py-3 shadow-lg">
                   <div className="text-[#0A75BB] font-bold text-sm">Dr Rajesh Goel</div>
@@ -488,7 +487,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden md:flex">
             <div className="md:w-1/3">
-              <Image src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation" width={600} height={500} className="w-full h-64 md:h-full object-cover" />
+              <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation" className="w-full h-64 md:h-full object-cover" loading="lazy" />
             </div>
             <div className="md:w-2/3 p-8">
               <div className="text-sm text-[#0A75BB] font-semibold mb-1">Senior Nephrologist & Kidney Transplant Physician</div>

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { SITE_CONFIG } from '@/lib/constants';
 import { FAQSchema } from '@/components/seo/JsonLd';
 import { Navbar } from '@/components/layout/Navbar';
@@ -156,7 +155,7 @@ export default function MedicalTourismPage() {
             </div>
             <div className="hidden md:block">
               <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-                <Image src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Best Nephrologist India" width={400} height={500} className="w-full h-auto" />
+                <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Best Nephrologist India" className="w-full h-auto" />
               </div>
             </div>
           </div>

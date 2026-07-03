@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { SITE_CONFIG } from '@/lib/constants';
 import {
@@ -507,7 +506,7 @@ function BookingForm() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
-              <Image src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" width={96} height={96} className="w-full h-full object-cover" />
+              <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
             </div>
             <div className="text-center md:text-left">
               <h1 className="text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>

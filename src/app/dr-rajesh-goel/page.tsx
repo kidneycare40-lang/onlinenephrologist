@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import type { Metadata } from 'next';
 import { DOCTOR_INFO, SITE_CONFIG, CONSULTATION_FEE } from '@/lib/constants';
 import { PhysicianSchema, FAQSchema, BreadcrumbSchema } from '@/components/seo/JsonLd';
@@ -125,7 +124,7 @@ export default function DoctorProfilePage() {
           <div className="grid md:grid-cols-3 gap-10 items-center">
             <div className="md:col-span-1">
               <div className="rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-                <Image src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Best Nephrologist in Delhi" width={400} height={500} className="w-full h-auto" />
+                <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Best Nephrologist in Delhi" className="w-full h-auto" />
               </div>
             </div>
             <div className="md:col-span-2">
