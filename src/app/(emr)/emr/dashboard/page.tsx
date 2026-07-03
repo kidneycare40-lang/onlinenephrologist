@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import {
   Users,
   IndianRupee,
@@ -13,6 +12,7 @@ import {
   CalendarPlus,
   FileText,
   ArrowRight,
+  Phone,
   Video,
   Footprints,
   Stethoscope,
@@ -21,13 +21,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { todayAppointments, waitingRoom, patients } from '@/lib/data/emr-mock';
 import { useClinic } from '@/lib/emr-clinic-context';
 import type { AppointmentStatus, AppointmentType } from '@/types/emr';
 import { deleteOnlineBooking } from '@/lib/emr-delete';
-
-const emrDataPromise = typeof window !== 'undefined'
-  ? import('@/lib/data/emr-mock')
-  : null;
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
   'online': '',
@@ -93,6 +90,22 @@ function getStatusLabel(status: AppointmentStatus) {
   }
 }
 
+function getTypeIcon(type: AppointmentType) {
+  switch (type) {
+    case 'ONLINE': return <Video className="h-3 w-3" />;
+    case 'FOLLOW_UP': return <CalendarCheck className="h-3 w-3" />;
+    default: return <Footprints className="h-3 w-3" />;
+  }
+}
+
+function getTypeLabel(type: AppointmentType) {
+  switch (type) {
+    case 'ONLINE': return 'Online';
+    case 'FOLLOW_UP': return 'Follow-up';
+    default: return 'Walk-in';
+  }
+}
+
 export default function EMRDashboardPage() {
   const router = useRouter();
   const { clinicId, clinic } = useClinic();
@@ -100,20 +113,14 @@ export default function EMRDashboardPage() {
   const [, setRefreshKey] = useState(0);
   const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
   const [greeting, setGreeting] = useState('Good Morning');
-  const [mockData, setMockData] = useState<{ todayAppointments: any[]; waitingRoom: any[]; patients: any[] } | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const hour = new Date().getHours();
     setGreeting(hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening');
     setOnlineBookings(getOnlineBookings());
-    emrDataPromise?.then((mod) => {
-      setMockData({ todayAppointments: mod.todayAppointments, waitingRoom: mod.waitingRoom, patients: mod.patients });
-    });
   }, []);
 
-  const handleMarkPaid = useCallback((bookingId: string) => {
+  const handleMarkPaid = (bookingId: string) => {
     try {
       const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
       const updated = bookings.map((b: OnlineBooking) =>
@@ -123,111 +130,105 @@ export default function EMRDashboardPage() {
       setOnlineBookings(updated);
       setRefreshKey(k => k + 1);
     } catch {}
-  }, []);
+  };
 
-  const handleDeleteBooking = useCallback(() => {
+  const handleDeleteBooking = () => {
     if (!deleteBookingId) return;
     deleteOnlineBooking(deleteBookingId);
     setOnlineBookings((prev) => prev.filter((b) => b.bookingId !== deleteBookingId));
     setDeleteBookingId(null);
-  }, [deleteBookingId]);
+  };
 
-  const patients = mockData?.patients || [];
-  const todayAppointments = mockData?.todayAppointments || [];
-  const waitingRoom = mockData?.waitingRoom || [];
+  const clinicPatients = clinicId ? patients.filter((p) => p.clinicId === clinicId) : [];
+  const clinicPatientIds = new Set(clinicPatients.map((p) => p.id));
+  const clinicAppointments = clinicId ? todayAppointments.filter((a) => clinicPatientIds.has(a.patientId) || clinicPatients.some(p => p.id === a.patientId)) : [];
+  const clinicWaiting = clinicId ? waitingRoom.filter((w) => w.clinicId === clinicId) : [];
 
-  const allAppointments = useMemo(() => {
-    const clinicPatients = clinicId ? patients.filter((p: any) => p.clinicId === clinicId) : [];
-    const clinicPatientIds = new Set(clinicPatients.map((p: any) => p.id));
-    const clinicAppointments = clinicId ? todayAppointments.filter((a: any) => clinicPatientIds.has(a.patientId) || clinicPatients.some((p: any) => p.id === a.patientId)) : [];
-    const clinicWaiting = clinicId ? waitingRoom.filter((w: any) => w.clinicId === clinicId) : [];
-    const clinicOnlineBookings = clinicId
-      ? onlineBookings.filter((b) => {
-          const mappedClinicId = BOOKING_CLINIC_MAP[b.clinicId];
-          return mappedClinicId === clinicId;
-        })
-      : [];
+  const clinicOnlineBookings = clinicId
+    ? onlineBookings.filter((b) => {
+        const mappedClinicId = BOOKING_CLINIC_MAP[b.clinicId];
+        return mappedClinicId === clinicId;
+      })
+    : [];
 
-    const appointments = [
-      ...clinicAppointments.map((a: any) => ({
-        id: a.id,
-        tokenId: a.tokenId,
-        patientName: a.patientName,
-        patientPhone: a.patientPhone,
-        patientId: a.patientId,
-        time: a.time,
-        type: a.type,
-        status: a.status,
-        payment: a.payment,
-        amount: a.amount,
-        reason: a.reason,
-        isOnline: false as const,
-        date: a.date,
-        ageGender: (() => {
-          const found = clinicPatients.find((p: any) => p.id === a.patientId) || patients.find((p: any) => p.id === a.patientId);
-          if (!found) return '—';
-          const age = Math.floor((Date.now() - new Date(found.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-          return `${age} / ${found.gender[0]}`;
-        })(),
-      })),
-      ...clinicOnlineBookings.map((b) => ({
-        id: b.bookingId,
-        tokenId: b.bookingId.slice(-6).toUpperCase(),
-        patientName: `${b.firstName} ${b.lastName}`,
-        patientPhone: b.phone,
-        patientId: '',
-        time: b.time,
-        type: 'ONLINE' as AppointmentType,
-        status: (b.status === 'pending' ? 'WAITING' : b.status === 'confirmed' ? 'COMPLETED' : 'WAITING') as AppointmentStatus,
-        payment: b.paymentStatus === 'paid' ? 'PAID' as const : 'UNPAID' as const,
-        amount: b.consultationFee,
-        reason: b.reason,
-        isOnline: true as const,
-        date: b.date,
-        ageGender: b.age ? `${b.age} / ${b.gender?.[0] || '?'}` : '—',
-      })),
-    ];
+  const allAppointments = [
+    ...clinicAppointments.map(a => ({
+      id: a.id,
+      tokenId: a.tokenId,
+      patientName: a.patientName,
+      patientPhone: a.patientPhone,
+      patientId: a.patientId,
+      time: a.time,
+      type: a.type,
+      status: a.status,
+      payment: a.payment,
+      amount: a.amount,
+      reason: a.reason,
+      isOnline: false as const,
+      date: a.date,
+      ageGender: (() => {
+        const found = clinicPatients.find(p => p.id === a.patientId) || patients.find(p => p.id === a.patientId);
+        if (!found) return '—';
+        const age = Math.floor((Date.now() - new Date(found.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        return `${age} / ${found.gender[0]}`;
+      })(),
+    })),
+    ...clinicOnlineBookings.map(b => ({
+      id: b.bookingId,
+      tokenId: b.bookingId.slice(-6).toUpperCase(),
+      patientName: `${b.firstName} ${b.lastName}`,
+      patientPhone: b.phone,
+      patientId: '',
+      time: b.time,
+      type: 'ONLINE' as AppointmentType,
+      status: (b.status === 'pending' ? 'WAITING' : b.status === 'confirmed' ? 'COMPLETED' : 'WAITING') as AppointmentStatus,
+      payment: b.paymentStatus === 'paid' ? 'PAID' as const : 'UNPAID' as const,
+      amount: b.consultationFee,
+      reason: b.reason,
+      isOnline: true as const,
+      date: b.date,
+      ageGender: b.age ? `${b.age} / ${b.gender?.[0] || '?'}` : '—',
+    })),
+  ];
 
-    return { appointments, clinicPatients, clinicWaiting };
-  }, [clinicId, patients, todayAppointments, waitingRoom, onlineBookings]);
+  const todayCount = allAppointments.length;
+  const revenue = allAppointments
+    .filter((a) => a.payment === 'PAID' && a.amount)
+    .reduce((sum, a) => sum + (a.amount || 0), 0);
+  const waitingCount = clinicWaiting.length;
+  const followUpCount = allAppointments.filter((a) => a.type === 'FOLLOW_UP').length;
 
-  const stats = useMemo(() => {
-    const todayCount = allAppointments.appointments.length;
-    const revenue = allAppointments.appointments
-      .filter((a) => a.payment === 'PAID' && a.amount)
-      .reduce((sum, a) => sum + (a.amount || 0), 0);
-    const waitingCount = allAppointments.clinicWaiting.length;
-    const followUpCount = allAppointments.appointments.filter((a) => a.type === 'FOLLOW_UP').length;
+  const stats = [
+    {
+      label: "Today's Patients",
+      value: todayCount,
+      icon: Users,
+      iconBg: 'bg-blue-500',
+    },
+    {
+      label: 'Revenue',
+      value: `₹${revenue.toLocaleString('en-IN')}`,
+      icon: IndianRupee,
+      iconBg: 'bg-emerald-500',
+    },
+    {
+      label: 'Waiting',
+      value: waitingCount,
+      icon: Clock,
+      iconBg: 'bg-amber-500',
+      pulse: true,
+    },
+    {
+      label: 'Follow-ups',
+      value: followUpCount,
+      icon: CalendarCheck,
+      iconBg: 'bg-purple-500',
+    },
+  ];
 
-    return [
-      { label: "Today's Patients", value: todayCount, icon: Users, iconBg: 'bg-blue-500' },
-      { label: 'Revenue', value: `₹${revenue.toLocaleString('en-IN')}`, icon: IndianRupee, iconBg: 'bg-emerald-500' },
-      { label: 'Waiting', value: waitingCount, icon: Clock, iconBg: 'bg-amber-500', pulse: true },
-      { label: 'Follow-ups', value: followUpCount, icon: CalendarCheck, iconBg: 'bg-purple-500' },
-    ];
-  }, [allAppointments]);
-
-  const recentPatients = useMemo(() => {
-    return [...allAppointments.clinicPatients]
-      .sort((a: any, b: any) => new Date(b.lastVisit || '0').getTime() - new Date(a.lastVisit || '0').getTime())
-      .slice(0, 5);
-  }, [allAppointments.clinicPatients]);
-
-  const { appointments } = allAppointments;
-
-  if (!mounted || !mockData) {
-    return (
-      <div className="px-4 lg:px-6 py-5 max-w-[1400px] mx-auto space-y-5 pb-24 lg:pb-6">
-        <div className="animate-pulse space-y-5">
-          <div className="h-8 bg-gray-200 rounded w-64" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[1,2,3,4].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl" />)}
-          </div>
-          <div className="h-64 bg-gray-100 rounded-xl" />
-        </div>
-      </div>
-    );
-  }
+  const recentPatients = [...clinicPatients]
+    .sort((a, b) => new Date(b.lastVisit || '0').getTime() - new Date(a.lastVisit || '0').getTime())
+    .slice(0, 5);
 
   return (
     <div className="px-4 lg:px-6 py-5 max-w-[1400px] mx-auto space-y-5 pb-24 lg:pb-6">
@@ -275,7 +276,7 @@ export default function EMRDashboardPage() {
         {/* Today's Appointments */}
         <div className="lg:col-span-7 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900 text-sm">Today&apos;s Appointments <span className="text-gray-400 font-normal">({appointments.length})</span></h2>
+            <h2 className="font-semibold text-gray-900 text-sm">Today&apos;s Appointments <span className="text-gray-400 font-normal">({allAppointments.length})</span></h2>
             <Link
               href="/emr/appointments"
               className="text-xs text-[#0A75BB] hover:text-[#085D94] font-medium flex items-center gap-1"
@@ -299,7 +300,7 @@ export default function EMRDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {appointments.map((apt) => (
+                {allAppointments.map((apt) => (
                   <tr
                     key={apt.id}
                     className="hover:bg-gray-50/60 cursor-pointer transition-colors"
@@ -388,10 +389,10 @@ export default function EMRDashboardPage() {
 
             {/* Mobile cards */}
             <div className="lg:hidden divide-y divide-gray-50">
-              {appointments.map((apt) => (
+              {allAppointments.map((apt) => (
                 <div
                   key={apt.id}
-                  className="px-4 py-3 active:bg-gray-100 transition-colors cursor-pointer"
+                  className="px-4 py-3 hover:bg-gray-50/60 active:bg-gray-100 transition-colors cursor-pointer"
                   onClick={() => apt.patientId ? router.push(`/emr/consultation/${apt.patientId}`) : undefined}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -461,11 +462,11 @@ export default function EMRDashboardPage() {
               <h3 className="font-semibold text-gray-900 text-sm">Recent Patients</h3>
             </div>
             <div className="divide-y divide-gray-50">
-              {recentPatients.map((patient: any) => (
+              {recentPatients.map((patient) => (
                 <div
                   key={patient.id}
                   onClick={() => router.push(`/emr/patients/${patient.id}`)}
-                  className="px-4 py-3 active:bg-gray-100 cursor-pointer transition-colors"
+                  className="px-4 py-3 hover:bg-gray-50/60 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
