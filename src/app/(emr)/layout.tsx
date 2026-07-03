@@ -1,13 +1,19 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import TopNav from '@/components/emr/TopNav';
 import MobileBottomNav from '@/components/emr/MobileBottomNav';
 import { ClinicProvider } from '@/lib/emr-clinic-context';
+import { initEmrSync } from '@/lib/emr-sync';
 
 export default function EMRLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideTopNav = pathname === '/emr/login' || pathname === '/emr/clinic-selection' || pathname === '/emr';
+
+  useEffect(() => {
+    initEmrSync();
+  }, []);
 
   if (hideTopNav) {
     return (
