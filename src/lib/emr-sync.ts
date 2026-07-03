@@ -23,30 +23,23 @@ const writeQueue: Record<string, string> = {};
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let isHydrated = false;
 
-function fetchWithTimeout(url: string, init?: RequestInit, ms = 5000): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
-}
-
 async function flushToServer() {
   const entries = Object.entries(writeQueue);
   if (entries.length === 0) return;
 
-  const toFlush = { ...writeQueue };
-  for (const key of Object.keys(writeQueue)) {
-    delete writeQueue[key];
-  }
-
-  await Promise.allSettled(
-    Object.entries(toFlush).map(([key, value]) =>
-      fetchWithTimeout('/api/emr/data', {
+  for (const [key, value] of entries) {
+    try {
+      await fetch('/api/emr/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value }),
-      }, 8000).catch(() => {})
-    )
-  );
+      });
+    } catch { /* server sync failed, will retry */ }
+  }
+
+  for (const key of Object.keys(writeQueue)) {
+    delete writeQueue[key];
+  }
 }
 
 function scheduleFlush() {
@@ -81,7 +74,7 @@ export async function hydrateFromServer() {
   if (isHydrated || typeof window === 'undefined') return;
 
   try {
-    const res = await fetchWithTimeout('/api/emr/data', undefined, 5000);
+    const res = await fetch('/api/emr/data');
     if (!res.ok) return;
     const store = await res.json();
     const originalSetItem = Storage.prototype.setItem;
@@ -103,18 +96,13 @@ export async function hydrateFromServer() {
   Storage.prototype.removeItem = patchedRemoveItem as typeof Storage.prototype.removeItem;
 }
 
-let listenersAttached = false;
-
 export function initEmrSync() {
   if (typeof window === 'undefined') return;
   hydrateFromServer();
 
-  if (!listenersAttached) {
-    listenersAttached = true;
-    window.addEventListener('beforeunload', () => {
-      if (Object.keys(writeQueue).length > 0) {
-        navigator.sendBeacon('/api/emr/data', JSON.stringify({ flush: true, queue: writeQueue }));
-      }
-    });
-  }
+  window.addEventListener('beforeunload', () => {
+    if (Object.keys(writeQueue).length > 0) {
+      navigator.sendBeacon('/api/emr/data', JSON.stringify({ flush: true, queue: writeQueue }));
+    }
+  });
 }
