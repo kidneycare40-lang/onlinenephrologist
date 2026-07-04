@@ -1,0 +1,151 @@
+// API Client - Thin wrapper around fetch for all EMR API calls
+
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    ...options,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new ApiError(body.error || res.statusText, res.status);
+  }
+
+  return res.json();
+}
+
+export const api = {
+  get: <T>(url: string) => request<T>(url),
+  post: <T>(url: string, body: unknown) =>
+    request<T>(url, { method: 'POST', body: JSON.stringify(body) }),
+  put: <T>(url: string, body: unknown) =>
+    request<T>(url, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: (url: string) => request<{ success: boolean }>(url, { method: 'DELETE' }),
+};
+
+// Convenience builders
+export const patientsApi = {
+  list: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any>(`/api/patients${qs}`);
+  },
+  get: (id: string) => api.get<any>(`/api/patients?id=${id}`),
+  getByUHID: (uhid: string) => api.get<any>(`/api/patients?uhid=${uhid}`),
+  search: (q: string) => api.get<any[]>(`/api/patients?q=${encodeURIComponent(q)}`),
+  create: (data: any) => api.post<any>('/api/patients', data),
+  update: (id: string, data: any) => api.put<any>('/api/patients', { id, ...data }),
+  delete: (id: string) => api.delete(`/api/patients?id=${id}`),
+};
+
+export const appointmentsApi = {
+  list: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any>(`/api/appointments${qs}`);
+  },
+  getByDateRange: (start: string, end: string, doctorId?: string) => {
+    const qs = new URLSearchParams({ startDate: start, endDate: end });
+    if (doctorId) qs.set('doctorId', doctorId);
+    return api.get<any[]>(`/api/appointments?${qs}`);
+  },
+  getByDoctorAndDate: (doctorId: string, date: string) =>
+    api.get<any[]>(`/api/appointments?doctorId=${doctorId}&date=${date}`),
+  create: (data: any) => api.post<any>('/api/appointments', data),
+  updateStatus: (id: string, status: string) =>
+    api.put<any>('/api/appointments', { id, status }),
+  cancel: (id: string) =>
+    api.put<any>('/api/appointments', { id, action: 'cancel' }),
+  reschedule: (id: string, newDate: string, newTime: string) =>
+    api.put<any>('/api/appointments', { id, action: 'reschedule', newDate, newTime }),
+  delete: (id: string) => api.delete(`/api/appointments?id=${id}`),
+};
+
+export const consultationsApi = {
+  get: (id: string) => api.get<any>(`/api/consultations?id=${id}`),
+  getByPatient: (patientId: string) =>
+    api.get<any[]>(`/api/consultations?patientId=${patientId}`),
+  create: (data: any) => api.post<any>('/api/consultations', data),
+  update: (id: string, data: any) => api.put<any>('/api/consultations', { id, ...data }),
+  complete: (id: string) =>
+    api.put<any>('/api/consultations', { id, action: 'complete' }),
+  delete: (id: string) => api.delete(`/api/consultations?id=${id}`),
+};
+
+export const prescriptionsApi = {
+  get: (id: string) => api.get<any>(`/api/prescriptions?id=${id}`),
+  getByPatient: (patientId: string) =>
+    api.get<any[]>(`/api/prescriptions?patientId=${patientId}`),
+  getTemplates: () => api.get<any[]>('/api/prescriptions?templates=true'),
+  create: (data: any) => api.post<any>('/api/prescriptions', data),
+  update: (id: string, data: any) => api.put<any>('/api/prescriptions', { id, ...data }),
+  delete: (id: string) => api.delete(`/api/prescriptions?id=${id}`),
+};
+
+export const vitalsApi = {
+  get: (patientId: string, type?: string) => {
+    const qs = new URLSearchParams({ patientId });
+    if (type) qs.set('type', type);
+    return api.get<{ latest: any; history?: any[]; trend?: any[] }>(`/api/vitals?${qs}`);
+  },
+  create: (data: any) => api.post<any>('/api/vitals', data),
+};
+
+export const billingApi = {
+  list: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any>(`/api/billing${qs}`);
+  },
+  get: (id: string) => api.get<any>(`/api/billing?id=${id}`),
+  getByPatient: (patientId: string) =>
+    api.get<any[]>(`/api/billing?patientId=${patientId}`),
+  create: (data: any) => api.post<any>('/api/billing', data),
+  recordPayment: (data: any) =>
+    api.post<any>('/api/billing', { ...data, action: 'record_payment' }),
+  delete: (id: string) => api.delete(`/api/billing?id=${id}`),
+};
+
+export const dashboardApi = {
+  getStats: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any>(`/api/dashboard${qs}`);
+  },
+  getTodayAppointments: (params?: Record<string, string>) => {
+    const qs = new URLSearchParams({ section: 'today-appointments', ...params });
+    return api.get<any[]>(`/api/dashboard?${qs}`);
+  },
+  getRevenue: (params?: Record<string, string>) => {
+    const qs = new URLSearchParams({ section: 'revenue', ...params });
+    return api.get<any[]>(`/api/dashboard?${qs}`);
+  },
+};
+
+export const settingsApi = {
+  getAll: (clinicId?: string) => {
+    const qs = clinicId ? `?clinicId=${clinicId}` : '';
+    return api.get<Record<string, any>>(`/api/settings${qs}`);
+  },
+  get: (key: string, clinicId?: string) => {
+    const qs = new URLSearchParams({ key });
+    if (clinicId) qs.set('clinicId', clinicId);
+    return api.get<{ key: string; value: any }>(`/api/settings?${qs}`);
+  },
+  set: (key: string, value: any, clinicId?: string) =>
+    api.post<any>('/api/settings', { key, value, clinicId }),
+  getClinics: () => api.get<any[]>('/api/settings?section=clinics'),
+  getDoctors: (clinicId?: string) => {
+    const qs = clinicId ? `?section=doctors&clinicId=${clinicId}` : '?section=doctors';
+    return api.get<any[]>(`/api/settings${qs}`);
+  },
+  getLetterheads: (clinicId?: string) => {
+    const qs = clinicId ? `?section=letterheads&clinicId=${clinicId}` : '?section=letterheads';
+    return api.get<any[]>(`/api/settings${qs}`);
+  },
+};

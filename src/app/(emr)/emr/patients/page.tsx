@@ -7,70 +7,8 @@ import {
   Bell, Trash2, RefreshCw, Users, Activity, Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { useClinic } from '@/lib/emr-clinic-context';
-import { EMRPatient } from '@/types/emr';
-import { filterDeletedPatients, deleteAddedPatient, markPatientDeleted } from '@/lib/emr-delete';
-
-function loadAllDynamicPatients(): EMRPatient[] {
-  if (typeof window === 'undefined') return [];
-  const result: EMRPatient[] = [];
-  try {
-    const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
-    if (Array.isArray(added)) result.push(...added);
-  } catch { /* ignore */ }
-  try {
-    const consultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
-    if (Array.isArray(consultations)) {
-      for (const c of consultations) {
-        if (c.patient && c.patient.id && !result.some(p => p.id === c.patient.id)) {
-          result.push(c.patient);
-        }
-      }
-    }
-  } catch { /* ignore */ }
-  try {
-    const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-    if (Array.isArray(bookings)) {
-      for (const b of bookings) {
-        if (b.patientData && b.patientData.firstName) {
-          const id = b.patientId || 'obp-' + b.bookingId;
-          if (!result.some(p => p.id === id)) {
-            result.push({
-              id,
-              firstName: b.patientData.firstName || '',
-              lastName: b.patientData.lastName || '',
-              phone: b.patientData.phone || '',
-              email: b.patientData.email || '',
-              dateOfBirth: b.patientData.dateOfBirth || '',
-              gender: b.patientData.gender || 'Male',
-              bloodGroup: b.patientData.bloodGroup || '',
-              uhid: id.startsWith('obp-') ? 'OB-' + id.slice(4, -1) : 'OB-' + id,
-              clinicId: b.clinicId || '',
-              abhaNumber: '',
-              address: b.patientData.address || '',
-              city: b.patientData.city || '',
-              state: b.patientData.state || '',
-              pincode: b.patientData.pincode || '',
-              emergencyContactName: '',
-              emergencyContactPhone: '',
-              emergencyContactRelation: '',
-              allergies: [],
-              medicalHistory: '',
-              isChronic: false,
-              isActive: true,
-              createdAt: b.createdAt || new Date().toISOString(),
-              lastVisit: b.createdAt || '',
-              totalVisits: 1,
-              familyMembers: [],
-            });
-          }
-        }
-      }
-    }
-  } catch { /* ignore */ }
-  return result;
-}
+import { patientsApi, ApiError } from '@/lib/api-client';
 
 function calculateAge(dob: string): number {
   if (!dob) return 0;
@@ -96,93 +34,121 @@ export default function PatientListPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState<EMRPatient | null>(null);
-  const [deletedVersion, setDeletedVersion] = useState(0);
-  const [tick, setTick] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [clinicFilter, setClinicFilter] = useState<string>(clinicId || 'all');
+
+  // API state
+  const [allPatients, setAllPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchDebounced, setSearchDebounced] = useState('');
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchDebounced(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (clinicId) setClinicFilter(clinicId);
   }, [clinicId]);
 
-  const refresh = useCallback(() => setTick(t => t + 1), []);
+  // Fetch patients from API
+  const refreshPatients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params: Record<string, string> = {};
+      if (clinicFilter && clinicFilter !== 'all') params.clinicId = clinicFilter;
+      if (searchDebounced) params.search = searchDebounced;
+      if (fromDate) params.dateFrom = fromDate;
+      if (toDate) params.dateTo = toDate;
 
-  useEffect(() => {
-    const interval = setInterval(refresh, 3000);
-    const handler = (e: StorageEvent) => {
-      if (e.key?.startsWith('emr_')) refresh();
-    };
-    window.addEventListener('storage', handler);
-    return () => { clearInterval(interval); window.removeEventListener('storage', handler); };
-  }, [refresh]);
+      const result = await patientsApi.list(params);
+      setAllPatients(result.data || []);
+    } catch (err: any) {
+      setError(err.message);
+      // Fallback: try loading from localStorage
+      try {
+        const dynamicPatients: any[] = [];
+        const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        if (Array.isArray(added)) dynamicPatients.push(...added);
+        const consultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+        if (Array.isArray(consultations)) {
+          for (const c of consultations) {
+            if (c.patient && c.patient.id && !dynamicPatients.some((p: any) => p.id === c.patient.id)) {
+              dynamicPatients.push(c.patient);
+            }
+          }
+        }
+        setAllPatients(dynamicPatients);
+      } catch {
+        setAllPatients([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [clinicFilter, searchDebounced, fromDate, toDate]);
 
-  const dynamicPatients = useMemo(() => loadAllDynamicPatients(), [tick]);
-
-  const allPatients = useMemo(
-    () => filterDeletedPatients([...mockPatients, ...dynamicPatients]),
-    [dynamicPatients, deletedVersion]
-  );
+  useEffect(() => { refreshPatients(); }, [refreshPatients]);
 
   const filtered = useMemo(() => {
     let result = [...allPatients];
 
-    if (clinicFilter !== 'all') {
-      result = result.filter(p => p.clinicId === clinicFilter);
-    }
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(p =>
-        `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
-        p.phone.includes(q) ||
-        p.uhid.toLowerCase().includes(q) ||
-        (p.email && p.email.toLowerCase().includes(q))
-      );
-    }
-
+    // Client-side date filtering (API may not filter dates yet)
     if (fromDate) {
-      result = result.filter(p => p.lastVisit && p.lastVisit >= fromDate);
+      result = result.filter((p: any) => {
+        const visitDate = p.last_visit_date || p.lastVisit;
+        return visitDate && visitDate >= fromDate;
+      });
     }
     if (toDate) {
-      result = result.filter(p => p.lastVisit && p.lastVisit <= toDate);
+      result = result.filter((p: any) => {
+        const visitDate = p.last_visit_date || p.lastVisit;
+        return visitDate && visitDate <= toDate;
+      });
     }
 
-    result.sort((a, b) => {
-      if (!a.lastVisit) return 1;
-      if (!b.lastVisit) return -1;
-      return b.lastVisit.localeCompare(a.lastVisit);
+    result.sort((a: any, b: any) => {
+      const aDate = a.last_visit_date || a.lastVisit || '';
+      const bDate = b.last_visit_date || b.lastVisit || '';
+      if (!aDate) return 1;
+      if (!bDate) return -1;
+      return bDate.localeCompare(aDate);
     });
 
     return result;
-  }, [search, fromDate, toDate, allPatients, clinicFilter]);
+  }, [allPatients, fromDate, toDate]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const stats = useMemo(() => ({
     total: allPatients.length,
-    chronic: allPatients.filter(p => p.isChronic).length,
-    active: allPatients.filter(p => p.isActive).length,
-    thisMonth: allPatients.filter(p => {
-      if (!p.lastVisit) return false;
-      const d = new Date(p.lastVisit);
+    chronic: allPatients.filter((p: any) => p.is_chronic || p.isChronic).length,
+    active: allPatients.filter((p: any) => p.is_active !== false).length,
+    thisMonth: allPatients.filter((p: any) => {
+      const d = p.last_visit_date || p.lastVisit;
+      if (!d) return false;
+      const date = new Date(d);
       const now = new Date();
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     }).length,
   }), [allPatients]);
 
   const boardUpdates = useMemo(() => {
     const updates: { id: number; text: string; time: string }[] = [];
     const now = new Date();
-    const recent = allPatients.filter(p => {
-      if (!p.lastVisit) return false;
-      const diff = now.getTime() - new Date(p.lastVisit).getTime();
+    const recent = allPatients.filter((p: any) => {
+      const d = p.last_visit_date || p.lastVisit;
+      if (!d) return false;
+      const diff = now.getTime() - new Date(d).getTime();
       return diff < 7 * 24 * 60 * 60 * 1000;
     });
     if (recent.length > 0) {
       updates.push({ id: 1, text: `${recent.length} patients visited this week`, time: 'This week' });
     }
-    const chronicCount = allPatients.filter(p => p.isChronic).length;
+    const chronicCount = allPatients.filter((p: any) => p.is_chronic || p.isChronic).length;
     if (chronicCount > 0) {
       updates.push({ id: 2, text: `${chronicCount} chronic patients under follow-up`, time: 'Active' });
     }
@@ -190,15 +156,20 @@ export default function PatientListPage() {
     return updates;
   }, [allPatients]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    const patientId = deleteTarget.id;
-    const isAdded = dynamicPatients.some(p => p.id === patientId);
-    if (isAdded) {
-      deleteAddedPatient(patientId);
+    try {
+      await patientsApi.delete(deleteTarget.id);
+      setAllPatients((prev) => prev.filter((p: any) => p.id !== deleteTarget.id));
+    } catch {
+      // Fallback: mark in localStorage
+      try {
+        const deleted = JSON.parse(localStorage.getItem('emr_deleted_patients') || '[]');
+        deleted.push(deleteTarget.id);
+        localStorage.setItem('emr_deleted_patients', JSON.stringify(deleted));
+        setAllPatients((prev) => prev.filter((p: any) => p.id !== deleteTarget.id));
+      } catch {}
     }
-    markPatientDeleted(patientId);
-    setDeletedVersion(v => v + 1);
     setDeleteTarget(null);
   };
 
@@ -206,6 +177,18 @@ export default function PatientListPage() {
     setClinicFilter(val);
     setCurrentPage(1);
   };
+
+  const getPatientName = (p: any) => `${p.first_name || p.firstName || ''} ${p.last_name || p.lastName || ''}`.trim();
+  const getPatientAge = (p: any) => {
+    const dob = p.date_of_birth || p.dateOfBirth;
+    return dob ? calculateAge(dob) : '?';
+  };
+  const getPatientGender = (p: any) => (p.gender || '?')[0];
+  const getPatientPhone = (p: any) => p.phone || '';
+  const getPatientUHID = (p: any) => p.uhid || '';
+  const getPatientVisitDate = (p: any) => p.last_visit_date || p.lastVisit || '';
+  const getPatientClinic = (p: any) => p.clinicId || p.primary_clinic_id || '';
+  const getPatientChronic = (p: any) => p.is_chronic || p.isChronic || false;
 
   return (
     <div className="px-4 lg:px-6 py-5 max-w-[1400px] mx-auto pb-24 lg:pb-6">
@@ -237,10 +220,10 @@ export default function PatientListPage() {
             <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }}
               className="text-xs text-gray-700 focus:outline-none" />
           </div>
-          <button onClick={refresh}
+          <button onClick={refreshPatients}
             className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
             title="Refresh">
-            <RefreshCw className={`h-4 w-4 ${tick > 0 ? '' : ''}`} />
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           </button>
         </div>
       </div>
@@ -277,42 +260,42 @@ export default function PatientListPage() {
                   <tr>
                     <td colSpan={6} className="px-4 py-12 text-center">
                       <Users className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">No patients found</p>
+                      <p className="text-sm text-gray-500">{loading ? 'Loading patients...' : 'No patients found'}</p>
                       <p className="text-xs text-gray-400 mt-1">Add patients from consultation or booking</p>
                     </td>
                   </tr>
                 ) : (
-                  paginated.map((patient, idx) => (
+                  paginated.map((patient: any, idx: number) => (
                     <tr key={patient.id}
                       className={cn('hover:bg-gray-50/60 cursor-pointer transition-colors', idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30')}
                       onClick={() => router.push(`/emr/patients/${patient.id}`)}>
-                      <td className="px-4 py-2.5 text-xs font-mono text-gray-500">{patient.uhid}</td>
+                      <td className="px-4 py-2.5 text-xs font-mono text-gray-500">{getPatientUHID(patient)}</td>
                       <td className="px-4 py-2.5">
-                        <span className="text-sm font-medium text-gray-900">{patient.firstName} {patient.lastName}</span>
+                        <span className="text-sm font-medium text-gray-900">{getPatientName(patient)}</span>
                         <span className="text-xs text-gray-500 ml-1.5">
-                          ({patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : '?'}, {patient.gender?.[0] || '?'})
+                          ({getPatientAge(patient)}, {getPatientGender(patient)})
                         </span>
-                        {patient.isChronic && (
+                        {getPatientChronic(patient) && (
                           <span className="ml-1.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-medium rounded">CKD</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-gray-600 hidden sm:table-cell">{patient.phone}</td>
+                      <td className="px-4 py-2.5 text-xs text-gray-600 hidden sm:table-cell">{getPatientPhone(patient)}</td>
                       <td className="px-4 py-2.5 hidden md:table-cell">
                         <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium',
-                          patient.clinicId === 'kcc-faridabad' && 'bg-blue-50 text-blue-700',
-                          patient.clinicId === 'kcc-saket' && 'bg-amber-50 text-amber-700',
-                          patient.clinicId === 'psri-delhi' && 'bg-purple-50 text-purple-700',
-                          patient.clinicId === 'online' && 'bg-emerald-50 text-emerald-700',
-                          !patient.clinicId && 'bg-gray-50 text-gray-500',
+                          getPatientClinic(patient) === 'kcc-faridabad' && 'bg-blue-50 text-blue-700',
+                          getPatientClinic(patient) === 'kcc-saket' && 'bg-amber-50 text-amber-700',
+                          getPatientClinic(patient) === 'psri-delhi' && 'bg-purple-50 text-purple-700',
+                          getPatientClinic(patient) === 'online' && 'bg-emerald-50 text-emerald-700',
+                          !getPatientClinic(patient) && 'bg-gray-50 text-gray-500',
                         )}>
-                          {patient.clinicId === 'kcc-faridabad' ? 'Faridabad' :
-                           patient.clinicId === 'kcc-saket' ? 'Saket' :
-                           patient.clinicId === 'psri-delhi' ? 'PSRI' :
-                           patient.clinicId === 'online' ? 'Online' : '—'}
+                          {getPatientClinic(patient) === 'kcc-faridabad' ? 'Faridabad' :
+                           getPatientClinic(patient) === 'kcc-saket' ? 'Saket' :
+                           getPatientClinic(patient) === 'psri-delhi' ? 'PSRI' :
+                           getPatientClinic(patient) === 'online' ? 'Online' : '—'}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-600">
-                        {patient.lastVisit ? formatDateShort(patient.lastVisit) : '—'}
+                        {getPatientVisitDate(patient) ? formatDateShort(getPatientVisitDate(patient)) : '—'}
                       </td>
                       <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
@@ -419,7 +402,7 @@ export default function PatientListPage() {
                 { id: 'psri-delhi', label: 'PSRI', color: 'bg-purple-500' },
                 { id: 'online', label: 'Online', color: 'bg-emerald-500' },
               ].map(cl => {
-                const count = allPatients.filter(p => p.clinicId === cl.id).length;
+                const count = allPatients.filter((p: any) => getPatientClinic(p) === cl.id).length;
                 return (
                   <button key={cl.id} onClick={() => handleClinicFilterChange(cl.id)}
                     className={cn('w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
@@ -446,7 +429,7 @@ export default function PatientListPage() {
             </div>
             <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Delete Patient?</h3>
             <p className="text-sm text-gray-500 text-center mb-6">
-              Are you sure you want to delete <strong>{deleteTarget.firstName} {deleteTarget.lastName}</strong> ({deleteTarget.uhid})?
+              Are you sure you want to delete <strong>{getPatientName(deleteTarget)}</strong> ({getPatientUHID(deleteTarget)})?
             </p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteTarget(null)}

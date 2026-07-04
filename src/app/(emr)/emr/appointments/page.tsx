@@ -14,11 +14,11 @@ import {
   MapPin,
   X,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { todayAppointments, waitingRoom, doctors, patients } from '@/lib/data/emr-mock';
-import type { EMRAppointment, AppointmentStatus, AppointmentType } from '@/types/emr';
 import { useClinic } from '@/lib/emr-clinic-context';
+import { appointmentsApi, patientsApi, ApiError } from '@/lib/api-client';
 import { CreditCard } from 'lucide-react';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
@@ -29,6 +29,7 @@ const BOOKING_CLINIC_MAP: Record<string, string> = {
 };
 
 function formatTimeDisplay(time24: string): string {
+  if (!time24) return '';
   const [h, m] = time24.split(':').map(Number);
   const ampm = h >= 12 ? 'PM' : 'AM';
   const hour12 = h % 12 || 12;
@@ -67,8 +68,10 @@ function generateTimeSlots(clinicId: string): string[] {
   return slots;
 }
 
-const STATUS_COLORS: Record<AppointmentStatus, string> = {
+const STATUS_COLORS: Record<string, string> = {
   WAITING: 'bg-amber-50 text-amber-700 border-l-4 border-amber-400',
+  SCHEDULED: 'bg-amber-50 text-amber-700 border-l-4 border-amber-400',
+  CONFIRMED: 'bg-blue-50 text-blue-700 border-l-4 border-blue-400',
   IN_PROGRESS: 'bg-blue-50 text-blue-700 border-l-4 border-blue-400',
   COMPLETED: 'bg-emerald-50 text-emerald-700 border-l-4 border-emerald-400',
   CANCELLED: 'bg-gray-50 text-gray-500 border-l-4 border-gray-300',
@@ -79,48 +82,31 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('M');
   const [age, setAge] = useState('');
-  const [city, setCity] = useState('');
-  const [address, setAddress] = useState('');
-  const [pin, setPin] = useState('');
   const [duplicate, setDuplicate] = useState<any>(null);
   const { clinicId } = useClinic();
 
-  // Detect duplicates
+  // Detect duplicates via API search
   useEffect(() => {
     if (!open) { setDuplicate(null); return; }
-    const q = (phone || name).trim().toLowerCase();
+    const q = (phone || name).trim();
     if (q.length < 3) { setDuplicate(null); return; }
-    const all: any[] = [];
-    try { all.push(...JSON.parse(localStorage.getItem('emr_added_patients') || '[]')); } catch {}
-    try {
-      const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-      if (Array.isArray(bookings)) {
-        for (const b of bookings) {
-          if (b.patientData?.firstName) {
-            const id = b.patientId || 'obp-' + b.bookingId;
-            if (!all.some((p: any) => p.id === id)) {
-              all.push({ id, firstName: b.patientData.firstName, lastName: b.patientData.lastName || '', phone: b.patientData.phone || '', clinicId: b.clinicId || '', uhid: 'OB-' + id.slice(4) });
-            }
-          }
-        }
+
+    let cancelled = false;
+    patientsApi.search(q).then(results => {
+      if (cancelled) return;
+      if (results && results.length > 0) {
+        setDuplicate(results[0]);
+      } else {
+        setDuplicate(null);
       }
-    } catch {}
-    try {
-      const { patients: mockPts } = require('@/lib/data/emr-mock');
-      all.push(...mockPts);
-    } catch {}
-    const searchPhone = phone.replace(/\D/g, '');
-    const match = all.find((p: any) => {
-      const fullName = `${p.firstName || ''} ${p.lastName || ''}`.toLowerCase();
-      const pPhone = (p.phone || '').replace(/\D/g, '');
-      return (phone && searchPhone.length >= 5 && pPhone.includes(searchPhone)) || (name && fullName.includes(q));
+    }).catch(() => {
+      if (!cancelled) setDuplicate(null);
     });
-    setDuplicate(match || null);
+
+    return () => { cancelled = true; };
   }, [phone, name, open]);
 
   if (!open) return null;
-
-  const clinicName = (cid: string) => cid === 'kcc-faridabad' ? 'KCC Faridabad' : cid === 'kcc-saket' ? 'KCC Saket' : cid === 'psri-delhi' ? 'PSRI Hospital' : cid === 'online' ? 'Online' : cid || 'Unknown';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -163,7 +149,7 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
                 <p className="text-sm font-semibold text-amber-800">Already Registered</p>
               </div>
               <p className="text-xs text-amber-700">
-                <strong>{duplicate.firstName} {duplicate.lastName}</strong> — {duplicate.uhid} — {clinicName(duplicate.clinicId)}
+                <strong>{duplicate.first_name} {duplicate.last_name}</strong> — {duplicate.uhid}
               </p>
             </div>
           )}
@@ -199,44 +185,6 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
               />
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Delhi"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Pin</label>
-              <input
-                type="text"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="110001"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Full address"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
-            />
-          </div>
-
-          <button className="text-sm text-[#0A75BB] hover:underline font-medium">
-            If you want to add more details, Click Here
-          </button>
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-3.5 flex gap-2 rounded-b-xl">
@@ -260,28 +208,61 @@ export default function AppointmentsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showNewPatientModal, setShowNewPatientModal] = useState(false);
   const [onlineBookings, setOnlineBookings] = useState<any[]>([]);
+  const [apiAppointments, setApiAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  const dateStr = formatDateISO(selectedDate);
+
+  // Load online bookings from localStorage
   useEffect(() => {
     try {
       setOnlineBookings(JSON.parse(localStorage.getItem('emr_bookings') || '[]'));
     } catch { /* ignore */ }
   }, []);
 
-  const dateStr = formatDateISO(selectedDate);
+  // Fetch appointments from API for selected date
+  const refreshAppointments = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Calculate start and end of day
+      const start = dateStr + 'T00:00:00';
+      const end = dateStr + 'T23:59:59';
+      const data = await appointmentsApi.getByDateRange(start, end, undefined);
+      setApiAppointments(data || []);
+    } catch {
+      setApiAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [dateStr]);
 
-  const clinicAppointments = clinicId ? todayAppointments.filter((a) => a.clinicId === clinicId) : [];
+  useEffect(() => { refreshAppointments(); }, [refreshAppointments]);
+
   const clinicOnlineBookings = clinicId
     ? onlineBookings.filter((b) => BOOKING_CLINIC_MAP[b.clinicId] === clinicId && b.date === dateStr)
     : [];
-  const clinicWaiting = clinicId ? waitingRoom.filter((w) => w.clinicId === clinicId) : [];
-  const clinicPatientIds = new Set(clinicAppointments.map((a) => a.patientId));
-  const clinicPatients = clinicId ? patients.filter((p) => clinicPatientIds.has(p.id)) : [];
-
-  const filteredAppointments = useMemo(() => {
-    return clinicAppointments.filter((apt) => apt.date === dateStr);
-  }, [dateStr, clinicAppointments]);
 
   const mergedAppointments = useMemo(() => {
+    // Map API appointments to display format
+    const apiMapped = apiAppointments.map((apt: any) => ({
+      id: apt.id,
+      tokenId: apt.token_id || apt.id?.slice(-6)?.toUpperCase() || '—',
+      patientId: apt.patient_id,
+      patientName: apt.patient ? `${apt.patient.first_name} ${apt.patient.last_name}` : apt.patientName || '—',
+      patientPhone: apt.patient?.phone || '',
+      doctorId: apt.doctor_id,
+      doctorName: apt.doctor ? `Dr. ${apt.doctor.first_name} ${apt.doctor.last_name}` : '—',
+      date: apt.appointment_date,
+      time: apt.appointment_time,
+      type: apt.type || 'WALK_IN',
+      status: apt.status || 'SCHEDULED',
+      reason: apt.reason || '',
+      payment: apt.payment_status === 'paid' ? 'PAID' : 'UNPAID',
+      amount: apt.amount || 0,
+      clinicId: apt.clinic_id,
+    }));
+
+    // Map online bookings
     const onlineMapped = clinicOnlineBookings.map((b) => ({
       id: b.bookingId,
       tokenId: b.bookingId.slice(-6).toUpperCase(),
@@ -292,28 +273,30 @@ export default function AppointmentsPage() {
       doctorName: b.doctorName || 'Dr. Rajesh Goel',
       date: b.date,
       time: to24Hour(b.time),
-      type: 'ONLINE' as AppointmentType,
-      status: (b.status === 'confirmed' ? 'COMPLETED' : 'WAITING') as AppointmentStatus,
+      type: 'ONLINE',
+      status: b.status === 'confirmed' ? 'COMPLETED' : 'WAITING',
       reason: b.reason,
-      payment: (b.paymentStatus === 'paid' ? 'PAID' : 'UNPAID') as 'PAID' | 'UNPAID',
+      payment: b.paymentStatus === 'paid' ? 'PAID' : 'UNPAID',
       amount: b.consultationFee,
       clinicId: BOOKING_CLINIC_MAP[b.clinicId] || '',
-    })) as EMRAppointment[];
-    return [...filteredAppointments, ...onlineMapped];
-  }, [filteredAppointments, clinicOnlineBookings]);
+    }));
+
+    return [...apiMapped, ...onlineMapped];
+  }, [apiAppointments, clinicOnlineBookings]);
 
   const stats = useMemo(() => {
     const total = mergedAppointments.length;
-    const pending = mergedAppointments.filter((a) => a.status === 'WAITING' || a.status === 'IN_PROGRESS').length;
+    const pending = mergedAppointments.filter((a) => a.status === 'WAITING' || a.status === 'SCHEDULED' || a.status === 'CONFIRMED' || a.status === 'IN_PROGRESS').length;
     const complete = mergedAppointments.filter((a) => a.status === 'COMPLETED').length;
     return { total, pending, complete };
   }, [mergedAppointments]);
 
   const appointmentsByTime = useMemo(() => {
-    const map: Record<string, EMRAppointment[]> = {};
+    const map: Record<string, any[]> = {};
     mergedAppointments.forEach((apt) => {
-      if (!map[apt.time]) map[apt.time] = [];
-      map[apt.time].push(apt);
+      const time = apt.time || '00:00';
+      if (!map[time]) map[time] = [];
+      map[time].push(apt);
     });
     return map;
   }, [mergedAppointments]);
@@ -365,6 +348,11 @@ export default function AppointmentsPage() {
               </button>
             )}
           </div>
+          <button onClick={refreshAppointments}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Refresh">
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          </button>
         </div>
 
         <div className="flex items-center gap-3 text-xs">
@@ -387,26 +375,18 @@ export default function AppointmentsPage() {
                     <span className="text-xs font-medium text-gray-500">{formatTimeDisplay(slot)}</span>
                   </div>
                   <div className="flex-1 py-1.5 px-3 space-y-1.5">
-                    {slotAppointments.map((apt) => (
+                    {slotAppointments.map((apt: any) => (
                       <div
                         key={apt.id}
                         className={cn(
                           'p-2.5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer',
-                          STATUS_COLORS[apt.status]
+                          STATUS_COLORS[apt.status] || 'bg-gray-50 text-gray-700 border-l-4 border-gray-300'
                         )}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-gray-900 truncate">{apt.patientName}</p>
                             <p className="text-[11px] text-gray-500 mt-0.5">
-                              {(() => {
-                                const found = clinicPatients.find(p => p.id === apt.patientId);
-                                if (found) {
-                                  const age = Math.floor((Date.now() - new Date(found.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-                                  return <>{`${age}y / ${found.gender[0]}`}{' '}&middot;{' '}</>;
-                                }
-                                return null;
-                              })()}
                               {apt.patientPhone}
                             </p>
                           </div>
@@ -445,9 +425,6 @@ export default function AppointmentsPage() {
               <Plus className="h-4 w-4" />
               New
             </button>
-            <p className="text-[11px] text-gray-400 mt-2 text-center">
-              <button className="text-[#0A75BB] hover:underline">Upload Patient List</button>
-            </p>
           </div>
 
           {/* Quick Links */}
@@ -455,7 +432,13 @@ export default function AppointmentsPage() {
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Links</p>
             <div className="space-y-2">
               <button className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                <FileText className="h-4 w-4 text-gray-400" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-gray-400">
+                  <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                  <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                  <path d="M10 9H8"/>
+                  <path d="M16 13H8"/>
+                  <path d="M16 17H8"/>
+                </svg>
                 View Reports
               </button>
             </div>
@@ -464,47 +447,10 @@ export default function AppointmentsPage() {
               <p className="text-sm font-semibold text-gray-900">KCC-DR-RG</p>
             </div>
           </div>
-
-          {/* Waiting Queue */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
-              <h3 className="font-semibold text-gray-900 text-sm">Waiting ({clinicWaiting.length})</h3>
-            </div>
-            <div className="divide-y divide-gray-50 max-h-[240px] overflow-y-auto">
-              {clinicWaiting.map((p, i) => (
-                <div key={p.tokenId} className="px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{p.patientName}</p>
-                      <p className="text-[11px] text-gray-500">
-                        {p.waitTimeMinutes > 0 ? `Waiting ${p.waitTimeMinutes}m` : 'Just arrived'}
-                      </p>
-                    </div>
-                    <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[11px] font-bold text-gray-500">
-                      {i + 1}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
       <NewPatientModal open={showNewPatientModal} onClose={() => setShowNewPatientModal(false)} />
     </div>
-  );
-}
-
-function FileText(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
-      <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
-      <path d="M10 9H8"/>
-      <path d="M16 13H8"/>
-      <path d="M16 17H8"/>
-    </svg>
   );
 }
