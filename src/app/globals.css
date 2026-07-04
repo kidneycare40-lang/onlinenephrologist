@@ -191,10 +191,9 @@ html {
   }
 }
 
-/* Mobile: prevent overscroll bounce */
+/* Mobile: smooth scrolling without overscroll bounce interference */
 @media (max-width: 1023px) {
   body {
-    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
 }
