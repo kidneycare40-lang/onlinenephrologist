@@ -6,8 +6,6 @@ import {
   PhysicianSchema,
   FAQSchema,
   WebPageSchema,
-  WebSiteSchema,
-  BreadcrumbListSchema,
 } from '@/components/seo/JsonLd';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -125,10 +123,6 @@ export default function HomePage() {
     <>
       <MedicalOrganizationSchema />
       <PhysicianSchema />
-      <WebSiteSchema />
-      <BreadcrumbListSchema items={[
-        { name: 'Home', url: SITE_CONFIG.url },
-      ]} />
       <FAQSchema faqs={faqs} />
       <WebPageSchema
         title="Online Nephrologist Consultation in India"
@@ -188,7 +182,7 @@ export default function HomePage() {
             <div className="hidden md:flex justify-center">
               <div className="relative">
                 <div className="w-80 h-80 rounded-3xl bg-white/10 backdrop-blur-sm border border-white/20 overflow-hidden shadow-2xl">
-                  <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation India" className="w-full h-full object-cover" width="320" height="320" />
+                  <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation India" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute -bottom-4 -left-4 bg-white rounded-xl px-4 py-3 shadow-lg">
                   <div className="text-[#0A75BB] font-bold text-sm">Dr Rajesh Goel</div>
@@ -493,20 +487,12 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden md:flex">
             <div className="md:w-1/3">
-              <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Senior Nephrologist Delhi, Reg: DMC/R/734" className="w-full h-64 md:h-full object-cover" width="400" height="600" loading="lazy" />
+              <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation" className="w-full h-64 md:h-full object-cover" loading="lazy" />
             </div>
             <div className="md:w-2/3 p-8">
               <div className="text-sm text-[#0A75BB] font-semibold mb-1">Senior Nephrologist & Kidney Transplant Physician</div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Dr Rajesh Goel</h2>
               <p className="text-gray-500 mb-4">{DOCTOR_INFO.qualifications.join(' | ')}</p>
-              <div className="flex items-center gap-4 mb-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <span className="font-semibold text-gray-700">Reg:</span> {DOCTOR_INFO.regNo}
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="font-semibold text-gray-700">Experience:</span> {DOCTOR_INFO.experience}+ Years
-                </span>
-              </div>
               <div className="flex flex-wrap gap-2 mb-4">
                 {DOCTOR_INFO.specializations.slice(0, 6).map((spec, i) => (
                   <span key={i} className="px-3 py-1 bg-blue-50 text-[#0A75BB] text-xs font-medium rounded-full">{spec}</span>

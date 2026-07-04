@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Kidney Calculators: eGFR, BMI, Potassium | Dr Goel',
+  title: 'Kidney Health Calculators | BMI, eGFR, Potassium & More | Dr Rajesh Goel',
   description:
     'Free online kidney health calculators — BMI, eGFR (CKD-EPI 2021), potassium risk, creatinine clearance (Cockcroft-Gault), BSA, and uACR. For educational purposes only.',
   keywords: [

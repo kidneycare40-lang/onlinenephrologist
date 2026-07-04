@@ -33,7 +33,7 @@ export function Footer() {
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <img src="/favicon.png" alt="Online Nephrologist" className="h-8 w-8" width="32" height="32" />
+              <img src="/favicon.png" alt="Online Nephrologist" className="h-8 w-8" />
               <span className="text-white font-bold text-sm">Online Nephrologist</span>
             </Link>
             <p className="text-sm leading-relaxed mb-4">

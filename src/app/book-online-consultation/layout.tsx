@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import { SITE_CONFIG } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'Book Online Kidney Consultation | Video Call | Dr Goel',
+  title: 'Book Online Kidney Consultation | Video Call | Dr Rajesh Goel Delhi',
   description: 'Book online video consultation with Dr Rajesh Goel, Senior Nephrologist in Delhi. Get expert kidney care from home for CKD, dialysis, kidney stones, and transplant. ₹1000.',
   keywords: ['online kidney consultation', 'nephrologist video call', 'kidney doctor online', 'online nephrologist Delhi', 'video consultation kidney', 'CKD online consultation', 'Dr Rajesh Goel online'],
   alternates: { canonical: `${SITE_CONFIG.url}/book-online-consultation` },
   openGraph: {
-    title: 'Book Online Kidney Consultation | Video Call | Dr Goel',
+    title: 'Book Online Kidney Consultation | Video Call | Dr Rajesh Goel Delhi',
     description: 'Book online video consultation with Dr Rajesh Goel, Senior Nephrologist in Delhi. Get expert kidney care from home for CKD, dialysis, kidney stones, and transplant. ₹1000.',
     url: `${SITE_CONFIG.url}/book-online-consultation`,
     siteName: SITE_CONFIG.name,
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Book Online Kidney Consultation | Video Call | Dr Goel',
+    title: 'Book Online Kidney Consultation | Video Call | Dr Rajesh Goel Delhi',
     description: 'Book online video consultation with Dr Rajesh Goel, Senior Nephrologist in Delhi. Get expert kidney care from home for CKD, dialysis, kidney stones, and transplant. ₹1000.',
     images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
   },

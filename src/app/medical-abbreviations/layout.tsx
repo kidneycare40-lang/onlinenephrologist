@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Medical Abbreviations: OD, BD, SOS Explained | Dr Goel',
+  title: 'OD, BD, SOS & Medical Abbreviations Explained | Dr Rajesh Goel',
   description:
     'What do OD, BD, TDS, SOS, HS, AC, PC mean on your prescription? Complete guide to medical abbreviations used in prescriptions for kidney patients.',
   keywords: [
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     'what does OD mean in medicine',
   ],
   openGraph: {
-    title: 'Medical Abbreviations: OD, BD, SOS Explained | Dr Goel',
+    title: 'OD, BD, SOS & Medical Abbreviations Explained | Dr Rajesh Goel',
     description:
       'What do OD, BD, TDS, SOS, HS, AC, PC mean on your prescription? Complete guide to medical abbreviations.',
     url: 'https://www.onlinenephrologist.com/medical-abbreviations',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Medical Abbreviations: OD, BD, SOS Explained | Dr Goel',
+    title: 'OD, BD, SOS & Medical Abbreviations Explained | Dr Rajesh Goel',
     description:
       'What do OD, BD, TDS, SOS, HS, AC, PC mean on your prescription? Complete guide to medical abbreviations.',
   },
