@@ -381,7 +381,7 @@ CREATE TABLE diagnoses (
     is_primary BOOLEAN NOT NULL DEFAULT false,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT false
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ============================================================
