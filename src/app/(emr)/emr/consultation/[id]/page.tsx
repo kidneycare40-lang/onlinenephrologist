@@ -578,75 +578,16 @@ export default function ConsultationPage() {
     showToastMessage('Generating PDF...', 'success');
 
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const { createRoot } = await import('react-dom/client');
-      const React = await import('react');
-      const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
+      const { generatePrescriptionPDF } = await import('@/lib/prescription-pdf');
 
-      const existing = document.querySelector<HTMLElement>('[data-prescription-html]');
-      let sourceEl: HTMLElement;
-      let cleanup: (() => void) | null = null;
-
-      if (existing) {
-        sourceEl = existing;
-      } else {
-        const wrapper = document.createElement('div');
-        wrapper.setAttribute('data-prescription-html', 'true');
-        wrapper.style.position = 'absolute';
-        wrapper.style.left = '-9999px';
-        wrapper.style.top = '0';
-        wrapper.style.width = '794px';
-        wrapper.style.background = '#fff';
-        wrapper.style.overflow = 'visible';
-        wrapper.style.zIndex = '-1';
-        document.body.appendChild(wrapper);
-
-        const root = createRoot(wrapper);
-        root.render(
-          React.createElement(PrescriptionPrint, {
-            patient,
-            consultation: consultation!,
-            consultationDate: new Date().toLocaleDateString('en-IN'),
-            testRequests,
-            testRequestByWhen,
-            labResults: patientLabResults,
-            clinicId: clinicId ?? undefined,
-          })
-        );
-
-        await new Promise<void>((resolve) => {
-          let attempts = 0;
-          const check = () => {
-            attempts++;
-            const hasContent = wrapper.innerText.trim().length > 50;
-            const imgs = wrapper.querySelectorAll('img');
-            const allLoaded = imgs.length === 0 || Array.from(imgs).every((img) => img.complete || img.naturalWidth > 0);
-            if ((hasContent && allLoaded) || attempts > 80) {
-              setTimeout(resolve, 500);
-            } else {
-              setTimeout(check, 100);
-            }
-          };
-          check();
-        });
-
-        sourceEl = wrapper;
-        cleanup = () => {
-          root.unmount();
-          if (wrapper.parentNode) document.body.removeChild(wrapper);
-        };
-      }
-
-      const opt = {
-        margin: [5, 8, 5, 8] as [number, number, number, number],
-        filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-      };
-
-      const pdfBlob = await html2pdf().set(opt).from(sourceEl).outputPdf('blob');
-      cleanup?.();
+      const pdfBlob = await generatePrescriptionPDF(
+        patient,
+        consultation,
+        testRequests,
+        testRequestByWhen,
+        patientLabResults,
+        clinicId ?? undefined,
+      );
 
       const pdfFile = new File([pdfBlob], `Prescription_${patient.firstName}_${patient.lastName}.pdf`, { type: 'application/pdf' });
 
