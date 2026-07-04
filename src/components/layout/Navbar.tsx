@@ -76,7 +76,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <img src="/favicon.png" alt="Online Nephrologist" className="h-8 w-8 sm:h-9 sm:w-9" />
+            <img src="/favicon.png" alt="Online Nephrologist" className="h-8 w-8 sm:h-9 sm:w-9" width="36" height="36" />
             <span className="text-sm sm:text-[15px] font-bold text-[#0A75BB] leading-tight">Online<br className="hidden lg:block" /> Nephrologist</span>
           </Link>
 
