@@ -422,9 +422,9 @@ INSERT INTO medicines (name, generic_name, brand_name, category, form, strength,
 ('Canagliflozin 100mg', 'Canagliflozin', 'Invokana 100', 'sglt2_inhibitor', 'tablet', '100mg', 100, 'mg', false, true, ARRAY['eGFR', 'Urine Albumin', 'K+']),
 -- Others
 ('Sodium Bicarbonate 500mg', 'Sodium Bicarbonate', 'Shelcal 500', 'alkalinizer', 'tablet', '500mg', 500, 'mg', false, true, ARRAY['Bicarbonate', 'pH']),
-('Pantoprazole 40mg', 'Pantoprazole', 'Pantocid 40', 'ppi', 'tablet', '40mg', 40, 'mg', false, false, ARRAY[]),
-('Omeprazole 20mg', 'Omeprazole', 'Omez 20', 'ppi', 'capsule', '20mg', 20, 'mg', false, false, ARRAY[]),
-('Paracetamol 500mg', 'Paracetamol', 'Crocin 500', 'analgesic', 'tablet', '500mg', 500, 'mg', false, false, ARRAY[]),
+('Pantoprazole 40mg', 'Pantoprazole', 'Pantocid 40', 'ppi', 'tablet', '40mg', 40, 'mg', false, false, '{}'),
+('Omeprazole 20mg', 'Omeprazole', 'Omez 20', 'ppi', 'capsule', '20mg', 20, 'mg', false, false, '{}'),
+('Paracetamol 500mg', 'Paracetamol', 'Crocin 500', 'analgesic', 'tablet', '500mg', 500, 'mg', false, false, '{}'),
 ('Gabapentin 300mg', 'Gabapentin', 'Neurontin 300', 'analgesic', 'capsule', '300mg', 300, 'mg', false, true, ARRAY['Creatinine']),
 ('Pregabalin 75mg', 'Pregabalin', 'Lyrica 75', 'analgesic', 'capsule', '75mg', 75, 'mg', false, true, ARRAY['Creatinine']);
 
