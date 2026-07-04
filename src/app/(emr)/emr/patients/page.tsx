@@ -72,10 +72,16 @@ export default function PatientListPage() {
       try {
         const dynamicPatients: any[] = [];
         const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
-        if (Array.isArray(added)) dynamicPatients.push(...added);
+        if (Array.isArray(added)) {
+          const filtered = clinicFilter && clinicFilter !== 'all'
+            ? added.filter((p: any) => !p.clinicId || p.clinicId === clinicFilter)
+            : added;
+          dynamicPatients.push(...filtered);
+        }
         const consultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
         if (Array.isArray(consultations)) {
           for (const c of consultations) {
+            if (clinicFilter && clinicFilter !== 'all' && c.clinicId && c.clinicId !== clinicFilter) continue;
             if (c.patient && c.patient.id && !dynamicPatients.some((p: any) => p.id === c.patient.id)) {
               dynamicPatients.push(c.patient);
             }

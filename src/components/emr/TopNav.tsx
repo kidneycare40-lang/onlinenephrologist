@@ -137,7 +137,9 @@ export default function TopNav() {
 
     async function searchPatients() {
       try {
-        const res = await fetch(`/api/patients?q=${encodeURIComponent(q)}`);
+        const params = new URLSearchParams({ q });
+        if (clinicId) params.set('clinicId', clinicId);
+        const res = await fetch(`/api/patients?${params.toString()}`);
         if (!res.ok) throw new Error('API failed');
         const data = await res.json();
         const patients = data.data || data.patients || data || [];
@@ -157,6 +159,7 @@ export default function TopNav() {
           const stored = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
           if (Array.isArray(stored)) {
             for (const p of stored) {
+              if (clinicId && p.clinicId && p.clinicId !== clinicId) continue;
               allPatients.push({ id: p.id, name: `${p.firstName || ''} ${p.lastName || ''}`.trim(), phone: p.phone || '', uhid: p.uhid || '' });
             }
           }
@@ -165,6 +168,7 @@ export default function TopNav() {
           const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
           if (Array.isArray(bookings)) {
             for (const b of bookings) {
+              if (clinicId && b.clinicId !== clinicId) continue;
               if (b.patientData?.firstName) {
                 const id = b.patientId || 'obp-' + b.bookingId;
                 if (!allPatients.some((p) => p.id === id)) {
@@ -425,7 +429,7 @@ export default function TopNav() {
                       {clinicOptions.map((opt) => (
                         <button
                           key={opt.id}
-                          onClick={() => { setClinicId(opt.id); setClinicSwitchOpen(false); setProfileOpen(false); }}
+                          onClick={() => { setClinicId(opt.id); setClinicSwitchOpen(false); setProfileOpen(false); if (pathname.includes('/emr/consultation/') || pathname.includes('/emr/patients/')) router.push('/emr/consultation'); }}
                           className={cn(
                             'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors',
                             clinicId === opt.id ? 'bg-[#0A75BB]/5' : 'hover:bg-gray-50'

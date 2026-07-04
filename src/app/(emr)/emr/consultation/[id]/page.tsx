@@ -134,6 +134,8 @@ export default function ConsultationPage() {
     let cancelled = false;
     const loadData = async () => {
       setIsLoadingData(true);
+      setConsultation(null);
+      setPatient(null);
       try {
         // Try loading from API first
         const { consultation: apiConsult, patient: apiPatient } = await loadConsultationFromApi(id, clinicId || undefined);
@@ -141,6 +143,10 @@ export default function ConsultationPage() {
         if (cancelled) return;
 
         if (apiConsult && apiPatient) {
+          if (clinicId && apiConsult.clinicId && apiConsult.clinicId !== clinicId) {
+            setIsLoadingData(false);
+            return;
+          }
           setConsultation(apiConsult);
           setPatient(apiPatient);
           setIsLoadingData(false);
@@ -149,7 +155,7 @@ export default function ConsultationPage() {
 
         // Try loading patient by ID directly
         if (!apiConsult) {
-          const directPatient = await loadPatientFromApi(id);
+          const directPatient = await loadPatientFromApi(id, clinicId || undefined);
           if (cancelled) return;
 
           if (directPatient) {
@@ -199,7 +205,10 @@ export default function ConsultationPage() {
       const allStored = [...patients, ...storedPatients];
 
       // Check stored consultations
-      const storedConsult = storedConsultations.find((c) => c.id === id || c.patientId === id);
+      const storedConsult = storedConsultations.find((c) => {
+        if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
+        return c.id === id || c.patientId === id;
+      });
       if (storedConsult) {
         const pat = allStored.find((p) => p.id === storedConsult.patientId);
         if (pat) {

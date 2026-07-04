@@ -99,11 +99,14 @@ export function apiPatientToEMR(apiPatient: any): EMRPatient {
 // Load consultation from API with localStorage fallback
 export async function loadConsultationFromApi(id: string, clinicId?: string): Promise<{ consultation: EMRConsultation | null; patient: EMRPatient | null }> {
   try {
-    // Try API first
     const data = await consultationsApi.get(id);
     if (data) {
+      const consult = apiConsultationToEMR(data);
+      if (clinicId && consult.clinicId && consult.clinicId !== clinicId) {
+        return { consultation: null, patient: null };
+      }
       return {
-        consultation: apiConsultationToEMR(data),
+        consultation: consult,
         patient: data.patient ? apiPatientToEMR(data.patient) : null,
       };
     }
@@ -115,11 +118,15 @@ export async function loadConsultationFromApi(id: string, clinicId?: string): Pr
 }
 
 // Load patient from API with localStorage fallback
-export async function loadPatientFromApi(patientId: string): Promise<EMRPatient | null> {
+export async function loadPatientFromApi(patientId: string, clinicId?: string): Promise<EMRPatient | null> {
   try {
     const data = await patientsApi.get(patientId);
     if (data) {
-      return apiPatientToEMR(data);
+      const patient = apiPatientToEMR(data);
+      if (clinicId && patient.clinicId && patient.clinicId !== clinicId) {
+        return null;
+      }
+      return patient;
     }
   } catch {
     // Fall through
