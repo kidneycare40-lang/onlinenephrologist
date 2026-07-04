@@ -33,7 +33,7 @@ const nextConfig = {
     ];
   },
   experimental: {
-    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
+    optimizePackageImports: ['lucide-react'],
   },
 };
 
