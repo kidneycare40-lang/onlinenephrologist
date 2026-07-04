@@ -1029,3 +1029,202 @@ export interface PatientSearchResult {
   total_visits: number;
   last_visit_date: string | null;
 }
+
+// ============================================================
+// TEMPLATE TYPES
+// ============================================================
+
+// Complaint Templates
+export interface ComplaintTemplate {
+  id: string;
+  clinic_id: string | null;
+  category: string;
+  name: string;
+  description: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+}
+
+// Diagnosis Templates
+export interface DiagnosisTemplate {
+  id: string;
+  clinic_id: string | null;
+  category: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  ckd_stage: number | null;
+  is_system: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+}
+
+// Medicine
+export interface Medicine {
+  id: string;
+  name: string;
+  generic_name: string | null;
+  brand_name: string | null;
+  manufacturer: string | null;
+  category: string;
+  subcategory: string | null;
+  form: string;
+  strength: string;
+  strength_numeric: number | null;
+  strength_unit: string | null;
+  pack_size: number;
+  unit: string;
+  mrp: number | null;
+  hsn_code: string | null;
+  drug_interactions: string[];
+  contraindications: string[];
+  renal_dose_adjustment: string | null;
+  pregnancy_category: string | null;
+  is_nephrotoxic: boolean;
+  requires_monitoring: boolean;
+  monitoring_parameters: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Medicine Templates
+export interface MedicineTemplate {
+  id: string;
+  clinic_id: string | null;
+  name: string;
+  description: string | null;
+  category: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+  items?: MedicineTemplateItem[];
+}
+
+export interface MedicineTemplateItem {
+  id: string;
+  template_id: string;
+  medicine_id: string;
+  dosage: string;
+  frequency: string;
+  timing: string | null;
+  duration: string | null;
+  instructions: string | null;
+  sort_order: number;
+  created_at: string;
+  medicine?: Medicine;
+}
+
+// Investigation Templates
+export interface InvestigationTemplate {
+  id: string;
+  clinic_id: string | null;
+  name: string;
+  description: string | null;
+  category: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+  items?: InvestigationTemplateItem[];
+}
+
+export interface InvestigationTemplateItem {
+  id: string;
+  template_id: string;
+  test_name: string;
+  category: string | null;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
+// Advice Templates
+export interface AdviceTemplate {
+  id: string;
+  clinic_id: string | null;
+  name: string;
+  description: string | null;
+  category: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  updated_by: string | null;
+  items?: AdviceTemplateItem[];
+}
+
+export interface AdviceTemplateItem {
+  id: string;
+  template_id: string;
+  advice_text: string;
+  category: string | null;
+  is_critical: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+// Consultation Complaints (junction)
+export interface ConsultationComplaint {
+  id: string;
+  consultation_id: string;
+  complaint_template_id: string | null;
+  complaint_name: string;
+  duration: string | null;
+  severity: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+// Consultation Diagnoses (junction)
+export interface ConsultationDiagnosis {
+  id: string;
+  consultation_id: string;
+  diagnosis_template_id: string | null;
+  diagnosis_name: string;
+  diagnosis_code: string | null;
+  is_primary: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
+// Template Categories
+export type ComplaintCategory = 'general' | 'renal' | 'cardiovascular' | 'neurological' | 'gastrointestinal' | 'musculoskeletal' | 'skin';
+export type DiagnosisCategory = 'ckd' | 'aki' | 'glomerular' | 'tubular' | 'vascular' | 'stones' | 'infection' | 'genetic' | 'transplant' | 'dialysis' | 'complication';
+export type MedicineCategory = 'antihypertensive' | 'diuretic' | 'phosphate_binder' | 'vitamin_d' | 'esa' | 'iron' | 'potassium_binder' | 'sglt2_inhibitor' | 'alkalinizer' | 'ppi' | 'analgesic';
+export type InvestigationCategory = 'ckd' | 'dialysis' | 'transplant' | 'aki' | 'glomerular' | 'stones' | 'infection' | 'general' | 'diabetes' | 'hypertension';
+export type AdviceCategory = 'diet' | 'lifestyle' | 'medication' | 'follow_up' | 'dialysis' | 'transplant' | 'diabetes' | 'hypertension' | 'stones' | 'infection';
+
+// Template filter params
+export interface TemplateFilterParams extends FilterParams {
+  category?: string;
+  ckdStage?: number;
+  isSystem?: boolean;
+}
+
+// Medicine search params
+export interface MedicineSearchParams {
+  query?: string;
+  category?: string;
+  form?: string;
+  isNephrotoxic?: boolean;
+  limit?: number;
+}

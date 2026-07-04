@@ -40,13 +40,13 @@ export function Footer() {
               Expert kidney care by Dr Rajesh Goel. Online and in-clinic consultations for all kidney conditions.
             </p>
             <div className="space-y-2 text-sm">
-              <a href="https://wa.me/919818235613" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+              <a href="https://wa.me/919818235613" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors py-1.5">
                 <Phone className="h-3.5 w-3.5" /> +91 9818235613
               </a>
-              <a href={`mailto:${SITE_CONFIG.email}`} className="flex items-center gap-2 hover:text-white transition-colors">
+              <a href={`mailto:${SITE_CONFIG.email}`} className="flex items-center gap-2 hover:text-white transition-colors py-1.5">
                 <Mail className="h-3.5 w-3.5" /> {SITE_CONFIG.email}
               </a>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 py-1.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span>13B, Saket Rd, Block K, Saket, New Delhi 110017</span>
               </div>
@@ -56,10 +56,10 @@ export function Footer() {
           {/* Services */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Services</h4>
-            <ul className="space-y-2.5">
+            <ul className="space-y-1">
               {footerLinks.services.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm hover:text-white transition-colors">{link.label}</Link>
+                  <Link href={link.href} className="text-sm hover:text-white transition-colors inline-block py-1.5">{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -68,10 +68,10 @@ export function Footer() {
           {/* Doctor */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Doctor</h4>
-            <ul className="space-y-2.5">
+            <ul className="space-y-1">
               {footerLinks.doctor.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm hover:text-white transition-colors">{link.label}</Link>
+                  <Link href={link.href} className="text-sm hover:text-white transition-colors inline-block py-1.5">{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -103,12 +103,12 @@ export function Footer() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-gray-800">
+      <div className="border-t border-gray-800 safe-area-bottom">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
           <p>&copy; {new Date().getFullYear()} Online Nephrologist. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+            <Link href="/privacy-policy" className="hover:text-white transition-colors py-1.5">Privacy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors py-1.5">Terms</Link>
           </div>
         </div>
       </div>

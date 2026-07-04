@@ -425,7 +425,7 @@ export default function BillingPage() {
               const height = (m.revenue / maxRevenue) * 100;
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[10px] text-gray-500">{formatCurrency(m.revenue).replace('₹', '')}</span>
+                  <span className="text-xs text-gray-500">{formatCurrency(m.revenue).replace('₹', '')}</span>
                   <div className="w-full flex justify-center">
                     <div
                       className="w-6 rounded-t bg-[#0A75BB] hover:bg-[#085a94] transition-colors cursor-pointer"
@@ -433,7 +433,7 @@ export default function BillingPage() {
                       title={`${m.label}: ${formatCurrency(m.revenue)} (${m.count} invoices)`}
                     />
                   </div>
-                  <span className="text-[10px] text-gray-400">{m.label}</span>
+                  <span className="text-xs text-gray-400">{m.label}</span>
                 </div>
               );
             })}
@@ -587,8 +587,8 @@ export default function BillingPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => setSelectedInvoice(inv)} className="p-1.5 rounded-lg hover:bg-[#0A75BB]/10 text-[#0A75BB] transition-colors" title="View">
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => setSelectedInvoice(inv)} className="p-2.5 rounded-lg hover:bg-[#0A75BB]/10 text-[#0A75BB] transition-colors" title="View">
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
@@ -596,18 +596,18 @@ export default function BillingPage() {
                             setEditingInvoice(inv);
                             setShowCreateModal(true);
                           }}
-                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                          className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                           title="Edit"
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handlePrint(inv)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Print">
+                        <button onClick={() => handlePrint(inv)} className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Print">
                           <Printer className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleWhatsApp(inv)} className="p-1.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors" title="WhatsApp">
+                        <button onClick={() => handleWhatsApp(inv)} className="p-2.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors" title="WhatsApp">
                           <MessageCircle className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleDeleteInvoice(inv.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                        <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>

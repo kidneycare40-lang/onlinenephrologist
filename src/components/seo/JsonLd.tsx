@@ -213,6 +213,37 @@ export function ArticleSchema({
   return <JsonLd data={schema} />;
 }
 
+export function WebSiteSchema() {
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Online Nephrologist',
+    url: 'https://onlinenephrologist.com',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://onlinenephrologist.com/conditions?q={search_term_string}',
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
+  return <JsonLd data={schema} />;
+}
+
+export function BreadcrumbListSchema({ items }: { items: Array<{ name: string; url: string }> }) {
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+
+  return <JsonLd data={schema} />;
+}
+
 export function LocalBusinessSchema({
   city,
   state,

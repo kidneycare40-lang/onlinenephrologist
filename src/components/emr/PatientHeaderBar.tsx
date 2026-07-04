@@ -86,11 +86,11 @@ export default function PatientHeaderBar({
           </button>
 
           {showTag && (
-            <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-[55] overflow-hidden">
               <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
                 <p className="text-xs font-semibold text-slate-600">Patient Tags</p>
-                <button onClick={() => setShowTag(false)} className="p-0.5 hover:bg-slate-100 rounded">
-                  <X className="h-3 w-3 text-slate-400" />
+                <button onClick={() => setShowTag(false)} className="p-1.5 hover:bg-slate-100 rounded-lg" aria-label="Close tags">
+                  <X className="h-3.5 w-3.5 text-slate-400" />
                 </button>
               </div>
               <div className="p-2">
@@ -101,20 +101,20 @@ export default function PatientHeaderBar({
                     onChange={(e) => setNewTag(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') addTag(); }}
                     placeholder="Add tag..."
-                    className="flex-1 px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                    className="flex-1 px-2.5 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
                   />
                   <button onClick={addTag} disabled={!newTag.trim()}
-                    className="px-2 py-1.5 text-xs font-medium text-white bg-[#0A75BB] rounded-lg hover:bg-[#085a94] disabled:opacity-50">
+                    className="px-3 py-2 text-xs font-medium text-white bg-[#0A75BB] rounded-lg hover:bg-[#085a94] disabled:opacity-50">
                     Add
                   </button>
                 </div>
                 {patientTags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {patientTags.map((tag) => (
-                      <span key={tag} className="flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-full text-[10px] font-medium text-slate-600">
+                      <span key={tag} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-full text-xs font-medium text-slate-600">
                         {tag}
-                        <button onClick={() => removeTag(tag)} className="hover:text-red-500">
-                          <X className="h-2.5 w-2.5" />
+                        <button onClick={() => removeTag(tag)} className="p-0.5 hover:text-red-500 rounded" aria-label={`Remove tag ${tag}`}>
+                          <X className="h-3 w-3" />
                         </button>
                       </span>
                     ))}
@@ -140,14 +140,14 @@ export default function PatientHeaderBar({
 
       {/* Alerts popup */}
       {showAlerts && allergies.length > 0 && (
-        <div className="fixed top-20 right-4 z-50 w-72 bg-white border border-red-200 rounded-xl shadow-xl overflow-hidden">
+        <div className="fixed top-20 right-4 z-[55] w-[calc(100vw-32px)] sm:w-72 bg-white border border-red-200 rounded-xl shadow-xl overflow-hidden">
           <div className="px-3 py-2 border-b border-red-100 bg-red-50 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-red-500" />
               <p className="text-xs font-semibold text-red-700">Patient Alerts</p>
             </div>
-            <button onClick={() => setShowAlerts(false)} className="p-0.5 hover:bg-red-100 rounded">
-              <X className="h-3 w-3 text-red-400" />
+            <button onClick={() => setShowAlerts(false)} className="p-1.5 hover:bg-red-100 rounded-lg" aria-label="Close alerts">
+              <X className="h-3.5 w-3.5 text-red-400" />
             </button>
           </div>
           <div className="p-3 space-y-1.5">
