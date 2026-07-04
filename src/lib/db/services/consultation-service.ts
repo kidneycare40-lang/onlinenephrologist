@@ -180,6 +180,28 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
     return (data || []) as PrescriptionWithRelations[];
   }
 
+  async findAllWithRelations(status?: string): Promise<PrescriptionWithRelations[]> {
+    let query = this.db
+      .from('prescriptions')
+      .select(`
+        *,
+        patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
+        doctor:users(id, first_name, last_name, qualification),
+        medicines:prescription_medicines(*),
+        investigations:prescription_investigations(*)
+      `)
+      .eq('is_deleted', false)
+      .order('prescription_date', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+    if (error) return [];
+    return (data || []) as PrescriptionWithRelations[];
+  }
+
   async findTemplates(): Promise<Prescription[]> {
     const { data, error } = await this.db
       .from('prescriptions')

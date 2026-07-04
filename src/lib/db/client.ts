@@ -16,5 +16,13 @@ export function getDb(): SupabaseClient {
   return client;
 }
 
+export function getDbOrNull(): SupabaseClient | null {
+  try {
+    return getDb();
+  } catch {
+    return null;
+  }
+}
+
 // Legacy alias for emr-store compat
 export { getDb as getSupabase };

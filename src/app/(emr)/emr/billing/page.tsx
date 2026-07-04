@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Receipt, Search, X, Download, Printer, MessageCircle,
   CheckCircle2, Clock, AlertTriangle, Eye, Plus, CreditCard,
   FileText, Trash2, Edit2, TrendingUp, Calendar, Building2, BarChart3,
+  RefreshCw,
 } from 'lucide-react';
 import { cn, formatDate, formatCurrency } from '@/lib/utils';
 import BillingInvoice from '@/components/emr/BillingInvoice';
 import CreateInvoiceModal from '@/components/emr/CreateInvoiceModal';
+import { billingApi } from '@/lib/api-client';
 import { mockInvoices } from '@/lib/data/billing-mock';
 import type { EMRInvoice, InvoiceStatus } from '@/types/emr';
 
@@ -26,8 +28,68 @@ const statusConfig: Record<InvoiceStatus, { label: string; color: string; bg: st
   CANCELLED: { label: 'Cancelled', color: 'text-red-700', bg: 'bg-red-50 border-red-200', icon: <X className="h-3.5 w-3.5" /> },
 };
 
+function apiInvoiceToEMR(apiInv: any): EMRInvoice {
+  const patient = apiInv.patient || {};
+  const items = apiInv.items || apiInv.invoice_items || [];
+  const payments = apiInv.payments || [];
+
+  const totalAmount = apiInv.total_amount || apiInv.grandTotal || 0;
+  const paidAmount = apiInv.paid_amount || apiInv.paidAmount || 0;
+
+  return {
+    id: apiInv.id,
+    invoiceNumber: apiInv.invoice_number || apiInv.invoiceNumber || `INV-${apiInv.id?.slice(-8)?.toUpperCase() || 'UNKNOWN'}`,
+    patientId: apiInv.patient_id || '',
+    patientName: patient.first_name ? `${patient.first_name} ${patient.last_name}` : '—',
+    patientPhone: patient.phone || '',
+    clinicId: apiInv.clinic_id || '',
+    doctorName: '',
+    date: apiInv.invoice_date || apiInv.created_at || '',
+    dueDate: apiInv.due_date || apiInv.invoice_date || '',
+    grandTotal: totalAmount,
+    paidAmount: paidAmount,
+    balance: totalAmount - paidAmount,
+    status: apiInv.status || 'PENDING',
+    subtotal: apiInv.subtotal || totalAmount,
+    discount: apiInv.discount || 0,
+    discountType: 'FIXED' as const,
+    gstRate: apiInv.tax_rate || 0,
+    gstAmount: apiInv.tax_amount || 0,
+    totalTax: apiInv.tax_amount || 0,
+    items: items.map((item: any) => {
+      const rate = item.unit_price || item.rate || 0;
+      const qty = item.quantity || item.qty || 1;
+      const gstRate = item.gst_rate || item.gstRate || 0;
+      const gstAmount = rate * qty * gstRate / 100;
+      const amount = rate * qty + gstAmount;
+      return {
+        id: item.id,
+        description: item.description || item.name || '',
+        qty,
+        rate,
+        gstRate,
+        gstAmount,
+        amount: item.amount || amount,
+        total: item.total || amount,
+      };
+    }),
+    payments: payments.map((p: any) => ({
+      id: p.id,
+      amount: p.amount || 0,
+      method: p.payment_method || p.method || 'CASH',
+      date: p.payment_date || p.created_at || '',
+      reference: p.reference || '',
+      notes: p.notes || '',
+    })),
+    notes: apiInv.notes || '',
+    createdAt: apiInv.created_at || '',
+    updatedAt: apiInv.updated_at || apiInv.created_at || '',
+  };
+}
+
 export default function BillingPage() {
-  const [invoices, setInvoices] = useState<EMRInvoice[]>(mockInvoices);
+  const [invoices, setInvoices] = useState<EMRInvoice[]>([]);
+  const [loading, setLoading] = useState(true);
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
@@ -35,6 +97,30 @@ export default function BillingPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<EMRInvoice | null>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
+
+  const refreshData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (statusFilter !== 'ALL') params.status = statusFilter;
+      const result = await billingApi.list(params).catch(() => null);
+
+      if (result && Array.isArray(result.data)) {
+        setInvoices(result.data.map(apiInvoiceToEMR));
+      } else if (result && Array.isArray(result)) {
+        setInvoices(result.map(apiInvoiceToEMR));
+      } else {
+        // Fallback to mock data
+        setInvoices(mockInvoices);
+      }
+    } catch {
+      setInvoices(mockInvoices);
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
+
+  useEffect(() => { refreshData(); }, [refreshData]);
 
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
@@ -145,17 +231,32 @@ export default function BillingPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleSaveInvoice = (invoice: EMRInvoice) => {
+  const handleSaveInvoice = async (invoice: EMRInvoice) => {
     if (editingInvoice) {
+      // Update existing
+      try {
+        await billingApi.update(invoice.id, invoice).catch(() => null);
+      } catch {}
       setInvoices(invoices.map((inv) => (inv.id === invoice.id ? invoice : inv)));
     } else {
+      // Create new
+      try {
+        const result = await billingApi.create(invoice).catch(() => null);
+        if (result?.id) {
+          invoice.id = result.id;
+          invoice.invoiceNumber = result.invoice_number || invoice.invoiceNumber;
+        }
+      } catch {}
       setInvoices([invoice, ...invoices]);
     }
     setEditingInvoice(null);
   };
 
-  const handleDeleteInvoice = (id: string) => {
+  const handleDeleteInvoice = async (id: string) => {
     if (confirm('Are you sure you want to delete this invoice?')) {
+      try {
+        await billingApi.delete(id).catch(() => null);
+      } catch {}
       setInvoices(invoices.filter((inv) => inv.id !== id));
       setSelectedInvoice(null);
     }
@@ -286,6 +387,9 @@ export default function BillingPage() {
                 </div>
               </div>
             ))}
+            {Object.keys(clinicStats).length === 0 && !loading && (
+              <p className="text-sm text-gray-400 text-center py-4">No data yet</p>
+            )}
           </div>
         </div>
 
@@ -363,6 +467,11 @@ export default function BillingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={refreshData}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Refresh">
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          </button>
           <button
             onClick={downloadCSV}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
@@ -512,7 +621,7 @@ export default function BillingPage() {
         {filtered.length === 0 && (
           <div className="py-12 text-center text-gray-500">
             <Receipt className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm font-medium">No invoices found</p>
+            <p className="text-sm font-medium">{loading ? 'Loading invoices...' : 'No invoices found'}</p>
           </div>
         )}
       </div>

@@ -80,6 +80,10 @@ export const consultationsApi = {
 };
 
 export const prescriptionsApi = {
+  list: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any>(`/api/prescriptions${qs}`);
+  },
   get: (id: string) => api.get<any>(`/api/prescriptions?id=${id}`),
   getByPatient: (patientId: string) =>
     api.get<any[]>(`/api/prescriptions?patientId=${patientId}`),
@@ -107,6 +111,7 @@ export const billingApi = {
   getByPatient: (patientId: string) =>
     api.get<any[]>(`/api/billing?patientId=${patientId}`),
   create: (data: any) => api.post<any>('/api/billing', data),
+  update: (id: string, data: any) => api.put<any>('/api/billing', { id, ...data }),
   recordPayment: (data: any) =>
     api.post<any>('/api/billing', { ...data, action: 'record_payment' }),
   delete: (id: string) => api.delete(`/api/billing?id=${id}`),
@@ -132,6 +137,10 @@ export const settingsApi = {
     const qs = clinicId ? `?clinicId=${clinicId}` : '';
     return api.get<Record<string, any>>(`/api/settings${qs}`);
   },
+  getSettings: (clinicId?: string) => {
+    const qs = clinicId ? `?clinicId=${clinicId}` : '';
+    return api.get<any[]>(`/api/settings${qs}`);
+  },
   get: (key: string, clinicId?: string) => {
     const qs = new URLSearchParams({ key });
     if (clinicId) qs.set('clinicId', clinicId);
@@ -139,13 +148,29 @@ export const settingsApi = {
   },
   set: (key: string, value: any, clinicId?: string) =>
     api.post<any>('/api/settings', { key, value, clinicId }),
+  upsertSetting: (key: string, value: any, clinicId?: string) =>
+    api.post<any>('/api/settings', { key, value, clinicId }),
   getClinics: () => api.get<any[]>('/api/settings?section=clinics'),
+  createClinic: (data: any) =>
+    api.post<any>('/api/settings', { ...data, action: 'create_clinic' }),
+  updateClinic: (id: string, data: any) =>
+    api.put<any>('/api/settings', { id, ...data, action: 'update_clinic' }),
+  deleteClinic: (id: string) =>
+    api.delete(`/api/settings?id=${id}&section=clinics`),
   getDoctors: (clinicId?: string) => {
     const qs = clinicId ? `?section=doctors&clinicId=${clinicId}` : '?section=doctors';
     return api.get<any[]>(`/api/settings${qs}`);
   },
+  createDoctor: (data: any) =>
+    api.post<any>('/api/settings', { ...data, action: 'create_user' }),
+  updateDoctor: (id: string, data: any) =>
+    api.put<any>('/api/settings', { id, ...data, action: 'update_user' }),
+  deleteDoctor: (id: string) =>
+    api.delete(`/api/settings?id=${id}&section=users`),
   getLetterheads: (clinicId?: string) => {
     const qs = clinicId ? `?section=letterheads&clinicId=${clinicId}` : '?section=letterheads';
     return api.get<any[]>(`/api/settings${qs}`);
   },
+  upsertLetterhead: (clinicId: string, data: any) =>
+    api.post<any>('/api/settings', { ...data, clinic_id: clinicId, action: 'create_letterhead' }),
 };

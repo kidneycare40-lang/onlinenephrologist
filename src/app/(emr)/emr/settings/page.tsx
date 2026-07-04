@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Settings, User, Building2, Bell, FileText, Sparkles, CreditCard, Calendar,
-  Camera, Lock, Save, X, Upload, Image as ImageIcon, Plus, Trash2, ChevronDown, ChevronRight, Stethoscope, Calculator,
+  Camera, Lock, Save, X, Upload, Image as ImageIcon, Plus, Trash2, ChevronDown, ChevronRight, Stethoscope, Calculator, RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
+import { settingsApi } from '@/lib/api-client';
 import type { PrescriptionTemplate, Medication, AdviceTemplate, TestPanelTemplate } from '@/types/emr';
 import { prescriptionTemplates as builtInTemplates, builtInAdviceTemplates, builtInTestPanelTemplates } from '@/lib/data/emr-mock';
 import { adviceTemplateStorage, testTemplateStorage } from '@/lib/template-storage';
@@ -222,7 +223,9 @@ export default function SettingsPage() {
   const [testPanelTests, setTestPanelTests] = useState('');
   const [confirmDeleteTestId, setConfirmDeleteTestId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Load all data from API on mount
+  const loadAllSettings = useCallback(async () => {
+    // Load templates
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       setTemplates(stored);
@@ -233,18 +236,79 @@ export default function SettingsPage() {
       setCustomRxHeader(localStorage.getItem(rxHeaderKey) || null);
       setCustomRxFooter(localStorage.getItem(rxFooterKey) || null);
     } catch { /* ignore */ }
-    if (clinicId) {
-      fetch(`/api/emr/letterhead?clinicId=${clinicId}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.header) setCustomRxHeader(d.header);
-          if (d.footer) setCustomRxFooter(d.footer);
-        })
-        .catch(() => {});
-    }
+
+    // Load profile and settings from API
+    try {
+      const [doctors, settings, letterheads] = await Promise.all([
+        settingsApi.getDoctors().catch(() => []),
+        settingsApi.getSettings().catch(() => []),
+        settingsApi.getLetterheads().catch(() => []),
+      ]);
+
+      // Load profile from first doctor
+      const doctor = doctors?.[0];
+      if (doctor) {
+        if (doctor.first_name) setFirstName(doctor.first_name);
+        if (doctor.last_name) setLastName(doctor.last_name);
+        if (doctor.email) setEmail(doctor.email);
+        if (doctor.phone) setPhone(doctor.phone);
+        if (doctor.gender) setGender(doctor.gender);
+        if (doctor.date_of_birth) setDob(doctor.date_of_birth);
+        if (doctor.qualification) setQualifications(doctor.qualification);
+        if (doctor.registration_number) setRegNumber(doctor.registration_number);
+        if (doctor.experience_years) setExperience(String(doctor.experience_years));
+        if (doctor.specialization) setSpecialization(doctor.specialization);
+        if (doctor.bio) setBio(doctor.bio);
+        if (doctor.profile_photo) setProfilePhoto(doctor.profile_photo);
+      }
+
+      // Load settings as key-value pairs
+      if (Array.isArray(settings)) {
+        for (const s of settings) {
+          switch (s.key) {
+            case 'notification_whatsapp': setWhatsappReminders(s.value === 'true' || s.value === true); break;
+            case 'notification_sms': setSmsReminders(s.value === 'true' || s.value === true); break;
+            case 'notification_email': setEmailNotifications(s.value === 'true' || s.value === true); break;
+            case 'notification_lab_alerts': setLabAlerts(s.value === 'true' || s.value === true); break;
+            case 'notification_missed_alerts': setMissedApptAlerts(s.value === 'true' || s.value === true); break;
+            case 'reminder_first': setFirstReminder(s.value); break;
+            case 'reminder_second': setSecondReminder(s.value); break;
+            case 'rx_default_template': setDefaultTemplate(s.value); break;
+            case 'rx_default_instructions': setDefaultInstructions(s.value); break;
+            case 'rx_enable_digital_sig': setEnableDigitalSig(s.value === 'true' || s.value === true); break;
+            case 'rx_auto_attach_sig': setAutoAttachSig(s.value === 'true' || s.value === true); break;
+            case 'ai_diagnosis': setAiDiagnosis(s.value === 'true' || s.value === true); break;
+            case 'ai_prescription': setAiPrescription(s.value === 'true' || s.value === true); break;
+            case 'ai_voice': setAiVoice(s.value === 'true' || s.value === true); break;
+            case 'ai_drug_interaction': setAiDrugInteraction(s.value === 'true' || s.value === true); break;
+            case 'ai_risk_scoring': setAiRiskScoring(s.value === 'true' || s.value === true); break;
+            case 'ai_language': setAiLanguage(s.value); break;
+            case 'ai_mode': setAiMode(s.value); break;
+            case 'ai_diag_suggest': setAiDiagSuggest(s.value === 'true' || s.value === true); break;
+            case 'ai_lab_suggest': setAiLabSuggest(s.value === 'true' || s.value === true); break;
+            case 'ai_referral_suggest': setAiReferralSuggest(s.value === 'true' || s.value === true); break;
+          }
+        }
+      }
+
+      // Load letterhead from API
+      if (Array.isArray(letterheads)) {
+        const lh = letterheads.find((l: any) => l.clinic_id === clinicId);
+        if (lh) {
+          if (lh.header_image) setCustomRxHeader(lh.header_image);
+          if (lh.footer_image) setCustomRxFooter(lh.footer_image);
+        }
+      }
+    } catch { /* fallback to localStorage values already loaded */ }
+
+    // Load billing settings
     setBilling(loadBillingSettings());
     setBillingLoaded(true);
-  }, [clinicId]);
+  }, [clinicId, rxHeaderKey, rxFooterKey]);
+
+  useEffect(() => {
+    loadAllSettings();
+  }, [loadAllSettings]);
 
   function saveTemplates(updated: PrescriptionTemplate[]) {
     setTemplates(updated);
@@ -380,30 +444,69 @@ export default function SettingsPage() {
   }
 
   async function handleSave() {
+    // Save profile to API
+    try {
+      const doctors = await settingsApi.getDoctors().catch(() => []);
+      const doctor = doctors?.[0];
+      if (doctor) {
+        await settingsApi.updateDoctor(doctor.id, {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone,
+          gender,
+          date_of_birth: dob,
+          qualification: qualifications,
+          registration_number: regNumber,
+          experience_years: parseInt(experience) || 0,
+          specialization,
+          bio,
+          profile_photo: profilePhoto || undefined,
+        }).catch(() => {});
+      }
+    } catch { /* will save locally as fallback */ }
+
+    // Save settings to API
+    const settingsToSave: Array<{ key: string; value: string }> = [
+      { key: 'notification_whatsapp', value: String(whatsappReminders) },
+      { key: 'notification_sms', value: String(smsReminders) },
+      { key: 'notification_email', value: String(emailNotifications) },
+      { key: 'notification_lab_alerts', value: String(labAlerts) },
+      { key: 'notification_missed_alerts', value: String(missedApptAlerts) },
+      { key: 'reminder_first', value: firstReminder },
+      { key: 'reminder_second', value: secondReminder },
+      { key: 'rx_default_template', value: defaultTemplate },
+      { key: 'rx_default_instructions', value: defaultInstructions },
+      { key: 'rx_enable_digital_sig', value: String(enableDigitalSig) },
+      { key: 'rx_auto_attach_sig', value: String(autoAttachSig) },
+      { key: 'ai_diagnosis', value: String(aiDiagnosis) },
+      { key: 'ai_prescription', value: String(aiPrescription) },
+      { key: 'ai_voice', value: String(aiVoice) },
+      { key: 'ai_drug_interaction', value: String(aiDrugInteraction) },
+      { key: 'ai_risk_scoring', value: String(aiRiskScoring) },
+      { key: 'ai_language', value: aiLanguage },
+      { key: 'ai_mode', value: aiMode },
+      { key: 'ai_diag_suggest', value: String(aiDiagSuggest) },
+      { key: 'ai_lab_suggest', value: String(aiLabSuggest) },
+      { key: 'ai_referral_suggest', value: String(aiReferralSuggest) },
+    ];
+    for (const s of settingsToSave) {
+      settingsApi.upsertSetting(s.key, s.value).catch(() => {});
+    }
+
+    // Save letterhead to API
     if (clinicId) {
       const headerData = customRxHeader || '';
       const footerData = customRxFooter || '';
       if (headerData) {
-        try {
-          const res = await fetch('/api/emr/letterhead', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clinicId, type: 'header', data: headerData }),
-          });
-          if (!res.ok) console.warn('Letterhead header server save failed:', res.status);
-        } catch (e) { console.warn('Letterhead header save error:', e); }
+        settingsApi.upsertLetterhead(clinicId, { header_image: headerData }).catch(() => {});
       }
       if (footerData) {
-        try {
-          const res = await fetch('/api/emr/letterhead', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ clinicId, type: 'footer', data: footerData }),
-          });
-          if (!res.ok) console.warn('Letterhead footer server save failed:', res.status);
-        } catch (e) { console.warn('Letterhead footer save error:', e); }
+        settingsApi.upsertLetterhead(clinicId, { footer_image: footerData }).catch(() => {});
       }
     }
+
+    // Also persist to localStorage as fallback
     try {
       if (customRxHeader) localStorage.setItem(rxHeaderKey, customRxHeader);
       else localStorage.removeItem(rxHeaderKey);

@@ -1,13 +1,54 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Search, Eye, Printer, MessageCircle, Download, X, Filter,
-  FileText, Stethoscope, Pill, Calendar, ChevronDown, Mail,
+  FileText, Stethoscope, Pill, Calendar, ChevronDown, Mail, RefreshCw,
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
-import { prescriptions, doctors } from '@/lib/data/emr-mock';
+import { prescriptionsApi, settingsApi } from '@/lib/api-client';
+import { prescriptions as mockPrescriptions, doctors as mockDoctors } from '@/lib/data/emr-mock';
 import type { EMRPrescription } from '@/types/emr';
+
+// Map API prescription to EMRPrescription format
+function apiRxToEMR(apiRx: any): EMRPrescription {
+  const patient = apiRx.patient || {};
+  const doctor = apiRx.doctor || {};
+  const medicines = apiRx.medicines || [];
+  const investigations = apiRx.investigations || [];
+
+  return {
+    id: apiRx.id,
+    prescriptionNumber: apiRx.prescription_number || apiRx.id?.slice(-8)?.toUpperCase() || '—',
+    patientId: apiRx.patient_id,
+    clinicId: apiRx.clinic_id || '',
+    patientName: patient.first_name ? `${patient.first_name} ${patient.last_name}` : '—',
+    patientAge: patient.date_of_birth
+      ? Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : 0,
+    patientGender: patient.gender || 'Male',
+    consultationId: apiRx.consultation_id || '',
+    date: apiRx.prescription_date || apiRx.created_at || '',
+    doctorName: doctor.first_name ? `Dr. ${doctor.first_name} ${doctor.last_name}` : 'Dr. Rajesh Goel',
+    doctorQualification: doctor.qualification || 'MBBS, DNB (Nephrology)',
+    diagnosis: apiRx.diagnosis || '',
+    medications: medicines.map((m: any) => ({
+      name: m.medicine_name || '',
+      dosage: m.dosage || '',
+      frequency: m.frequency || '',
+      duration: m.duration || '',
+      instructions: m.instructions || '',
+      strength: m.strength || '',
+      when: m.when_to_take || '',
+    })),
+    investigations: investigations.map((i: any) => i.test_name || ''),
+    instructions: apiRx.advice || '',
+    followUpDate: apiRx.follow_up_date || '',
+    status: apiRx.status || 'Active',
+    isTemplate: apiRx.is_template || false,
+    templateName: apiRx.template_name || '',
+  };
+}
 
 export default function PrescriptionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,8 +57,45 @@ export default function PrescriptionsPage() {
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const [selectedRx, setSelectedRx] = useState<EMRPrescription | null>(null);
 
+  // API data
+  const [allPrescriptions, setAllPrescriptions] = useState<EMRPrescription[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [doctorsList, setDoctorsList] = useState<any[]>([]);
+
+  // Fetch prescriptions from API
+  const refreshData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rxParams: Record<string, string> = {};
+      if (statusFilter !== 'All') rxParams.status = statusFilter;
+      const [rxResult, doctorsResult] = await Promise.all([
+        prescriptionsApi.list(rxParams).catch(() => null),
+        settingsApi.getDoctors().catch(() => []),
+      ]);
+
+      if (rxResult && Array.isArray(rxResult.data)) {
+        setAllPrescriptions(rxResult.data.map(apiRxToEMR));
+      } else if (rxResult && Array.isArray(rxResult)) {
+        setAllPrescriptions(rxResult.map(apiRxToEMR));
+      } else {
+        // Fallback to mock data
+        setAllPrescriptions(mockPrescriptions);
+      }
+
+      setDoctorsList(doctorsResult || []);
+    } catch {
+      // Fallback to mock data
+      setAllPrescriptions(mockPrescriptions);
+      setDoctorsList(mockDoctors);
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
+
+  useEffect(() => { refreshData(); }, [refreshData]);
+
   const filtered = useMemo(() => {
-    return prescriptions.filter((p) => {
+    return allPrescriptions.filter((p) => {
       const matchSearch =
         searchQuery === '' ||
         p.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -30,7 +108,7 @@ export default function PrescriptionsPage() {
         (!dateRange.to || p.date <= dateRange.to);
       return matchSearch && matchStatus && matchDoctor && matchDate;
     });
-  }, [searchQuery, statusFilter, doctorFilter, dateRange]);
+  }, [searchQuery, statusFilter, doctorFilter, dateRange, allPrescriptions]);
 
   const statusStyles: Record<string, string> = {
     Active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -47,10 +125,17 @@ export default function PrescriptionsPage() {
             {filtered.length} prescription{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#0A75BB] hover:bg-[#085a94] transition-colors">
-          <FileText className="h-4 w-4" />
-          New Prescription
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={refreshData}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Refresh">
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          </button>
+          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#0A75BB] hover:bg-[#085a94] transition-colors">
+            <FileText className="h-4 w-4" />
+            New Prescription
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -86,8 +171,8 @@ export default function PrescriptionsPage() {
             className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20"
           >
             <option value="All">All Doctors</option>
-            {doctors.map((d) => (
-              <option key={d.id} value={d.name}>{d.name}</option>
+            {doctorsList.map((d: any) => (
+              <option key={d.id} value={`Dr. ${d.first_name} ${d.last_name}`}>Dr. {d.first_name} {d.last_name}</option>
             ))}
           </select>
           <select
@@ -143,7 +228,7 @@ export default function PrescriptionsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-center">
-                    <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border', statusStyles[rx.status])}>
+                    <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border', statusStyles[rx.status] || statusStyles.Active)}>
                       {rx.status}
                     </span>
                   </td>
@@ -168,7 +253,7 @@ export default function PrescriptionsPage() {
         {filtered.length === 0 && (
           <div className="py-12 text-center text-gray-500">
             <FileText className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm font-medium">No prescriptions found</p>
+            <p className="text-sm font-medium">{loading ? 'Loading prescriptions...' : 'No prescriptions found'}</p>
           </div>
         )}
       </div>
@@ -239,10 +324,12 @@ export default function PrescriptionsPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Diagnosis</h3>
-                    <p className="text-gray-900 font-medium bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">{selectedRx.diagnosis}</p>
-                  </div>
+                  {selectedRx.diagnosis && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Diagnosis</h3>
+                      <p className="text-gray-900 font-medium bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">{selectedRx.diagnosis}</p>
+                    </div>
+                  )}
 
                   <div>
                     <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Medications</h3>
@@ -265,7 +352,7 @@ export default function PrescriptionsPage() {
                               <td className="px-4 py-3 text-gray-400 font-medium">{idx + 1}</td>
                               <td className="px-4 py-3 font-medium text-gray-900">{med.name}</td>
                               <td className="px-4 py-3 text-gray-700">{med.dosage}</td>
-                              <td className="px-4 py-3 text-gray-700">{med.frequency.includes('morning') ? 'Morning' : med.frequency.includes('night') || med.frequency.includes('dinner') ? 'Night' : med.frequency.includes('bedtime') ? 'Night' : 'Any'}</td>
+                              <td className="px-4 py-3 text-gray-700">{med.frequency?.includes('morning') ? 'Morning' : med.frequency?.includes('night') || med.frequency?.includes('dinner') ? 'Night' : med.frequency?.includes('bedtime') ? 'Night' : 'Any'}</td>
                               <td className="px-4 py-3 text-gray-700">{med.frequency}</td>
                               <td className="px-4 py-3 text-gray-700">{med.duration}</td>
                               <td className="px-4 py-3 text-gray-700 text-xs">{med.instructions || '—'}</td>

@@ -129,48 +129,63 @@ export default function TopNav() {
   }, []);
 
   useEffect(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     if (q.length < 2) { setSearchResults([]); return; }
 
-    const allPatients: { id: string; name: string; phone: string; uhid: string }[] = [];
-    try {
-      const stored = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
-      if (Array.isArray(stored)) {
-        for (const p of stored) {
-          allPatients.push({ id: p.id, name: `${p.firstName || ''} ${p.lastName || ''}`.trim(), phone: p.phone || '', uhid: p.uhid || '' });
+    let cancelled = false;
+
+    async function searchPatients() {
+      try {
+        const res = await fetch(`/api/patients?q=${encodeURIComponent(q)}`);
+        if (!res.ok) throw new Error('API failed');
+        const data = await res.json();
+        const patients = data.data || data.patients || data || [];
+        if (!cancelled && Array.isArray(patients)) {
+          setSearchResults(patients.slice(0, 8).map((p: any) => ({
+            id: p.id,
+            name: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+            phone: p.phone || '',
+            uhid: p.uhid || '',
+          })));
         }
-      }
-    } catch {}
-    try {
-      const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-      if (Array.isArray(bookings)) {
-        for (const b of bookings) {
-          if (b.patientData?.firstName) {
-            const id = b.patientId || 'obp-' + b.bookingId;
-            if (!allPatients.some((p) => p.id === id)) {
-              allPatients.push({ id, name: `${b.patientData.firstName || ''} ${b.patientData.lastName || ''}`.trim(), phone: b.patientData.phone || '', uhid: 'OB-' + id.slice(4) });
+      } catch {
+        // Fallback to localStorage search
+        if (cancelled) return;
+        const allPatients: { id: string; name: string; phone: string; uhid: string }[] = [];
+        try {
+          const stored = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+          if (Array.isArray(stored)) {
+            for (const p of stored) {
+              allPatients.push({ id: p.id, name: `${p.firstName || ''} ${p.lastName || ''}`.trim(), phone: p.phone || '', uhid: p.uhid || '' });
             }
           }
-        }
-      }
-    } catch {}
-    try {
-      const mock = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
-      if (Array.isArray(mock)) {
-        for (const c of mock) {
-          if (c.patientId && !allPatients.some((p) => p.id === c.patientId)) {
-            allPatients.push({ id: c.patientId, name: c.patientName || '', phone: '', uhid: '' });
+        } catch {}
+        try {
+          const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+          if (Array.isArray(bookings)) {
+            for (const b of bookings) {
+              if (b.patientData?.firstName) {
+                const id = b.patientId || 'obp-' + b.bookingId;
+                if (!allPatients.some((p) => p.id === id)) {
+                  allPatients.push({ id, name: `${b.patientData.firstName || ''} ${b.patientData.lastName || ''}`.trim(), phone: b.patientData.phone || '', uhid: 'OB-' + id.slice(4) });
+                }
+              }
+            }
           }
-        }
-      }
-    } catch {}
+        } catch {}
 
-    const matched = allPatients.filter((p) => {
-      const searchPhone = q.replace(/\D/g, '');
-      const phone = (p.phone || '').replace(/\D/g, '');
-      return p.name.toLowerCase().includes(q) || (searchPhone.length >= 3 && phone.includes(searchPhone)) || (p.uhid && p.uhid.toLowerCase().includes(q));
-    }).slice(0, 8);
-    setSearchResults(matched);
+        const ql = q.toLowerCase();
+        const matched = allPatients.filter((p) => {
+          const searchPhone = ql.replace(/\D/g, '');
+          const phone = (p.phone || '').replace(/\D/g, '');
+          return p.name.toLowerCase().includes(ql) || (searchPhone.length >= 3 && phone.includes(searchPhone)) || (p.uhid && p.uhid.toLowerCase().includes(ql));
+        }).slice(0, 8);
+        if (!cancelled) setSearchResults(matched);
+      }
+    }
+
+    searchPatients();
+    return () => { cancelled = true; };
   }, [searchQuery]);
 
   function resetPatientForm() {

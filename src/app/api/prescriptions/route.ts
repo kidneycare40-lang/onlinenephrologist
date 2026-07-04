@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(prescriptions);
     }
 
-    return NextResponse.json({ error: 'Query parameter required: id, patientId, or templates=true' }, { status: 400 });
+    // List all prescriptions (with optional filters)
+    const status = searchParams.get('status');
+    const allPrescriptions = await prescriptionRepo.findAllWithRelations(status || undefined);
+    return NextResponse.json(allPrescriptions);
 
   } catch (error) {
     console.error('GET /api/prescriptions error:', error);
