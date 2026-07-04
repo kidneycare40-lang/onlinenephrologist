@@ -592,12 +592,13 @@ export default function ConsultationPage() {
       } else {
         const wrapper = document.createElement('div');
         wrapper.setAttribute('data-prescription-html', 'true');
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '0';
+        wrapper.style.position = 'absolute';
+        wrapper.style.left = '-9999px';
         wrapper.style.top = '0';
-        wrapper.style.width = '210mm';
+        wrapper.style.width = '794px';
         wrapper.style.background = '#fff';
-        wrapper.style.zIndex = '99999';
+        wrapper.style.overflow = 'visible';
+        wrapper.style.zIndex = '-1';
         document.body.appendChild(wrapper);
 
         const root = createRoot(wrapper);
@@ -619,9 +620,9 @@ export default function ConsultationPage() {
             attempts++;
             const hasContent = wrapper.innerText.trim().length > 50;
             const imgs = wrapper.querySelectorAll('img');
-            const allLoaded = Array.from(imgs).every((img) => img.complete || img.naturalWidth > 0);
-            if ((hasContent && allLoaded) || attempts > 60) {
-              setTimeout(resolve, 300);
+            const allLoaded = imgs.length === 0 || Array.from(imgs).every((img) => img.complete || img.naturalWidth > 0);
+            if ((hasContent && allLoaded) || attempts > 80) {
+              setTimeout(resolve, 500);
             } else {
               setTimeout(check, 100);
             }
@@ -632,7 +633,7 @@ export default function ConsultationPage() {
         sourceEl = wrapper;
         cleanup = () => {
           root.unmount();
-          document.body.removeChild(wrapper);
+          if (wrapper.parentNode) document.body.removeChild(wrapper);
         };
       }
 
@@ -640,7 +641,7 @@ export default function ConsultationPage() {
         margin: [5, 8, 5, 8] as [number, number, number, number],
         filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: true, allowTaint: true, backgroundColor: '#ffffff' },
+        html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true, backgroundColor: '#ffffff', width: 794, windowWidth: 794 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
       };
 
