@@ -32,6 +32,8 @@ import ReportUploadOCR from '@/components/emr/ReportUploadOCR';
 import { Plus, Search, Trash2, X, Stethoscope } from 'lucide-react';
 import { type ExtractedLabValue, type ExtractedMedicine, type OCRResult } from '@/lib/ocr-utils';
 import { autoCorrect } from '@/lib/spellcheck';
+import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR } from '@/lib/consultation-api';
+import { patientsApi } from '@/lib/api-client';
 
 class ErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
   state = { error: null as Error | null };
@@ -113,203 +115,216 @@ export default function ConsultationPage() {
   const [showHistorySection, setShowHistorySection] = useState(false);
 
   const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
-  useEffect(() => {
-    try {
-      setAddedPatients(JSON.parse(localStorage.getItem('emr_added_patients') || '[]'));
-    } catch { /* ignore */ }
-  }, []);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [consultation, setConsultation] = useState<EMRConsultation | null>(null);
+  const [patient, setPatient] = useState<any>(null);
 
-  const allPatients = useMemo(() => [...patients, ...addedPatients], [addedPatients]);
-
-  // Load online bookings from localStorage
+  // Load online bookings from localStorage (kept as fallback)
   const onlineBookings = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem('emr_bookings') || '[]') as { bookingId: string; firstName: string; lastName: string; phone: string; email: string; age: string; gender: string; consultationType: string; clinicId: string; date: string; time: string; reason: string; createdAt: string; status: string; consultationFee: number; paymentStatus?: string }[];
     } catch { return []; }
   }, []);
 
-  const initialConsultation = useMemo(() => {
-    // First check localStorage for saved consultations
-    let storedConsultations: EMRConsultation[] = [];
-    try {
-      storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
-    } catch { /* ignore */ }
+  const allPatients = useMemo(() => [...patients, ...addedPatients], [addedPatients]);
 
-    // Check stored consultations first
-    const storedConsult = storedConsultations.find((c) => c.id === id || c.patientId === id);
-    if (storedConsult) {
-      // Clinic filter: only show consultations for current clinic
-      if (clinicId && storedConsult.clinicId && storedConsult.clinicId !== clinicId) {
-        // Don't return — try next lookup
-      } else {
-        let storedPatients: EMRPatient[] = [];
-        try {
-          storedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
-        } catch { /* ignore */ }
-        const allStored = [...patients, ...addedPatients, ...storedPatients];
-        const pat = allStored.find((p) => p.id === storedConsult.patientId);
-        if (pat) return storedConsult;
-      }
-    }
-
-    // Then check mock consultations (clinic-filtered)
-    let consult = consultations.find((c) => {
-      if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
-      return c.id === id || c.patientId === id;
-    });
-    if (!consult) {
-      consult = consultations.find((c) => c.patientId === id);
-    }
-    if (consult) {
-      const strengthPattern = /^\d+(\.\d+)?\s*(mg|g|mcg|IU|ML|mL|%|units?)$/i;
-      const whenPatterns = /^(take (in |after |before |with )?(morning|afternoon|night|dinner|breakfast|lunch|meals|food|empty stomach)|after food|before food|empty stomach|with food|any time|bf|af|bed time)$/i;
-      consult = {
-        ...consult,
-        prescriptions: consult.prescriptions.map((p) => {
-          let updated = { ...p };
-          if (!updated.strength && updated.dosage && strengthPattern.test(updated.dosage.trim())) {
-            updated = { ...updated, strength: updated.dosage, dosage: '1-0-1' };
-          }
-          if (updated.instructions && whenPatterns.test(updated.instructions.trim())) {
-            updated = { ...updated, when: updated.when || updated.instructions, instructions: '' };
-          }
-          return updated;
-        }),
-      };
-    }
-    if (consult) return consult;
-
-    // Check online bookings - auto-create patient + consultation from booking
-    const booking = onlineBookings.find((b) => b.bookingId === id);
-    if (booking) {
-      const bookingClinicId = booking.clinicId === 'online' ? 'online' : booking.clinicId;
-      const patientId = `obp-${booking.bookingId}`;
-      const newPat: EMRPatient = {
-        id: patientId,
-        firstName: booking.firstName,
-        lastName: booking.lastName,
-        phone: booking.phone,
-        email: booking.email,
-        dateOfBirth: booking.age ? `${new Date().getFullYear() - parseInt(booking.age)}-01-01` : '1990-01-01',
-        gender: (booking.gender as 'Male' | 'Female') || 'Male',
-        bloodGroup: '',
-        uhid: `OB-${booking.bookingId.slice(-6).toUpperCase()}`,
-        clinicId: bookingClinicId,
-        abhaNumber: '',
-        address: '',
-        city: '',
-        state: '',
-        pincode: '',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        emergencyContactRelation: '',
-        allergies: [],
-        medicalHistory: '',
-        isChronic: false,
-        isActive: true,
-        createdAt: booking.createdAt || new Date().toISOString(),
-        lastVisit: booking.date,
-        totalVisits: 0,
-        familyMembers: [],
-      };
-
-      // Save patient to localStorage
-      let storedPatients: EMRPatient[] = [];
-      try { storedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]'); } catch { /* ignore */ }
-      if (!storedPatients.find((p) => p.id === patientId)) {
-        storedPatients.push(newPat);
-        localStorage.setItem('emr_added_patients', JSON.stringify(storedPatients));
-      }
-
-      // Create new consultation
-      const newConsult: EMRConsultation = {
-        id: `consult-${booking.bookingId}`,
-        patientId,
-        clinicId: bookingClinicId,
-        date: booking.date || new Date().toISOString().split('T')[0],
-        doctorName: 'Dr. Rajesh Goel',
-        status: 'IN_PROGRESS',
-        tokenId: `#${booking.bookingId.slice(-6).toUpperCase()}`,
-        chiefComplaint: booking.reason || '',
-        hpi: '',
-        examination: '',
-        vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
-        diagnoses: [],
-        prescriptions: [],
-        investigations: [],
-        advice: '',
-        notes: '',
-        followUpDate: '',
-      };
-
-      // Save consultation to localStorage
-      storedConsultations.push(newConsult);
-      localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
-
-      return newConsult;
-    }
-
-    return null;
-  }, [id, allPatients, addedPatients, onlineBookings]);
-
-  const initialPatient = useMemo(() => {
-    // Also load stored patients from localStorage
-    let storedPatients: EMRPatient[] = [];
-    try {
-      storedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
-    } catch { /* ignore */ }
-    const allStored = [...patients, ...addedPatients, ...storedPatients];
-    if (initialConsultation) {
-      const pat = allStored.find((p) => p.id === initialConsultation.patientId);
-      // Clinic filter: only show patients for current clinic (allow empty clinicId)
-      if (clinicId && pat && pat.clinicId && pat.clinicId !== clinicId) return null;
-      return pat || null;
-    }
-    // Check online bookings
-    const booking = onlineBookings.find((b) => b.bookingId === id);
-    if (booking) {
-      const BOOKING_CLINIC_MAP: Record<string, string> = { 'online': '', 'faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'saket': 'kcc-saket' };
-      const mappedId = BOOKING_CLINIC_MAP[booking.clinicId] || booking.clinicId;
-      if (clinicId && mappedId !== clinicId) return null;
-      const patientId = `obp-${booking.bookingId}`;
-      return allStored.find((p) => p.id === patientId) || null;
-    }
-    const pat = allStored.find((p) => p.id === id);
-    // Clinic filter for direct patient lookup (allow empty clinicId)
-    if (clinicId && pat && pat.clinicId && pat.clinicId !== clinicId) return null;
-    return pat || null;
-  }, [initialConsultation, id, allPatients, addedPatients, onlineBookings, clinicId]);
-
-  const newConsultation = useMemo<EMRConsultation | null>(() => {
-    if (initialConsultation || !initialPatient) return null;
-    return {
-      id: `consult-${initialPatient.id}`,
-      patientId: initialPatient.id,
-      clinicId: initialPatient.clinicId || clinicId || '',
-      date: new Date().toISOString().split('T')[0],
-      doctorName: 'Dr Rajesh Goel',
-      chiefComplaint: '',
-      history: '',
-      hpi: '',
-      examination: '',
-      vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
-      diagnoses: [],
-      prescriptions: [],
-      investigations: [],
-      advice: '',
-      notes: '',
-      followUpDate: '',
-      status: 'IN_PROGRESS',
-    };
-  }, [initialConsultation, initialPatient, clinicId]);
-
-  const [consultation, setConsultation] = useState<EMRConsultation | null>(initialConsultation || newConsultation);
-  const [patient, setPatient] = useState<any>(initialPatient);
-
+  // Load consultation and patient from API (with localStorage fallback)
   useEffect(() => {
-    setConsultation(initialConsultation || newConsultation);
-    setPatient(initialPatient);
-  }, [initialConsultation, initialPatient, newConsultation]);
+    let cancelled = false;
+    const loadData = async () => {
+      setIsLoadingData(true);
+      try {
+        // Try loading from API first
+        const { consultation: apiConsult, patient: apiPatient } = await loadConsultationFromApi(id, clinicId || undefined);
+
+        if (cancelled) return;
+
+        if (apiConsult && apiPatient) {
+          setConsultation(apiConsult);
+          setPatient(apiPatient);
+          setIsLoadingData(false);
+          return;
+        }
+
+        // Try loading patient by ID directly
+        if (!apiConsult) {
+          const directPatient = await loadPatientFromApi(id);
+          if (cancelled) return;
+
+          if (directPatient) {
+            setPatient(directPatient);
+            // Create new consultation for this patient
+            const newConsult: EMRConsultation = {
+              id: `consult-${directPatient.id}`,
+              patientId: directPatient.id,
+              clinicId: directPatient.clinicId || clinicId || '',
+              date: new Date().toISOString().split('T')[0],
+              doctorName: 'Dr Rajesh Goel',
+              chiefComplaint: '',
+              hpi: '',
+              examination: '',
+              vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
+              diagnoses: [],
+              prescriptions: [],
+              investigations: [],
+              advice: '',
+              notes: '',
+              followUpDate: '',
+              status: 'IN_PROGRESS',
+            };
+            setConsultation(newConsult);
+            setIsLoadingData(false);
+            return;
+          }
+        }
+      } catch {
+        // API failed, fall through to localStorage
+      }
+
+      if (cancelled) return;
+
+      // Fallback: load from localStorage (existing logic)
+      let storedConsultations: EMRConsultation[] = [];
+      try {
+        storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+      } catch { /* ignore */ }
+
+      let storedPatients: EMRPatient[] = [];
+      try {
+        storedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+      } catch { /* ignore */ }
+
+      setAddedPatients(storedPatients);
+      const allStored = [...patients, ...storedPatients];
+
+      // Check stored consultations
+      const storedConsult = storedConsultations.find((c) => c.id === id || c.patientId === id);
+      if (storedConsult) {
+        const pat = allStored.find((p) => p.id === storedConsult.patientId);
+        if (pat) {
+          setConsultation(storedConsult);
+          setPatient(pat);
+          setIsLoadingData(false);
+          return;
+        }
+      }
+
+      // Check mock consultations
+      let consult = consultations.find((c) => {
+        if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
+        return c.id === id || c.patientId === id;
+      });
+      if (!consult) {
+        consult = consultations.find((c) => c.patientId === id);
+      }
+      if (consult) {
+        const pat = allStored.find((p) => p.id === consult!.patientId);
+        setConsultation(consult);
+        setPatient(pat || null);
+        setIsLoadingData(false);
+        return;
+      }
+
+      // Check online bookings - auto-create patient + consultation
+      const booking = onlineBookings.find((b) => b.bookingId === id);
+      if (booking) {
+        const bookingClinicId = booking.clinicId === 'online' ? 'online' : booking.clinicId;
+        const patientId = `obp-${booking.bookingId}`;
+        const newPat: EMRPatient = {
+          id: patientId,
+          firstName: booking.firstName,
+          lastName: booking.lastName,
+          phone: booking.phone,
+          email: booking.email,
+          dateOfBirth: booking.age ? `${new Date().getFullYear() - parseInt(booking.age)}-01-01` : '1990-01-01',
+          gender: (booking.gender as 'Male' | 'Female') || 'Male',
+          bloodGroup: '',
+          uhid: `OB-${booking.bookingId.slice(-6).toUpperCase()}`,
+          clinicId: bookingClinicId,
+          abhaNumber: '',
+          address: '',
+          city: '',
+          state: '',
+          pincode: '',
+          emergencyContactName: '',
+          emergencyContactPhone: '',
+          emergencyContactRelation: '',
+          allergies: [],
+          medicalHistory: '',
+          isChronic: false,
+          isActive: true,
+          createdAt: booking.createdAt || new Date().toISOString(),
+          lastVisit: booking.date,
+          totalVisits: 0,
+          familyMembers: [],
+        };
+
+        // Save patient to localStorage
+        if (!storedPatients.find((p) => p.id === patientId)) {
+          storedPatients.push(newPat);
+          localStorage.setItem('emr_added_patients', JSON.stringify(storedPatients));
+        }
+
+        const newConsult: EMRConsultation = {
+          id: `consult-${booking.bookingId}`,
+          patientId,
+          clinicId: bookingClinicId,
+          date: booking.date || new Date().toISOString().split('T')[0],
+          doctorName: 'Dr. Rajesh Goel',
+          status: 'IN_PROGRESS',
+          tokenId: `#${booking.bookingId.slice(-6).toUpperCase()}`,
+          chiefComplaint: booking.reason || '',
+          hpi: '',
+          examination: '',
+          vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
+          diagnoses: [],
+          prescriptions: [],
+          investigations: [],
+          advice: '',
+          notes: '',
+          followUpDate: '',
+        };
+
+        storedConsultations.push(newConsult);
+        localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
+
+        setConsultation(newConsult);
+        setPatient(newPat);
+        setIsLoadingData(false);
+        return;
+      }
+
+      // Check direct patient ID in localStorage/mock
+      const pat = allStored.find((p) => p.id === id);
+      if (pat) {
+        const newConsult: EMRConsultation = {
+          id: `consult-${pat.id}`,
+          patientId: pat.id,
+          clinicId: pat.clinicId || clinicId || '',
+          date: new Date().toISOString().split('T')[0],
+          doctorName: 'Dr Rajesh Goel',
+          chiefComplaint: '',
+          hpi: '',
+          examination: '',
+          vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
+          diagnoses: [],
+          prescriptions: [],
+          investigations: [],
+          advice: '',
+          notes: '',
+          followUpDate: '',
+          status: 'IN_PROGRESS',
+        };
+        setConsultation(newConsult);
+        setPatient(pat);
+      }
+
+      setIsLoadingData(false);
+    };
+
+    loadData();
+    return () => { cancelled = true; };
+  }, [id, clinicId, onlineBookings]);
 
   const calculateBMI = useCallback((weight: string, height: string) => {
     const w = parseFloat(weight);
@@ -466,10 +481,14 @@ export default function ConsultationPage() {
   };
 
   const saveConsultationToStorage = useCallback((consult: EMRConsultation) => {
+    // Save to both API and localStorage
+    if (consult && patient) {
+      saveConsultationToApi(consult, patient.id, clinicId || '').catch(() => {});
+    }
+    // Also save to localStorage as backup
     try {
       const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
       const allPats = [...patients, ...JSON.parse(localStorage.getItem('emr_added_patients') || '[]') as EMRPatient[]];
-      // Dedup by phone (same person, different IDs) or patientId
       const pat = allPats.find((p) => p.id === consult.patientId);
       const key = pat?.phone || consult.patientId;
       const idx = stored.findIndex((c) => {
@@ -484,7 +503,7 @@ export default function ConsultationPage() {
       }
       localStorage.setItem('emr_consultations', JSON.stringify(stored));
     } catch { /* ignore */ }
-  }, []);
+  }, [patient, clinicId]);
 
   // Auto-save: save to localStorage whenever consultation changes
   useEffect(() => {
@@ -494,18 +513,24 @@ export default function ConsultationPage() {
   }, [consultation, saveConsultationToStorage]);
 
   const handleSave = async () => {
-    if (!consultation) return;
+    if (!consultation || !patient) return;
     setIsSaving(true);
-    saveConsultationToStorage({ ...consultation, status: 'COMPLETED' });
+    const completedConsult = { ...consultation, status: 'COMPLETED' as const };
+    setConsultation(completedConsult);
+    await saveConsultationToApi(completedConsult, patient.id, clinicId || '').catch(() => {});
+    saveConsultationToStorage(completedConsult);
     await new Promise((r) => setTimeout(r, 500));
     setIsSaving(false);
     showToastMessage('Consultation saved successfully');
   };
 
   const handleEndConsultation = async () => {
-    if (!consultation) return;
+    if (!consultation || !patient) return;
     setIsSaving(true);
-    saveConsultationToStorage({ ...consultation, status: 'COMPLETED' });
+    const completedConsult = { ...consultation, status: 'COMPLETED' as const };
+    setConsultation(completedConsult);
+    await saveConsultationToApi(completedConsult, patient.id, clinicId || '').catch(() => {});
+    saveConsultationToStorage(completedConsult);
     await new Promise((r) => setTimeout(r, 400));
     setIsSaving(false);
     showToastMessage('Consultation ended');
@@ -860,6 +885,17 @@ export default function ConsultationPage() {
       });
     return results;
   }, [patient]);
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="flex flex-col items-center gap-3 text-center max-w-sm">
+          <Stethoscope className="h-10 w-10 text-slate-300 animate-pulse" />
+          <p className="text-slate-600 font-medium">Loading consultation...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!consultation || !patient) {
     return (
