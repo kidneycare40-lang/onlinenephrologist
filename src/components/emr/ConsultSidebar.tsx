@@ -110,7 +110,7 @@ export default function ConsultSidebar({ activeSection, onSectionClick }: Consul
       <div className="lg:hidden sticky top-14 z-30 bg-[#1e293b] border-b border-slate-700 no-print">
         <div
           ref={scrollRef}
-          className="flex overflow-x-auto scrollbar-hide gap-1 px-2 py-1.5"
+          className="flex overflow-x-auto scrollbar-hide gap-2 px-2 py-1.5"
         >
           {sidebarItems.map((item) => {
             const Icon = item.icon;
@@ -127,7 +127,7 @@ export default function ConsultSidebar({ activeSection, onSectionClick }: Consul
                   }
                 }}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150 shrink-0 touch-target',
+                  'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-150 shrink-0 touch-target',
                   isActive
                     ? 'bg-[#0A75BB] text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-700/50'

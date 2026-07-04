@@ -174,3 +174,87 @@ export const settingsApi = {
   upsertLetterhead: (clinicId: string, data: any) =>
     api.post<any>('/api/settings', { ...data, clinic_id: clinicId, action: 'create_letterhead' }),
 };
+
+// ============================================================
+// TEMPLATE APIs
+// ============================================================
+
+export const complaintTemplatesApi = {
+  list: (params?: { category?: string; search?: string }) => {
+    const qs = new URLSearchParams({ type: 'complaints' });
+    if (params?.category) qs.set('category', params.category);
+    if (params?.search) qs.set('search', params.search);
+    return api.get<any[]>(`/api/templates?${qs}`);
+  },
+  create: (data: any) => api.post<any>('/api/templates', { type: 'complaints', ...data }),
+  update: (id: string, data: any) => api.put<any>('/api/templates', { type: 'complaints', id, ...data }),
+  delete: (id: string) => api.delete(`/api/templates?type=complaints&id=${id}`),
+};
+
+export const diagnosisTemplatesApi = {
+  list: (params?: { category?: string; ckdStage?: number; search?: string }) => {
+    const qs = new URLSearchParams({ type: 'diagnoses' });
+    if (params?.category) qs.set('category', params.category);
+    if (params?.ckdStage) qs.set('ckdStage', String(params.ckdStage));
+    if (params?.search) qs.set('search', params.search);
+    return api.get<any[]>(`/api/templates?${qs}`);
+  },
+  create: (data: any) => api.post<any>('/api/templates', { type: 'diagnoses', ...data }),
+  update: (id: string, data: any) => api.put<any>('/api/templates', { type: 'diagnoses', id, ...data }),
+  delete: (id: string) => api.delete(`/api/templates?type=diagnoses&id=${id}`),
+};
+
+export const medicinesApi = {
+  search: (params: { q?: string; category?: string; form?: string; nephrotoxic?: boolean; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    if (params.category) qs.set('category', params.category);
+    if (params.form) qs.set('form', params.form);
+    if (params.nephrotoxic !== undefined) qs.set('nephrotoxic', String(params.nephrotoxic));
+    if (params.limit) qs.set('limit', String(params.limit));
+    return api.get<any[]>(`/api/medicines?${qs}`);
+  },
+  create: (data: any) => api.post<any>('/api/medicines', data),
+};
+
+export const medicineTemplatesApi = {
+  list: (params?: { category?: string; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.category) qs.set('category', params.category);
+    if (params?.search) qs.set('search', params.search);
+    const query = qs.toString();
+    return api.get<any[]>(`/api/medicine-templates${query ? `?${query}` : ''}`);
+  },
+  get: (id: string) => api.get<any>(`/api/medicine-templates?id=${id}`),
+  create: (data: any) => api.post<any>('/api/medicine-templates', data),
+  update: (id: string, data: any) => api.put<any>('/api/medicine-templates', { id, ...data }),
+  delete: (id: string) => api.delete(`/api/medicine-templates?id=${id}`),
+};
+
+export const investigationTemplatesApi = {
+  list: (params?: { category?: string; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.category) qs.set('category', params.category);
+    if (params?.search) qs.set('search', params.search);
+    const query = qs.toString();
+    return api.get<any[]>(`/api/investigation-templates${query ? `?${query}` : ''}`);
+  },
+  get: (id: string) => api.get<any>(`/api/investigation-templates?id=${id}`),
+  create: (data: any) => api.post<any>('/api/investigation-templates', data),
+  update: (id: string, data: any) => api.put<any>('/api/investigation-templates', { id, ...data }),
+  delete: (id: string) => api.delete(`/api/investigation-templates?id=${id}`),
+};
+
+export const adviceTemplatesApi = {
+  list: (params?: { category?: string; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.category) qs.set('category', params.category);
+    if (params?.search) qs.set('search', params.search);
+    const query = qs.toString();
+    return api.get<any[]>(`/api/advice-templates${query ? `?${query}` : ''}`);
+  },
+  get: (id: string) => api.get<any>(`/api/advice-templates?id=${id}`),
+  create: (data: any) => api.post<any>('/api/advice-templates', data),
+  update: (id: string, data: any) => api.put<any>('/api/advice-templates', { id, ...data }),
+  delete: (id: string) => api.delete(`/api/advice-templates?id=${id}`),
+};

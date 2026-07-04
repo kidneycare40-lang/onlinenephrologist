@@ -265,7 +265,7 @@ export default function EMRDashboardPage() {
         <button
           onClick={refreshData}
           disabled={loading}
-          className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          className="p-2.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           title="Refresh"
         >
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
@@ -314,14 +314,14 @@ export default function EMRDashboardPage() {
             <table className="w-full hidden lg:table">
               <thead>
                 <tr className="bg-gray-50/80">
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Token</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Patient</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Age/Gender</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Time</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Type</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Payment</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase">Action</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Token</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Patient</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Age/Gender</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Time</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Payment</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -335,7 +335,7 @@ export default function EMRDashboardPage() {
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900">{apt.patientName}</span>
-                        {apt.isOnline && <span className="px-1.5 py-0.5 bg-cyan-100 text-cyan-700 text-[10px] font-semibold rounded">WEB</span>}
+                        {apt.isOnline && <span className="px-1.5 py-0.5 bg-cyan-100 text-cyan-700 text-xs font-semibold rounded">WEB</span>}
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500">{apt.ageGender}</td>
@@ -348,7 +348,7 @@ export default function EMRDashboardPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={cn(
-                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium',
+                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
                         apt.payment === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                       )}>
                         {apt.payment === 'PAID' ? <CreditCard className="h-3 w-3" /> : null}
@@ -357,7 +357,7 @@ export default function EMRDashboardPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={cn(
-                        'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium',
+                        'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium',
                         getStatusColor(apt.status)
                       )}>
                         {getStatusLabel(apt.status)}
@@ -431,12 +431,12 @@ export default function EMRDashboardPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-gray-900 truncate">{apt.patientName}</span>
-                        {apt.isOnline && <span className="px-1.5 py-0.5 bg-cyan-100 text-cyan-700 text-[9px] font-semibold rounded shrink-0">WEB</span>}
+                        {apt.isOnline && <span className="px-1.5 py-0.5 bg-cyan-100 text-cyan-700 text-xs font-semibold rounded shrink-0">WEB</span>}
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">{apt.ageGender} &middot; {apt.time}</p>
                     </div>
                     <span className={cn(
-                      'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0',
+                      'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0',
                       getStatusColor(apt.status)
                     )}>
                       {getStatusLabel(apt.status)}
@@ -444,19 +444,19 @@ export default function EMRDashboardPage() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
                     <span className={cn(
-                      'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium',
+                      'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium',
                       apt.payment === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                     )}>
                       {apt.payment === 'PAID' ? 'Paid' : 'Unpaid'} {apt.amount ? `₹${apt.amount}` : ''}
                     </span>
-                    <span className="text-[10px] text-gray-400">{apt.tokenId}</span>
-                    <div className="ml-auto flex items-center gap-1">
+                    <span className="text-xs text-gray-400">{apt.tokenId}</span>
+                    <div className="ml-auto flex items-center gap-2">
                       {apt.payment === 'UNPAID' && apt.isOnline && (
-                        <button onClick={() => handleMarkPaid(apt.id)} className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Pay</button>
+                        <button onClick={() => handleMarkPaid(apt.id)} className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg">Pay</button>
                       )}
                       <Link
                         href={apt.patientId ? `/emr/consultation/${apt.patientId}` : '#'}
-                        className="text-[10px] font-medium text-[#0A75BB] bg-[#0A75BB]/5 px-2 py-1 rounded"
+                        className="text-xs font-medium text-[#0A75BB] bg-[#0A75BB]/5 px-2.5 py-1.5 rounded-lg"
                       >
                         Rx
                       </Link>
@@ -476,17 +476,17 @@ export default function EMRDashboardPage() {
         {/* Quick Actions Sidebar */}
         <div className="lg:col-span-3 space-y-4">
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</p>
             <div className="space-y-2">
-              <button onClick={() => router.push('/emr/patients/add')} className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-[#0A75BB] text-white text-sm font-medium rounded-lg hover:bg-[#085D94] transition-colors">
+              <button onClick={() => router.push('/emr/patients/add')} className="w-full flex items-center gap-2.5 px-3 h-11 bg-[#0A75BB] text-white text-sm font-medium rounded-lg hover:bg-[#085D94] transition-colors">
                 <UserPlus className="h-4 w-4" />
                 New Patient
               </button>
-              <button onClick={() => router.push('/emr/appointments')} className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">
+              <button onClick={() => router.push('/emr/appointments')} className="w-full flex items-center gap-2.5 px-3 h-11 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">
                 <CalendarPlus className="h-4 w-4" />
                 New Appointment
               </button>
-              <button onClick={() => router.push('/emr/reports')} className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
+              <button onClick={() => router.push('/emr/reports')} className="w-full flex items-center gap-2.5 px-3 h-11 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
                 <FileText className="h-4 w-4" />
                 View Reports
               </button>
@@ -515,11 +515,11 @@ export default function EMRDashboardPage() {
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {patient.first_name} {patient.last_name}
                       </p>
-                      <p className="text-[11px] text-gray-500 mt-0.5">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         {patient.uhid} &middot; {patient.phone}
                       </p>
                     </div>
-                    <span className="text-[11px] text-gray-400 shrink-0 ml-2">
+                    <span className="text-xs text-gray-400 shrink-0 ml-2">
                       {patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
                     </span>
                   </div>

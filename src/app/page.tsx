@@ -166,7 +166,7 @@ export default function HomePage() {
                   Call: +91 9818235613
                 </a>
               </div>
-              <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm text-blue-200">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-6 text-sm sm:text-sm text-blue-200">
                 <span className="flex items-center gap-1">
                   <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                   18+ Years Experience
@@ -228,7 +228,7 @@ export default function HomePage() {
       </section>
 
       {/* Why Choose Section — E-E-A-T */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-8 sm:py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Consult Dr Rajesh Goel Online?</h2>
@@ -252,7 +252,7 @@ export default function HomePage() {
       </section>
 
       {/* Online Consultation Process */}
-      <section className="py-16 bg-white">
+      <section className="py-8 sm:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">How Online Kidney Consultation Works</h2>
@@ -282,7 +282,7 @@ export default function HomePage() {
       </section>
 
       {/* Conditions Treated — Internal Links */}
-      <section className="py-16 bg-gray-50" id="conditions">
+      <section className="py-8 sm:py-16 bg-gray-50" id="conditions">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Kidney Conditions Treated Online</h2>
@@ -314,7 +314,7 @@ export default function HomePage() {
       </section>
 
       {/* Who Should Consult Online */}
-      <section className="py-16 bg-white">
+      <section className="py-8 sm:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Who Should Consult a Nephrologist Online?</h2>
@@ -351,7 +351,7 @@ export default function HomePage() {
       </section>
 
       {/* Benefits of Online Consultation */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-8 sm:py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Benefits of Online Kidney Consultation</h2>
@@ -377,7 +377,7 @@ export default function HomePage() {
       </section>
 
       {/* What Reports to Bring */}
-      <section className="py-16 bg-white">
+      <section className="py-8 sm:py-16 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">What Reports to Bring for Online Consultation</h2>
@@ -425,7 +425,7 @@ export default function HomePage() {
       </section>
 
       {/* Internal Links — Related Pages */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-8 sm:py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Kidney Health Resources</h2>
@@ -453,7 +453,7 @@ export default function HomePage() {
       </section>
 
       {/* Emergency Symptoms */}
-      <section className="py-16 bg-red-50">
+      <section className="py-8 sm:py-16 bg-red-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-2xl border-2 border-red-200 p-8">
             <div className="text-center mb-8">
@@ -489,7 +489,7 @@ export default function HomePage() {
       </section>
 
       {/* Doctor Profile Card */}
-      <section className="py-16 bg-white">
+      <section className="py-8 sm:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden md:flex">
             <div className="md:w-1/3">
@@ -527,7 +527,7 @@ export default function HomePage() {
       </section>
 
       {/* FAQ Section — 30+ FAQs */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-8 sm:py-16 bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
@@ -548,7 +548,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-br from-[#0A75BB] to-[#063d5c] text-white">
+      <section className="py-8 sm:py-16 bg-gradient-to-br from-[#0A75BB] to-[#063d5c] text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Book Your Online Nephrologist Consultation Today</h2>
           <p className="text-blue-100 mb-4 text-lg">Don&apos;t wait — get expert kidney care from Dr Rajesh Goel. Consultation starting at ₹1000.</p>

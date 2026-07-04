@@ -109,13 +109,13 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-3.5 flex items-center justify-between rounded-t-xl z-10">
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-3.5 flex items-center justify-between rounded-t-2xl sm:rounded-t-2xl z-10">
           <h2 className="text-base font-semibold text-gray-900">Add New Patient</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="h-4 w-4 text-gray-500" />
+          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Close">
+            <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
@@ -127,7 +127,7 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter full name"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
+              className="w-full px-3 h-11 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
             />
           </div>
 
@@ -138,7 +138,7 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+91 98765 43210"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
+              className="w-full px-3 h-11 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
             />
           </div>
 
@@ -157,13 +157,13 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 {['M', 'F', 'Other'].map((g) => (
                   <button
                     key={g}
                     onClick={() => setGender(g)}
                     className={cn(
-                      'flex-1 py-2 rounded-lg border text-xs font-medium transition-all',
+                      'flex-1 h-11 rounded-lg border text-xs font-medium transition-all',
                       gender === g
                         ? 'border-[#0A75BB] bg-[#0A75BB]/5 text-[#0A75BB]'
                         : 'border-gray-200 text-gray-600 hover:border-gray-300'
@@ -181,20 +181,20 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
                 placeholder="e.g. 45 or 01/01/1981"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
+                className="w-full px-3 h-11 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB]"
               />
             </div>
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-3.5 flex gap-2 rounded-b-xl">
-          <button className="flex-1 px-3 py-2.5 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors">
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-3.5 flex flex-col sm:flex-row gap-2 rounded-b-2xl sm:rounded-b-2xl safe-area-bottom">
+          <button className="flex-1 h-11 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors">
             Add &amp; Create Rx
           </button>
-          <button className="flex-1 px-3 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors">
+          <button className="flex-1 h-11 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors">
             Add &amp; Create Bill
           </button>
-          <button className="flex-1 px-3 py-2.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors">
+          <button className="flex-1 h-11 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors">
             Add &amp; Create Appt
           </button>
         </div>

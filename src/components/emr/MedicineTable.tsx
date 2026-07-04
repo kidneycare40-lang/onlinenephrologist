@@ -70,14 +70,18 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
   const customInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
+    function handleClick(e: MouseEvent | TouchEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
         setShowCustom(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
   }, []);
 
   useEffect(() => {
@@ -188,14 +192,18 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
   }, []);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
+    function handleClick(e: MouseEvent | TouchEvent) {
       if (templateDropdownRef.current && !templateDropdownRef.current.contains(e.target as Node)) {
         setShowTemplateDropdown(false);
         setConfirmDeleteId(null);
       }
     }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
   }, []);
 
   useEffect(() => {
@@ -208,7 +216,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
 
   useEffect(() => {
     if (editingId === null) return;
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       const target = e.target as Node;
       if (dropdownRef.current && dropdownRef.current.contains(target)) return;
       if (editInputRef.current && editInputRef.current.contains(target)) return;
@@ -216,7 +224,11 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
       setEditValue('');
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [editingId]);
 
   const existingMedicineKeys = useMemo(() => {
@@ -552,10 +564,10 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
                     </div>
                     <button
                       onClick={() => insertRowBelow(idx)}
-                      className="mt-1 w-5 h-5 rounded bg-[#0A75BB] text-white flex items-center justify-center hover:bg-[#085a94] transition-colors shrink-0"
+                      className="mt-1 w-8 h-8 rounded bg-[#0A75BB] text-white flex items-center justify-center hover:bg-[#085a94] transition-colors shrink-0"
                       title="Add row below"
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-4 w-4" />
                     </button>
                   </div>
                 </td>
@@ -612,9 +624,9 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
                 <td className="px-3 py-2 align-top pt-2">
                   <button
                     onClick={() => removeMedicine(rx.id)}
-                    className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover/row:opacity-100 transition-all"
+                    className="p-1.5 text-slate-400 hover:text-red-500 sm:opacity-0 sm:group-hover/row:opacity-100 transition-all rounded"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </td>
               </tr>
@@ -657,25 +669,25 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
       {renderMedicineDropdown()}
 
       {/* Bottom Action Bar */}
-      <div className="px-3 py-2 border-t border-slate-200 flex items-center justify-end gap-3">
+      <div className="px-3 py-2 border-t border-slate-200 flex items-center justify-end gap-2">
         <button onClick={() => setShowLoadPrev(true)}
-          className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 transition-colors">
-          <RotateCcw className="h-3 w-3" /> Load Prev
+          className="flex items-center gap-1.5 px-3 h-10 text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors rounded hover:bg-slate-50">
+          <RotateCcw className="h-3.5 w-3.5" /> Load Prev
         </button>
 
         <div ref={templateDropdownRef} className="relative">
           <button onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
-            className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 transition-colors">
-            <FileText className="h-3 w-3" /> Load template
-            {activeTemplateId && <Check className="h-3 w-3 text-emerald-500" />}
+            className="flex items-center gap-1.5 px-3 h-10 text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors rounded hover:bg-slate-50">
+            <FileText className="h-3.5 w-3.5" /> Load template
+            {activeTemplateId && <Check className="h-3.5 w-3.5 text-emerald-500" />}
           </button>
 
           {showTemplateDropdown && (
             <div className="absolute bottom-full right-0 mb-1 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-[160] overflow-hidden">
               <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
                 <p className="text-xs font-semibold text-slate-500">Saved Templates</p>
-                <button onClick={() => setShowTemplateDropdown(false)} className="p-0.5 hover:bg-slate-100 rounded">
-                  <X className="h-3 w-3 text-slate-400" />
+                <button onClick={() => setShowTemplateDropdown(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
+                  <X className="h-3.5 w-3.5 text-slate-400" />
                 </button>
               </div>
               <div className="max-h-64 overflow-y-auto">
@@ -696,14 +708,14 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
                       {confirmDeleteId === tpl.id ? (
                         <>
                           <button onClick={(e) => deleteTemplate(tpl.id, e)}
-                            className="px-1.5 py-0.5 text-[9px] font-medium text-white bg-red-500 rounded hover:bg-red-600">Del</button>
+                            className="px-2 py-1 text-[10px] font-medium text-white bg-red-500 rounded hover:bg-red-600">Del</button>
                           <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                            className="px-1.5 py-0.5 text-[9px] font-medium text-slate-500 bg-slate-100 rounded">No</button>
+                            className="px-2 py-1 text-[10px] font-medium text-slate-500 bg-slate-100 rounded">No</button>
                         </>
                       ) : (
                         <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(tpl.id); }}
-                          className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover/tpl:opacity-100 transition-all">
-                          <Trash2 className="h-3 w-3" />
+                          className="p-1.5 text-slate-400 hover:text-red-500 sm:opacity-0 sm:group-hover/tpl:opacity-100 transition-all rounded">
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
@@ -730,11 +742,11 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
         </div>
 
         <button onClick={() => setShowSaveAs(true)}
-          className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-slate-500 hover:text-slate-700 transition-colors">
-          <Save className="h-3 w-3" /> Save as template
+          className="flex items-center gap-1.5 px-3 h-10 text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors rounded hover:bg-slate-50">
+          <Save className="h-3.5 w-3.5" /> Save as template
         </button>
         <button onClick={() => { onChange([]); setActiveTemplateId(null); }}
-          className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-red-400 hover:text-red-600 transition-colors">
+          className="flex items-center gap-1.5 px-3 h-10 text-xs font-medium text-red-400 hover:text-red-600 transition-colors rounded hover:bg-red-50">
           <Trash2 className="h-3 w-3" /> Clear All
         </button>
       </div>

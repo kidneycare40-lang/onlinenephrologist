@@ -144,7 +144,7 @@ export default function ConsultationListPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Consultations</h1>
           <p className="text-sm text-gray-500 mt-0.5">Today&apos;s consultation queue</p>
@@ -153,11 +153,11 @@ export default function ConsultationListPage() {
           type="date"
           value={dateFilter}
           onChange={(e) => setDateFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30"
+          className="px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30"
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-center">
           <p className="text-2xl font-bold text-amber-600">{waiting}</p>
           <p className="text-xs text-gray-500 mt-0.5">Waiting</p>
@@ -172,7 +172,7 @@ export default function ConsultationListPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
@@ -180,7 +180,7 @@ export default function ConsultationListPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search patient name or ID..."
-            className="w-full h-9 pl-9 pr-4 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30"
+            className="w-full h-11 pl-9 pr-4 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30"
           />
         </div>
         <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -189,7 +189,7 @@ export default function ConsultationListPage() {
               key={s}
               onClick={() => setStatusFilter(s)}
               className={cn(
-                'px-3 py-1.5 text-xs font-medium transition-colors',
+                'px-3 h-11 text-xs font-medium transition-colors',
                 statusFilter === s ? 'bg-[#0A75BB] text-white' : 'text-gray-600 hover:bg-gray-50'
               )}
             >
@@ -200,6 +200,7 @@ export default function ConsultationListPage() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -257,9 +258,9 @@ export default function ConsultationListPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex items-center justify-end gap-2">
                       {patient?.phone && (
-                        <a href={`tel:${patient.phone}`} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                        <a href={`tel:${patient.phone}`} className="p-2.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
                           <Phone className="h-4 w-4" />
                         </a>
                       )}
@@ -272,7 +273,7 @@ export default function ConsultationListPage() {
                           return a.patientId;
                         })()}`}
                         className={cn(
-                          'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors',
+                          'inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg transition-colors',
                           a.status === 'WAITING' ? 'bg-[#0A75BB] text-white hover:bg-[#085D94]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         )}
                       >
@@ -285,6 +286,7 @@ export default function ConsultationListPage() {
             })}
           </tbody>
         </table>
+        </div>
 
         {filteredOnline.length > 0 && (
           <>
@@ -333,21 +335,21 @@ export default function ConsultationListPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-2">
                         {b.phone && (
-                          <a href={`tel:${b.phone}`} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                          <a href={`tel:${b.phone}`} className="p-2.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
                             <Phone className="h-4 w-4" />
                           </a>
                         )}
                         <Link
                           href={`/emr/consultation/${b.bookingId}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#0A75BB] text-white hover:bg-[#085D94] transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg bg-[#0A75BB] text-white hover:bg-[#085D94] transition-colors"
                         >
                           <Play className="h-3 w-3" /> Start Rx
                         </Link>
                         <button
                           onClick={() => setDeleteBookingId(b.bookingId)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          className="p-2.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                           title="Delete booking"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -409,15 +411,15 @@ export default function ConsultationListPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-2">
                         {pat?.phone && (
-                          <a href={`tel:${pat.phone}`} className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                          <a href={`tel:${pat.phone}`} className="p-2.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
                             <Phone className="h-4 w-4" />
                           </a>
                         )}
                         <Link
                           href={`/emr/consultation/${sc.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
                         >
                           <Eye className="h-3 w-3" /> View Rx
                         </Link>
@@ -455,13 +457,13 @@ export default function ConsultationListPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteBookingId(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 h-11 px-4 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteBooking}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
+                className="flex-1 h-11 px-4 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>
