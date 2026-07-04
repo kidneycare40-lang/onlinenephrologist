@@ -328,7 +328,7 @@ export default function TopNav() {
             <span className="hidden sm:inline">New</span>
           </button>
 
-          <div ref={searchRef} className={cn('relative flex items-center transition-all duration-200', searchFocused ? 'w-52 lg:w-64' : 'w-10 lg:w-44')}>
+          <div ref={searchRef} className={cn('relative flex items-center transition-all duration-200', searchFocused ? 'w-52 lg:w-64' : 'w-9 lg:w-44')}>
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/50 pointer-events-none" />
             <input
               type="text"
@@ -336,8 +336,7 @@ export default function TopNav() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               placeholder="Search Patient"
-              className="w-full h-11 pl-8 pr-2 rounded-lg bg-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus:bg-white/15 focus:ring-1 focus:ring-white/20 transition-all duration-200"
-              aria-label="Search patients"
+              className="w-full h-9 pl-8 pr-2 rounded-lg bg-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus:bg-white/15 focus:ring-1 focus:ring-white/20 transition-all duration-200 touch-target"
             />
             {searchFocused && searchResults.length > 0 && (
               <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-[55] max-h-80 overflow-y-auto">
@@ -365,17 +364,17 @@ export default function TopNav() {
             )}
           </div>
 
-          <button className="relative p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Notifications">
+          <button className="relative p-2 rounded-lg hover:bg-white/10 transition-colors">
             <Bell className="h-4.5 w-4.5 text-white/70" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-[1.5px] ring-[#095187]" />
           </button>
 
-          <button className="hidden sm:flex p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Apps">
+          <button className="hidden sm:flex p-2 rounded-lg hover:bg-white/10 transition-colors">
             <Grid3X3 className="h-4.5 w-4.5 text-white/70" />
           </button>
 
           <div ref={profileRef} className="relative">
-            <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 p-1 rounded-lg hover:bg-white/10 transition-colors">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white">RG</div>
               <ChevronDown className={cn('hidden sm:block h-3.5 w-3.5 text-white/50 transition-transform', profileOpen && 'rotate-180')} />
             </button>
@@ -412,12 +411,12 @@ export default function TopNav() {
                 ) : (
                   <>
                     <div className="px-3 py-2.5 border-b border-gray-100 flex items-center gap-2">
-                      <button onClick={() => setClinicSwitchOpen(false)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Go back">
+                      <button onClick={() => setClinicSwitchOpen(false)} className="p-1 rounded hover:bg-gray-100 transition-colors">
                         <ChevronLeft className="h-4 w-4 text-gray-500" />
                       </button>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">Switch Clinic</p>
-                        <p className="text-xs text-gray-500">Select a clinic location</p>
+                        <p className="text-[10px] text-gray-500">Select a clinic location</p>
                       </div>
                     </div>
                     <div className="py-1">
@@ -459,10 +458,10 @@ export default function TopNav() {
       {showAddPatient && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowAddPatient(false)} />
-          <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-y-auto">
+          <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">Add New Patient</h2>
-              <button onClick={() => setShowAddPatient(false)} className="p-2.5 rounded-lg hover:bg-gray-100 transition-colors" aria-label="Close">
+              <button onClick={() => setShowAddPatient(false)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
@@ -471,19 +470,19 @@ export default function TopNav() {
               <div className="grid grid-cols-1 sm:grid-cols-[80px_1fr_1fr] gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">Prefix</label>
-                  <select value={patientPrefix} onChange={(e) => setPatientPrefix(e.target.value)} className="w-full h-11 px-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30">
+                  <select value={patientPrefix} onChange={(e) => setPatientPrefix(e.target.value)} className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30">
                     <option>Mr</option><option>Mrs</option><option>Ms</option><option>Master</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">Patient Name *</label>
                   <input type="text" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Enter Name"
-                    className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">Phone Number *</label>
                   <input type="tel" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} placeholder="Enter Number" maxLength={10}
-                    className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                 </div>
               </div>
 
@@ -515,13 +514,13 @@ export default function TopNav() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">Gender *</label>
                   <div className="flex gap-1">
                     {['MALE', 'FEMALE', 'OTHER'].map((g) => (
                       <button key={g} onClick={() => setPatientGender(g)}
-                        className={cn('flex-1 h-11 rounded-lg text-xs font-medium border transition-colors',
+                        className={cn('flex-1 h-10 rounded-lg text-xs font-medium border transition-colors',
                           patientGender === g ? 'bg-[#0A75BB] text-white border-[#0A75BB]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#0A75BB]')}>
                         {g === 'MALE' ? 'M' : g === 'FEMALE' ? 'F' : 'Other'}
                       </button>
@@ -531,30 +530,30 @@ export default function TopNav() {
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">Age</label>
                   <input type="number" value={patientAge} onChange={(e) => setPatientAge(e.target.value)} placeholder="Age"
-                    className="w-full h-11 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                    className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">DOB</label>
                   <input type="date" value={patientDob} onChange={(e) => setPatientDob(e.target.value)}
-                    className="w-full h-11 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                    className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">City</label>
                   <input type="text" value={patientCity} onChange={(e) => setPatientCity(e.target.value)} placeholder="Enter City"
-                    className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">Address</label>
                   <input type="text" value={patientAddress} onChange={(e) => setPatientAddress(e.target.value)} placeholder="Enter Address"
-                    className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1.5 block">Pin Code</label>
                   <input type="text" value={patientPin} onChange={(e) => setPatientPin(e.target.value)} placeholder="Pin" maxLength={6}
-                    className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                    className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                 </div>
               </div>
 
@@ -574,9 +573,9 @@ export default function TopNav() {
                       {clinicId === 'psri-delhi' ? (
                         <input type="text" value={patientUhid} onChange={(e) => setPatientUhid(e.target.value)}
                           placeholder="e.g. PSRI-48091"
-                          className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                          className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                       ) : (
-                        <div className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 flex items-center text-gray-500">
+                        <div className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 flex items-center text-gray-500">
                           {autoUhid}
                         </div>
                       )}
@@ -584,13 +583,13 @@ export default function TopNav() {
                     <div>
                       <label className="text-xs font-medium text-gray-600 mb-1.5 block">Email</label>
                       <input type="email" value={patientEmail} onChange={(e) => setPatientEmail(e.target.value)} placeholder="email@example.com"
-                        className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                     </div>
                   </div>
                     <div>
                       <label className="text-xs font-medium text-gray-600 mb-1.5 block">Blood Group</label>
                       <select value={patientBloodGroup} onChange={(e) => setPatientBloodGroup(e.target.value)}
-                        className="w-full h-11 px-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30">
+                        className="w-full h-10 px-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30">
                         <option value="">Select</option>
                         <option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
                       </select>
@@ -599,18 +598,18 @@ export default function TopNav() {
                     <div>
                       <label className="text-xs font-medium text-gray-600 mb-1.5 block">ABHA Number</label>
                       <input type="text" value={patientAbha} onChange={(e) => setPatientAbha(e.target.value)} placeholder="14-digit ABHA" maxLength={14}
-                        className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-600 mb-1.5 block">Insurance</label>
                       <input type="text" value={patientInsurance} onChange={(e) => setPatientInsurance(e.target.value)} placeholder="Provider & Number"
-                        className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                        className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1.5 block">Allergies</label>
                     <input type="text" value={patientAllergies} onChange={(e) => setPatientAllergies(e.target.value)} placeholder="e.g. Penicillin, Sulfa"
-                      className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
+                      className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1.5 block">Medical History</label>
@@ -628,11 +627,11 @@ export default function TopNav() {
               </button>
               <div className="flex gap-3">
                 <button onClick={handleAddPatient} disabled={!patientName.trim() || !patientPhone.trim()}
-                  className="flex-1 h-11 rounded-xl text-xs font-semibold text-[#0A75BB] border-2 border-[#0A75BB] hover:bg-[#0A75BB]/5 transition-colors disabled:opacity-50">
+                  className="flex-1 h-10 rounded-xl text-xs font-semibold text-[#0A75BB] border-2 border-[#0A75BB] hover:bg-[#0A75BB]/5 transition-colors disabled:opacity-50">
                   Add & Create Bill
                 </button>
                 <button onClick={handleAddPatient} disabled={!patientName.trim() || !patientPhone.trim()}
-                  className="flex-1 h-11 rounded-xl text-xs font-semibold text-[#0A75BB] border-2 border-[#0A75BB] hover:bg-[#0A75BB]/5 transition-colors disabled:opacity-50">
+                  className="flex-1 h-10 rounded-xl text-xs font-semibold text-[#0A75BB] border-2 border-[#0A75BB] hover:bg-[#0A75BB]/5 transition-colors disabled:opacity-50">
                   Add & Create Appointment
                 </button>
               </div>

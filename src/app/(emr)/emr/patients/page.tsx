@@ -247,12 +247,12 @@ export default function PatientListPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50/80">
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Patient</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Phone</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Clinic</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Last Visit</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Action</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase">ID</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase">Patient</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase hidden sm:table-cell">Phone</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase hidden md:table-cell">Clinic</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase">Last Visit</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-gray-500 uppercase">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -276,12 +276,12 @@ export default function PatientListPage() {
                           ({getPatientAge(patient)}, {getPatientGender(patient)})
                         </span>
                         {getPatientChronic(patient) && (
-                          <span className="ml-1.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[11px] font-medium rounded">CKD</span>
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-medium rounded">CKD</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-600 hidden sm:table-cell">{getPatientPhone(patient)}</td>
                       <td className="px-4 py-2.5 hidden md:table-cell">
-                        <span className={cn('px-2 py-0.5 rounded-full text-[11px] font-medium',
+                        <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium',
                           getPatientClinic(patient) === 'kcc-faridabad' && 'bg-blue-50 text-blue-700',
                           getPatientClinic(patient) === 'kcc-saket' && 'bg-amber-50 text-amber-700',
                           getPatientClinic(patient) === 'psri-delhi' && 'bg-purple-50 text-purple-700',
@@ -300,12 +300,12 @@ export default function PatientListPage() {
                       <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => router.push(`/emr/consultation/${patient.id}`)}
-                            className="text-xs font-medium text-[#0A75BB] hover:underline inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg">
-                            <Stethoscope className="h-3.5 w-3.5" /> Visit Pad
+                            className="text-xs font-medium text-[#0A75BB] hover:underline inline-flex items-center gap-1">
+                            <Stethoscope className="h-3 w-3" /> Visit Pad
                           </button>
                           <button onClick={() => setDeleteTarget(patient)}
-                            className="p-2.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete">
-                            <Trash2 className="h-4 w-4" />
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete">
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>
@@ -319,12 +319,12 @@ export default function PatientListPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between">
-              <p className="text-xs text-gray-500">
+              <p className="text-[11px] text-gray-500">
                 Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
               </p>
               <div className="flex items-center gap-1">
                 <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                  className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 disabled:opacity-30">
+                  className="p-1 rounded text-gray-400 hover:bg-gray-100 disabled:opacity-30">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
@@ -332,13 +332,13 @@ export default function PatientListPage() {
                   return start + i;
                 }).filter(p => p <= totalPages).map(page => (
                   <button key={page} onClick={() => setCurrentPage(page)}
-                    className={cn('w-9 h-9 rounded-lg text-xs font-medium transition-colors',
+                    className={cn('w-7 h-7 rounded text-xs font-medium transition-colors',
                       currentPage === page ? 'bg-[#0A75BB] text-white' : 'text-gray-600 hover:bg-gray-100')}>
                     {page}
                   </button>
                 ))}
                 <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 disabled:opacity-30">
+                  className="p-1 rounded text-gray-400 hover:bg-gray-100 disabled:opacity-30">
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
@@ -355,7 +355,7 @@ export default function PatientListPage() {
                 <Bell className="h-4 w-4 text-[#0A75BB]" />
                 <h3 className="font-semibold text-gray-900 text-sm">KCC Board</h3>
               </div>
-              <span className="w-5 h-5 rounded-full bg-[#0A75BB]/10 text-[#0A75BB] text-[11px] font-bold flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-[#0A75BB]/10 text-[#0A75BB] text-[10px] font-bold flex items-center justify-center">
                 {boardUpdates.length}
               </span>
             </div>
@@ -363,7 +363,7 @@ export default function PatientListPage() {
               {boardUpdates.map(update => (
                 <div key={update.id} className="px-4 py-3 hover:bg-gray-50/60 transition-colors">
                   <p className="text-sm text-gray-700">{update.text}</p>
-                  <p className="text-xs text-gray-400 mt-1">{update.time}</p>
+                  <p className="text-[11px] text-gray-400 mt-1">{update.time}</p>
                 </div>
               ))}
             </div>
@@ -371,7 +371,7 @@ export default function PatientListPage() {
 
           {/* Quick Stats */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Stats</p>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Stats</p>
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Total Patients</span>
@@ -394,7 +394,7 @@ export default function PatientListPage() {
 
           {/* Clinic Breakdown */}
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">By Clinic</p>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">By Clinic</p>
             <div className="space-y-2">
               {[
                 { id: 'kcc-faridabad', label: 'Faridabad', color: 'bg-blue-500' },

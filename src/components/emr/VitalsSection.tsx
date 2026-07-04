@@ -39,12 +39,12 @@ export default function VitalsSection({ vitals, onChange }: VitalsSectionProps) 
                 onChange={(e) => onChange(field, e.target.value)}
                 readOnly={readOnly}
                 className={cn(
-                  'w-24 px-2 h-11 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] focus:border-[#0A75BB] text-center',
+                  'w-20 px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] focus:border-[#0A75BB] text-center',
                   readOnly && 'bg-slate-50 text-slate-600'
                 )}
                 placeholder={placeholder}
               />
-              <span className="text-[11px] text-slate-400 whitespace-nowrap">{unit}</span>
+              <span className="text-[10px] text-slate-400 whitespace-nowrap">{unit}</span>
             </div>
           ))}
         </div>

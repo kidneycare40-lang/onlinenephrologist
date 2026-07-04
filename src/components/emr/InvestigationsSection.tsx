@@ -318,7 +318,7 @@ export function InvestigationsTable({
                               onKeyDown={handleKeyDown}
                               onBlur={saveEdit}
                               autoFocus
-                              className="w-full px-2 h-11 text-[13px] text-center border border-[#0A75BB] rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] font-semibold"
+                              className="w-full px-1 py-0.5 text-[12px] text-center border border-[#0A75BB] rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] font-semibold"
                             />
                           ) : (
                             <button
@@ -370,20 +370,20 @@ export function InvestigationsTable({
                         if (e.key === 'Escape') { setShowAddInput(false); setNewTestName(''); }
                       }}
                       placeholder="Type to search tests..."
-                      className="flex-1 px-3 h-11 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                      className="flex-1 px-2 py-1 text-[12px] border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
                     />
                     <button
                       onClick={() => addTest(newTestName)}
                       disabled={!newTestName.trim()}
-                      className="px-3 h-11 text-xs font-medium text-white bg-[#0A75BB] rounded hover:bg-[#085a94] disabled:opacity-50 transition-colors"
+                      className="px-2 py-1 text-[11px] font-medium text-white bg-[#0A75BB] rounded hover:bg-[#085a94] disabled:opacity-50 transition-colors"
                     >
                       Add
                     </button>
                     <button
                       onClick={() => { setShowAddInput(false); setNewTestName(''); }}
-                      className="p-2.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                      className="p-1 text-slate-400 hover:text-slate-600"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ) : (

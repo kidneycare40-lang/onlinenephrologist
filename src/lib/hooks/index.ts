@@ -5,11 +5,3 @@ export { usePrescriptions, usePrescription, usePrescriptionTemplates } from './u
 export { useVitals, useKidneyParams } from './use-vitals';
 export { useInvoices, useInvoice } from './use-billing';
 export { useDashboardStats, useTodayAppointments } from './use-dashboard';
-export {
-  useComplaintTemplates,
-  useDiagnosisTemplates,
-  useMedicineSearch,
-  useMedicineTemplates,
-  useInvestigationTemplates,
-  useAdviceTemplates,
-} from './use-templates';

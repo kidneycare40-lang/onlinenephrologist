@@ -15,7 +15,6 @@ import BookingSettingsComponent from '@/components/emr/BookingSettings';
 import ConsultationSettingsComponent from '@/components/emr/ConsultationSettings';
 import ClinicSettingsTab from '@/components/emr/ClinicSettingsTab';
 import CalculatorsSettings from '@/components/emr/CalculatorsSettings';
-import TemplateManager from '@/components/emr/TemplateManager';
 import { loadBillingSettings, saveBillingSettings, type BillingSettings } from '@/lib/billing-settings';
 
 type SettingsTab = 'profile' | 'clinic' | 'notifications' | 'prescription' | 'templates' | 'ai' | 'billing' | 'booking' | 'consultation' | 'calculators';
@@ -827,14 +826,10 @@ export default function SettingsPage() {
           {/* TEMPLATES */}
           {activeTab === 'templates' && (
             <div className="space-y-4">
-              {/* Database-backed Template Manager */}
-              <TemplateManager clinicId={clinicId ?? undefined} />
-
-              {/* Legacy Medicine Templates (localStorage) */}
               <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                   <div>
-                    <h2 className="font-semibold text-gray-900">Medicine Templates (Legacy)</h2>
+                    <h2 className="font-semibold text-gray-900">Medicine Templates</h2>
                     <p className="text-xs text-gray-500 mt-0.5">Create reusable medicine combinations for quick prescription</p>
                   </div>
                   <button onClick={startCreateTemplate}

@@ -88,14 +88,14 @@ export default function ConditionsPage() {
 
       <Navbar />
 
-      <section className="bg-gradient-to-br from-[#0A75BB] to-[#063d5c] text-white py-10 sm:py-16">
+      <section className="bg-gradient-to-br from-[#0A75BB] to-[#063d5c] text-white py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Kidney Conditions & Treatments</h1>
           <p className="text-blue-100 text-lg">Comprehensive nephrology care by Dr Rajesh Goel for all kidney-related conditions</p>
         </div>
       </section>
 
-      <section className="py-8 sm:py-16 bg-gray-50">
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {conditions.map((condition) => {
@@ -148,7 +148,7 @@ export default function ConditionsPage() {
         </div>
       </section>
 
-      <section className="py-8 sm:py-16 bg-white">
+      <section className="py-16 bg-white">
         <div className="max-w-3xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions</h2>
           <div className="space-y-4">
@@ -162,7 +162,7 @@ export default function ConditionsPage() {
         </div>
       </section>
 
-      <section className="py-8 sm:py-12 bg-[#0A75BB] text-white text-center">
+      <section className="py-12 bg-[#0A75BB] text-white text-center">
         <div className="max-w-3xl mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Need Expert Kidney Care?</h2>
           <p className="mb-6 text-blue-100">Book a consultation with Dr Rajesh Goel today</p>

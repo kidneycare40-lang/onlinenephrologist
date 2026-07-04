@@ -79,17 +79,13 @@ export default function DiagnosisTable({ diagnoses, onChange }: DiagnosisTablePr
 
   useEffect(() => {
     if (editingCell?.field !== 'name') return;
-    const handleClick = (e: MouseEvent | TouchEvent) => {
+    const handleClick = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         saveEdit();
       }
     };
     document.addEventListener('mousedown', handleClick);
-    document.addEventListener('touchstart', handleClick);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('touchstart', handleClick);
-    };
+    return () => document.removeEventListener('mousedown', handleClick);
   }, [editingCell, editValue]);
 
   const pushHistory = (newDiags: Diagnosis[]) => {
@@ -208,12 +204,12 @@ export default function DiagnosisTable({ diagnoses, onChange }: DiagnosisTablePr
         <h3 className="text-sm font-semibold text-slate-700">Diagnosis</h3>
         <div className="flex items-center gap-1">
           <button onClick={undo} disabled={historyIdx === 0}
-            className="p-2 text-slate-400 hover:text-[#0A75BB] hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-30" title="Undo">
-            <Undo2 className="h-4 w-4" />
+            className="p-1 text-slate-400 hover:text-[#0A75BB] hover:bg-slate-100 rounded transition-colors disabled:opacity-30" title="Undo">
+            <Undo2 className="h-3.5 w-3.5" />
           </button>
           <button onClick={addEmptyRow}
-            className="p-2 text-slate-400 hover:text-[#0A75BB] hover:bg-slate-100 rounded-lg transition-colors" title="Add diagnosis">
-            <Plus className="h-4 w-4" />
+            className="p-1 text-slate-400 hover:text-[#0A75BB] hover:bg-slate-100 rounded transition-colors" title="Add diagnosis">
+            <Plus className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -286,7 +282,7 @@ export default function DiagnosisTable({ diagnoses, onChange }: DiagnosisTablePr
                     <button
                       onClick={() => startEditing(diag.id, 'name', diag.name)}
                       className={cn(
-                        'w-full text-left text-[12px] py-1 px-1 rounded transition-colors cursor-text min-h-[36px] border border-transparent',
+                        'w-full text-left text-[12px] py-1 px-1 rounded transition-colors cursor-text min-h-[28px] border border-transparent',
                         'hover:border-slate-200 hover:bg-white',
                         diag.name ? 'text-slate-800 font-medium' : 'text-slate-400 italic'
                       )}
@@ -312,7 +308,7 @@ export default function DiagnosisTable({ diagnoses, onChange }: DiagnosisTablePr
                     <button
                       onClick={() => startEditing(diag.id, 'snomedCode', diag.snomedCode || '')}
                       className={cn(
-                        'w-full text-left text-[12px] py-1 px-1 rounded transition-colors cursor-text min-h-[36px] border border-transparent',
+                        'w-full text-left text-[12px] py-1 px-1 rounded transition-colors cursor-text min-h-[28px] border border-transparent',
                         'hover:border-slate-200 hover:bg-white',
                         diag.snomedCode ? 'text-slate-700 font-mono text-[11px]' : 'text-slate-400'
                       )}
@@ -339,7 +335,7 @@ export default function DiagnosisTable({ diagnoses, onChange }: DiagnosisTablePr
                     <button
                       onClick={() => startEditing(diag.id, 'duration', diag.duration || '')}
                       className={cn(
-                        'w-full text-left text-[12px] py-1 px-1 rounded transition-colors cursor-text min-h-[36px] border border-transparent',
+                        'w-full text-left text-[12px] py-1 px-1 rounded transition-colors cursor-text min-h-[28px] border border-transparent',
                         'hover:border-slate-200 hover:bg-white',
                         diag.duration ? 'text-slate-700' : 'text-slate-400'
                       )}
@@ -363,9 +359,9 @@ export default function DiagnosisTable({ diagnoses, onChange }: DiagnosisTablePr
                 <td className="px-3 py-1.5">
                   <button
                     onClick={() => removeDiagnosis(diag.id)}
-                    className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                    className="p-1 text-slate-400 hover:text-red-500 transition-colors rounded hover:bg-red-50"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </td>
               </tr>
@@ -387,10 +383,10 @@ export default function DiagnosisTable({ diagnoses, onChange }: DiagnosisTablePr
 
             {diagnoses.length > 0 && (
               <tr className="border-t border-slate-200 cursor-pointer hover:bg-[#0A75BB]/5" onClick={addEmptyRow}>
-                <td className="px-3 py-2.5 text-xs text-slate-400 text-center">{diagnoses.length + 1}</td>
-                <td colSpan={5} className="px-3 py-2.5">
-                  <span className="text-xs font-medium text-[#0A75BB] flex items-center gap-1.5">
-                    <Plus className="h-4 w-4" /> Add another diagnosis
+                <td className="px-3 py-2 text-[11px] text-slate-400 text-center">{diagnoses.length + 1}</td>
+                <td colSpan={5} className="px-3 py-2">
+                  <span className="text-[12px] font-medium text-[#0A75BB] flex items-center gap-1.5">
+                    <Plus className="h-3.5 w-3.5" /> Add another diagnosis
                   </span>
                 </td>
               </tr>

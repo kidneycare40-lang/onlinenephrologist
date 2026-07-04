@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Search, Filter, ChevronDown, ChevronUp, ChevronRight, Stethoscope,
   ClipboardList, FlaskConical, Building2, Activity, ArrowRight,
   CalendarClock, Scan, Scissors, Calendar, User, Phone, Pill,
-  AlertCircle, Clock, X, RefreshCw,
+  AlertCircle, Clock, X,
 } from 'lucide-react';
 import { cn, formatDate, getInitials } from '@/lib/utils';
 import { timeline, patientSummaries, prescriptions } from '@/lib/data/emr-mock';
-import { patientsApi } from '@/lib/api-client';
 import type { TimelineEvent, TimelineEventType } from '@/types/emr';
 
 const eventConfig: Record<TimelineEventType, { color: string; bgColor: string; borderColor: string; icon: typeof Stethoscope; label: string }> = {
@@ -41,36 +40,6 @@ function groupByYear(events: TimelineEvent[]): { label: string; events: Timeline
   return groups;
 }
 
-function mapApiEventToTimeline(apiEvent: any): TimelineEvent {
-  const typeMap: Record<string, TimelineEventType> = {
-    consultation: 'opd_visit',
-    prescription: 'prescription',
-    investigation: 'lab_result',
-    vitals: 'lab_result',
-    kidney_params: 'lab_result',
-    appointment: 'follow_up',
-    invoice: 'opd_visit',
-    dialysis: 'dialysis',
-    report: 'lab_result',
-  };
-
-  const type = typeMap[apiEvent.type] || 'opd_visit';
-
-  return {
-    id: apiEvent.id,
-    patientId: apiEvent.patientId || '',
-    type,
-    date: apiEvent.date || '',
-    time: apiEvent.time || '',
-    title: apiEvent.title || '',
-    description: apiEvent.description || '',
-    details: apiEvent.details || '',
-    doctorName: apiEvent.doctor || '',
-    clinicId: apiEvent.clinic || '',
-    medications: apiEvent.medications || [],
-  };
-}
-
 export default function TimelinePage({ params }: { params: { patientId: string } }) {
   const patientId = params.patientId;
   const patient = useMemo(() => patientSummaries.find((p) => p.id === patientId) || patientSummaries[0], [patientId]);
@@ -78,33 +47,6 @@ export default function TimelinePage({ params }: { params: { patientId: string }
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [apiEvents, setApiEvents] = useState<TimelineEvent[] | null>(null);
-  const [kidneyData, setKidneyData] = useState<any[]>([]);
-  const [showChart, setShowChart] = useState(false);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [timelineRes, kidneyRes] = await Promise.all([
-        fetch(`/api/patients/${patientId}?view=timeline`).then(r => r.ok ? r.json() : []),
-        fetch(`/api/patients/${patientId}?view=kidney-chart`).then(r => r.ok ? r.json() : []),
-      ]);
-
-      if (Array.isArray(timelineRes) && timelineRes.length > 0) {
-        setApiEvents(timelineRes.map(mapApiEventToTimeline));
-      }
-      if (Array.isArray(kidneyRes?.data)) {
-        setKidneyData(kidneyRes.data);
-      }
-    } catch {
-      // Fall through to mock data
-    } finally {
-      setLoading(false);
-    }
-  }, [patientId]);
-
-  useEffect(() => { loadData(); }, [loadData]);
 
   const toggleType = (type: TimelineEventType) => {
     setTypeFilters((prev) => prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]);
@@ -118,7 +60,7 @@ export default function TimelinePage({ params }: { params: { patientId: string }
     });
   };
 
-  const mockEvents = useMemo(() => {
+  const filteredEvents = useMemo(() => {
     return timeline
       .filter((e) => e.patientId === patient.id)
       .filter((e) => typeFilters.includes(e.type))
@@ -130,19 +72,8 @@ export default function TimelinePage({ params }: { params: { patientId: string }
       });
   }, [patient, typeFilters, searchQuery]);
 
-  const filteredEvents = useMemo(() => {
-    const events = apiEvents || mockEvents;
-    return events
-      .filter((e) => typeFilters.includes(e.type))
-      .filter((e) => searchQuery === '' || e.title.toLowerCase().includes(searchQuery.toLowerCase()) || e.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      .sort((a, b) => {
-        const dA = new Date(`${a.date}T${a.time || '00:00'}`);
-        const dB = new Date(`${b.date}T${b.time || '00:00'}`);
-        return dB.getTime() - dA.getTime();
-      });
-  }, [apiEvents, mockEvents, typeFilters, searchQuery]);
-
   const groupedEvents = useMemo(() => groupByYear(filteredEvents), [filteredEvents]);
+
   const patientRx = useMemo(() => prescriptions.filter((p) => p.patientId === patient.id && p.status === 'Active'), [patient]);
 
   return (
@@ -185,16 +116,6 @@ export default function TimelinePage({ params }: { params: { patientId: string }
                   showFilters ? 'bg-[#0A75BB]/5 border-[#0A75BB]/20 text-[#0A75BB]' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50')}>
                 <Filter className="h-4 w-4" />Event Types
               </button>
-              {kidneyData.length > 0 && (
-                <button onClick={() => setShowChart(!showChart)}
-                  className={cn('inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors',
-                    showChart ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50')}>
-                  <Activity className="h-4 w-4" />Kidney Trends
-                </button>
-              )}
-              <button onClick={loadData} className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
-                <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-              </button>
             </div>
             {showFilters && (
               <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
@@ -213,59 +134,11 @@ export default function TimelinePage({ params }: { params: { patientId: string }
             )}
           </div>
 
-          {showChart && kidneyData.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"><Activity className="h-4 w-4 text-purple-500" />Kidney Parameter Trends</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[
-                  { key: 'creatinine', label: 'Creatinine', unit: 'mg/dL', color: '#ef4444', normal: '< 1.3' },
-                  { key: 'gfr', label: 'eGFR', unit: 'mL/min', color: '#3b82f6', normal: '> 60' },
-                  { key: 'bun', label: 'BUN', unit: 'mg/dL', color: '#f59e0b', normal: '7-20' },
-                  { key: 'potassium', label: 'Potassium', unit: 'mEq/L', color: '#8b5cf6', normal: '3.5-5.0' },
-                ].map(({ key, label, unit, color, normal }) => {
-                  const points = kidneyData
-                    .filter((d: any) => d[key] != null)
-                    .map((d: any) => ({ date: d.date, value: d[key] }))
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-                  if (points.length === 0) return null;
-
-                  const values = points.map((p) => p.value);
-                  const minVal = Math.min(...values) * 0.8;
-                  const maxVal = Math.max(...values) * 1.2;
-                  const range = maxVal - minVal || 1;
-
-                  return (
-                    <div key={key} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold text-gray-700">{label}</span>
-                        <span className="text-[10px] text-gray-400">Normal: {normal}</span>
-                      </div>
-                      <div className="flex items-end gap-1 h-20">
-                        {points.slice(-10).map((p, i) => {
-                          const height = ((p.value - minVal) / range) * 100;
-                          return (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group">
-                              <span className="text-[9px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">{p.value}</span>
-                              <div className="w-full rounded-t" style={{ height: `${Math.max(height, 4)}%`, backgroundColor: color, opacity: 0.8 }} />
-                              <span className="text-[8px] text-gray-400">{new Date(p.date).toLocaleDateString('en', { month: 'short' })}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="mt-1 text-[10px] text-gray-400 text-center">{points.length} records &middot; Latest: {points[points.length - 1].value} {unit}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div className="relative">
             {groupedEvents.length === 0 ? (
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                 <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-medium">{loading ? 'Loading timeline...' : 'No events found'}</p>
+                <p className="text-gray-500 font-medium">No events found</p>
               </div>
             ) : (
               <div className="space-y-8">
@@ -302,7 +175,7 @@ export default function TimelinePage({ params }: { params: { patientId: string }
                                 </div>
                                 <h3 className="font-semibold text-gray-900">{event.title}</h3>
                                 <p className="text-sm text-gray-600 mt-1 leading-relaxed">{event.description}</p>
-                                {event.doctorName && <p className="text-xs text-gray-400 mt-2"><Stethoscope className="h-3 w-3 inline mr-1" />{event.doctorName}</p>}
+                                <p className="text-xs text-gray-400 mt-2"><Stethoscope className="h-3 w-3 inline mr-1" />{event.doctorName}</p>
                                 {event.medications && event.medications.length > 0 && (
                                   <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-lg p-3">
                                     <p className="text-xs font-semibold text-emerald-700 mb-1.5"><Pill className="h-3 w-3 inline mr-1" />Medications</p>
@@ -322,6 +195,15 @@ export default function TimelinePage({ params }: { params: { patientId: string }
                                     </button>
                                     {isExpanded && <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-100"><p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{event.details}</p></div>}
                                   </>
+                                )}
+                                {event.relatedLinks && event.relatedLinks.length > 0 && (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {event.relatedLinks.map((link, i) => (
+                                      <a key={i} href={link.href} className="inline-flex items-center gap-1 text-xs font-medium text-[#0A75BB] hover:underline bg-[#0A75BB]/5 px-2.5 py-1 rounded-md border border-[#0A75BB]/10">
+                                        <ChevronRight className="h-3 w-3" />{link.label}
+                                      </a>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             </div>

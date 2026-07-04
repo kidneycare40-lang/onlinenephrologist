@@ -541,7 +541,7 @@ function BookingForm() {
                   )}
                 >
                   <span className={cn(
-                    'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
+                    'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold',
                     step === s.num ? 'bg-[#0A75BB] text-white' : step > s.num ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
                   )}>
                     {step > s.num ? '✓' : s.num}
@@ -560,7 +560,7 @@ function BookingForm() {
         <div className="bg-slate-100 border-b border-slate-200">
           <div className="max-w-3xl mx-auto px-4 py-2.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your Selection:</span>
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Your Selection:</span>
               <span className={cn(
                 'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full',
                 isOnline
@@ -844,10 +844,10 @@ function BookingForm() {
                         <h3 className="font-bold text-gray-900 text-sm mb-1">{clinic.shortName}</h3>
                         <p className="text-xs text-slate-500 mb-3 line-clamp-2">{clinic.address}</p>
                         <div className="flex flex-wrap gap-1.5 mb-3">
-                          <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', colors.badge)}>
+                          <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', colors.badge)}>
                             <Clock className="h-2.5 w-2.5 inline mr-0.5" />{clinic.timing.split(' ').slice(1).join(' ')}
                           </span>
-                          <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', colors.badge)}>
+                          <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', colors.badge)}>
                             ₹{clinic.fee}
                           </span>
                         </div>
