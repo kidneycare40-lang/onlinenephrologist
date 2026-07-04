@@ -34,6 +34,7 @@ import { type ExtractedLabValue, type ExtractedMedicine, type OCRResult } from '
 import { autoCorrect } from '@/lib/spellcheck';
 import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR } from '@/lib/consultation-api';
 import { patientsApi } from '@/lib/api-client';
+import TemplateSelector from '@/components/emr/TemplateSelector';
 
 class ErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
   state = { error: null as Error | null };
@@ -616,10 +617,11 @@ export default function ConsultationPage() {
           let attempts = 0;
           const check = () => {
             attempts++;
+            const hasContent = wrapper.innerText.trim().length > 50;
             const imgs = wrapper.querySelectorAll('img');
             const allLoaded = Array.from(imgs).every((img) => img.complete || img.naturalWidth > 0);
-            if (allLoaded || attempts > 40) {
-              resolve();
+            if ((hasContent && allLoaded) || attempts > 60) {
+              setTimeout(resolve, 300);
             } else {
               setTimeout(check, 100);
             }
@@ -933,7 +935,7 @@ export default function ConsultationPage() {
 
         <ConsultSidebar activeSection={activeSection} onSectionClick={scrollToSection} />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0">
           <PatientHeaderBar
             firstName={patient.firstName}
             lastName={patient.lastName}
@@ -1073,12 +1075,35 @@ export default function ConsultationPage() {
                       placeholder="Enter patient complaints..."
                       rows={4}
                     />
+                    <div className="mt-2">
+                      <TemplateSelector
+                        type="complaints"
+                        onSelect={(items) => {
+                          const names = items.map((i: any) => i.name);
+                          handleApplyComplaints(names);
+                        }}
+                        clinicId={clinicId ?? undefined}
+                      />
+                    </div>
                 </div>
               </ErrorBoundary>
 
               <ErrorBoundary>
                 <div id="section-investigations">
                   <InvestigationsTable pastResults={patientLabResults} />
+                  <div className="mt-2">
+                    <TemplateSelector
+                      type="investigations"
+                      onSelect={(items) => {
+                        const newTests = items.map((i: any) => i.test_name || i.name || '').filter(Boolean);
+                        if (newTests.length > 0) {
+                          setTestRequests((prev) => [...new Set([...prev, ...newTests])]);
+                          showToastMessage(`Added ${newTests.length} test(s) from panel`);
+                        }
+                      }}
+                      clinicId={clinicId ?? undefined}
+                    />
+                  </div>
                 </div>
               </ErrorBoundary>
 
@@ -1088,6 +1113,16 @@ export default function ConsultationPage() {
                     diagnoses={consultation.diagnoses}
                     onChange={(diagnoses) => setConsultation({ ...consultation, diagnoses })}
                   />
+                  <div className="mt-2">
+                    <TemplateSelector
+                      type="diagnoses"
+                      onSelect={(items) => {
+                        const names = items.map((i: any) => i.name);
+                        handleApplyDiagnoses(names);
+                      }}
+                      clinicId={clinicId ?? undefined}
+                    />
+                  </div>
                 </div>
               </ErrorBoundary>
 
@@ -1103,6 +1138,37 @@ export default function ConsultationPage() {
                       }
                     }}
                   />
+                  <div className="mt-2">
+                    <TemplateSelector
+                      type="medicines"
+                      onSelect={(items) => {
+                        const existing = consultation.prescriptions.map((p) => p.name.toLowerCase());
+                        const newPrescriptions = [...consultation.prescriptions];
+                        let count = 0;
+                        for (const item of items) {
+                          const name = (item.medicine_name || item.name || '').trim();
+                          if (name && !existing.includes(name.toLowerCase())) {
+                            newPrescriptions.push({
+                              id: generateId(),
+                              name,
+                              dosage: item.dosage || '',
+                              strength: item.strength || '',
+                              frequency: item.frequency || '',
+                              duration: item.duration || '',
+                              instructions: item.instructions || '',
+                              when: item.timing || '',
+                              route: (item.route as any) || 'oral',
+                            });
+                            existing.push(name.toLowerCase());
+                            count++;
+                          }
+                        }
+                        setConsultation({ ...consultation, prescriptions: newPrescriptions });
+                        if (count > 0) showToastMessage(`Added ${count} medicine(s) from template`);
+                      }}
+                      clinicId={clinicId ?? undefined}
+                    />
+                  </div>
                 </div>
               </ErrorBoundary>
 
@@ -1134,6 +1200,20 @@ export default function ConsultationPage() {
                         className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 resize-none"
                       />
                     </div>
+                  </div>
+                  <div className="mt-2">
+                    <TemplateSelector
+                      type="advice"
+                      onSelect={(items) => {
+                        const existing = consultation.advice;
+                        const newAdvice = items.map((i: any) => i.advice_text || i.name || '').filter(Boolean).join('\n');
+                        if (newAdvice) {
+                          setConsultation({ ...consultation, advice: existing ? `${existing}\n${newAdvice}` : newAdvice });
+                          showToastMessage('Advice template applied');
+                        }
+                      }}
+                      clinicId={clinicId ?? undefined}
+                    />
                   </div>
                 </div>
               </ErrorBoundary>

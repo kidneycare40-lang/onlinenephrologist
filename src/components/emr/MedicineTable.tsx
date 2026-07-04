@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { X, Plus, Search, RotateCcw, FileText, Save, Trash2, Pencil, ChevronDown, Check, ChevronRight } from 'lucide-react';
 import { commonMedicines, recentFrequentMedicines, prescriptionTemplates } from '@/lib/data/emr-mock';
@@ -68,6 +69,15 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
   const [customVal, setCustomVal] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
+  const updatePosition = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setDropPos({ top: rect.bottom + 2, left: rect.left, width: rect.width });
+    }
+  };
 
   useEffect(() => {
     function handleClick(e: MouseEvent | TouchEvent) {
@@ -121,15 +131,22 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
         </div>
       ) : (
         <button
-          onClick={() => setOpen(!open)}
+          ref={btnRef}
+          onClick={() => {
+            if (!open) updatePosition();
+            setOpen(!open);
+          }}
           className="w-full flex items-center justify-between px-2 py-1.5 text-[12px] text-left border border-slate-200 rounded bg-white hover:border-slate-300 transition-colors cursor-pointer group/d"
         >
           <span className={cn('truncate', !value && 'text-slate-400')}>{value || placeholder || 'Select'}</span>
           <ChevronDown className="h-3 w-3 text-slate-400 shrink-0 ml-1 group-hover/d:text-slate-600" />
         </button>
       )}
-      {open && !showCustom && (
-        <div className="absolute top-full left-0 mt-0.5 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-[170] max-h-48 overflow-y-auto">
+      {open && !showCustom && createPortal(
+        <div
+          className="fixed bg-white border border-slate-200 rounded-lg shadow-xl z-[250] max-h-48 overflow-y-auto"
+          style={{ top: dropPos.top, left: dropPos.left, width: Math.max(dropPos.width, 120) }}
+        >
           {placeholder && (
             <button
               onClick={() => { onChange(''); setOpen(false); }}
@@ -154,14 +171,15 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
             <>
               <div className="border-t border-slate-100" />
               <button
-                onClick={() => { setShowCustom(true); setCustomVal(value && !options.includes(value) ? value : ''); }}
+                onClick={() => { setShowCustom(true); setCustomVal(value && !options.includes(value) ? value : ''); setOpen(false); }}
                 className="w-full text-left px-2.5 py-1.5 text-[12px] text-[#0A75BB] hover:bg-[#0A75BB]/5 font-medium"
               >
                 + Custom...
               </button>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -440,8 +458,8 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
 
   const renderMedicineDropdown = () => {
     if (editingId === null) return null;
-    return (
-      <div ref={dropdownRef} className="fixed z-[200] bg-white border border-slate-200 rounded-lg shadow-xl max-h-72 overflow-y-auto" style={{ top: dropdownPos.top, left: dropdownPos.left, width: Math.max(dropdownPos.width, 320) }}>
+    return createPortal(
+      <div ref={dropdownRef} className="fixed z-[250] bg-white border border-slate-200 rounded-lg shadow-xl max-h-72 overflow-y-auto" style={{ top: dropdownPos.top, left: dropdownPos.left, width: Math.max(dropdownPos.width, 320) }}>
         {filtered.map((m, i) => {
           const isDuplicate = existingMedicineKeys.has(m.name.toLowerCase().trim());
           return (
@@ -487,7 +505,8 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
         {filtered.length === 0 && !editValue.trim() && (
           <div className="px-4 py-6 text-center text-xs text-slate-400">Type to search medicines...</div>
         )}
-      </div>
+      </div>,
+      document.body
     );
   };
 

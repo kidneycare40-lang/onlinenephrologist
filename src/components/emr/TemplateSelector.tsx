@@ -219,7 +219,7 @@ export default function TemplateSelector({
                 </div>
               )}
               {medicineSearchResults.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-[170] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                   {medicineSearchResults.map((med) => (
                     <button
                       key={med.id}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConsultationService } from '@/lib/db/services';
+import { logAudit, logActivity } from '@/lib/db/audit';
 import type { FilterParams, PaginationParams } from '@/lib/db/types';
 
 export async function GET(request: NextRequest) {
@@ -51,6 +52,10 @@ export async function POST(request: NextRequest) {
     }
 
     const consultation = await consultationService.create(body);
+
+    logAudit({ action: 'CREATE', entityType: 'consultation', entityId: consultation?.id, newValues: { patient_id: body.patient_id, doctor_id: body.doctor_id } });
+    logActivity({ patientId: body.patient_id, action: 'consultation_created', description: 'New consultation' });
+
     return NextResponse.json(consultation, { status: 201 });
 
   } catch (error) {
@@ -72,10 +77,12 @@ export async function PUT(request: NextRequest) {
 
     if (action === 'complete') {
       const consultation = await consultationService.complete(id);
+      logAudit({ action: 'UPDATE', entityType: 'consultation', entityId: id, newValues: { status: 'COMPLETED' } });
       return NextResponse.json(consultation);
     }
 
     const consultation = await consultationService.update(id, updateData);
+    logAudit({ action: 'UPDATE', entityType: 'consultation', entityId: id, newValues: updateData });
     return NextResponse.json(consultation);
 
   } catch (error) {
@@ -98,6 +105,8 @@ export async function DELETE(request: NextRequest) {
     if (!success) {
       return NextResponse.json({ error: 'Consultation not found' }, { status: 404 });
     }
+
+    logAudit({ action: 'DELETE', entityType: 'consultation', entityId: id });
 
     return NextResponse.json({ success: true });
 

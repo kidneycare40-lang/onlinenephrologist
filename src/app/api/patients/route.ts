@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPatientService } from '@/lib/db/services';
+import { logAudit, logActivity } from '@/lib/db/audit';
 import type { FilterParams, PaginationParams, SortParams } from '@/lib/db/types';
 
 export async function GET(request: NextRequest) {
@@ -74,6 +75,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create patient' }, { status: 500 });
     }
 
+    logAudit({ userId: body.created_by, action: 'CREATE', entityType: 'patient', entityId: patient.id, newValues: { first_name: body.first_name, last_name: body.last_name, phone: body.phone } });
+    logActivity({ userId: body.created_by, patientId: patient.id, action: 'patient_created', description: `New patient: ${body.first_name} ${body.last_name}` });
+
     return NextResponse.json(patient, { status: 201 });
 
   } catch (error: any) {
@@ -109,6 +113,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
     }
 
+    logAudit({ userId: updateData.updated_by, action: 'UPDATE', entityType: 'patient', entityId: id, newValues: updateData });
+
     return NextResponse.json(patient);
 
   } catch (error) {
@@ -131,6 +137,8 @@ export async function DELETE(request: NextRequest) {
     if (!success) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
     }
+
+    logAudit({ action: 'DELETE', entityType: 'patient', entityId: id });
 
     return NextResponse.json({ success: true });
 

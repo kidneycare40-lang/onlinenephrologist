@@ -24,6 +24,7 @@ const navLinks = [
   { label: 'Consultation', href: '/emr/consultation', icon: Stethoscope },
   { label: 'Telemedicine', href: '/emr/telemedicine', icon: Video },
   { label: 'Billing', href: '/emr/billing', icon: Receipt },
+  { label: 'Kidney Charts', href: '/emr/kidney-charts', icon: TrendingUp },
   { label: 'Reports', href: '/emr/reports', icon: TrendingUp },
   { label: 'Settings', href: '/emr/settings', icon: Settings },
 ];

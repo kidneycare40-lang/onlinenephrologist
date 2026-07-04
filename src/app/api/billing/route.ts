@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBillingService } from '@/lib/db/services';
+import { logAudit, logActivity } from '@/lib/db/audit';
 import type { FilterParams, PaginationParams, SortParams } from '@/lib/db/types';
 
 export async function GET(request: NextRequest) {
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 });
       }
 
+      logAudit({ userId: body.created_by, action: 'CREATE', entityType: 'payment', entityId: payment?.id, newValues: { amount: body.amount, payment_method: body.payment_method, invoice_id: body.invoice_id } });
+      logActivity({ patientId: body.patient_id, action: 'payment_recorded', description: `Payment of ₹${body.amount} recorded` });
+
       return NextResponse.json(payment, { status: 201 });
     }
 
@@ -87,6 +91,9 @@ export async function POST(request: NextRequest) {
     if (!invoice) {
       return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 });
     }
+
+    logAudit({ action: 'CREATE', entityType: 'invoice', entityId: invoice?.id, newValues: { patient_id: body.patient_id, items: body.items.length } });
+    logActivity({ patientId: body.patient_id, action: 'invoice_created', description: `Invoice created with ${body.items.length} items` });
 
     return NextResponse.json(invoice, { status: 201 });
 
@@ -110,6 +117,8 @@ export async function DELETE(request: NextRequest) {
     if (!success) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
+
+    logAudit({ action: 'DELETE', entityType: 'invoice', entityId: id });
 
     return NextResponse.json({ success: true });
 
