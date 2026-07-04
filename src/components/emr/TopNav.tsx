@@ -339,7 +339,7 @@ export default function TopNav() {
               className="w-full h-9 pl-8 pr-2 rounded-lg bg-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus:bg-white/15 focus:ring-1 focus:ring-white/20 transition-all duration-200 touch-target"
             />
             {searchFocused && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 max-h-80 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-[55] max-h-80 overflow-y-auto">
                 {searchResults.map((r) => (
                   <button
                     key={r.id}

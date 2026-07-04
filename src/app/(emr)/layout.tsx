@@ -29,7 +29,7 @@ export default function EMRLayout({ children }: { children: React.ReactNode }) {
     <ClinicProvider>
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <TopNav />
-        <main className="flex-1 pt-14 pb-16 lg:pb-0">
+        <main className="flex-1 pt-14 pb-20 lg:pb-0">
           {children}
         </main>
         <MobileBottomNav />
