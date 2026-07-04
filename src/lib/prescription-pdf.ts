@@ -71,7 +71,7 @@ export async function generatePrescriptionPDF(
   const ML = 10;
   const MR = 10;
   const CW = PW - ML - MR;
-  const FOOTER_H = 18;
+  const FOOTER_H = 20;
   const FOOTER_Y = PH - FOOTER_H - 5;
   const MAX_Y = FOOTER_Y - 10;
   let y = 10;
@@ -124,11 +124,11 @@ export async function generatePrescriptionPDF(
 
   const logoData = await loadImg(isPsri ? '/PSRI.jpeg' : '/images/kidney_logo.png');
   if (logoData) {
-    putImg(logoData, ML, y, isPsri ? 25 : 18, isPsri ? 15 : 18);
+    putImg(logoData, ML, y, isPsri ? 30 : 20, isPsri ? 22 : 20);
   }
 
   if (isPsri) {
-    let ty = y + 4;
+    let ty = y + 6;
     doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_RED);
     doc.text('PSRI INSTITUTE OF RENAL SCIENCES', PW - MR, ty, { align: 'right' });
     ty += 6;
@@ -143,6 +143,8 @@ export async function generatePrescriptionPDF(
     doc.text('Fellow (Kidney Transplant)', PW - MR, ty, { align: 'right' });
     ty += 3.5;
     doc.text('Reg. No. R/0734 (DMC)', PW - MR, ty, { align: 'right' });
+    ty += 3.5;
+    doc.text('Mon-Saturday 1PM to 7PM', PW - MR, ty, { align: 'right' });
   } else {
     let ty = y + 4;
     doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLUE);
@@ -159,7 +161,7 @@ export async function generatePrescriptionPDF(
     doc.text('+91 9818235688', PW - MR, ty, { align: 'right' });
   }
 
-  const headerEnd = y + (isPsri ? 26 : 22);
+  const headerEnd = y + (isPsri ? 28 : 24);
   drawHLine(headerEnd, accentColor, 0.7);
   y = headerEnd + 3;
 
@@ -327,31 +329,72 @@ export async function generatePrescriptionPDF(
   doc.text('DR. RAJESH GOEL', PW - MR, y, { align: 'right' });
 
   const lastPage = doc.getNumberOfPages();
+  const dietChartImg = await loadImg('/diet-chart.png');
+
   for (let p = 1; p <= lastPage; p++) {
     doc.setPage(p);
     drawHLine(FOOTER_Y, accentColor, 0.7);
-    doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...COL_GRAY);
+
+    const col1X = ML + 2;
+    const col3X = PW - MR - 2;
+    const centerColX = PW / 2;
+    const leftW = 70;
+    const rightW = 70;
+    const centerW = 25;
 
     if (isPsri) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(ML, FOOTER_Y, leftW, 16, 'F');
+      doc.rect(centerColX - centerW / 2, FOOTER_Y, centerW, 16, 'F');
+      doc.rect(PW - MR - rightW, FOOTER_Y, rightW, 16, 'F');
+
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...COL_RED);
-      doc.text('PSRI INSTITUTE OF RENAL SCIENCES', ML + 2, FOOTER_Y + 3);
+      doc.text('PSRI INSTITUTE OF RENAL SCIENCES', col1X, FOOTER_Y + 3);
       doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100);
-      doc.text('Pushpawati Singhania Hospital & Research Institute', ML + 2, FOOTER_Y + 6);
-      doc.text('Press Enclave Marg, Saket, New Delhi - 110017', ML + 2, FOOTER_Y + 9);
-      doc.text('Mon to Sat - 1:00 PM - 7:00 PM', ML + 2, FOOTER_Y + 12);
+      doc.text('Pushpawati Singhania Hospital & Research Institute', col1X, FOOTER_Y + 6);
+      doc.text('Press Enclave Marg, Saket, New Delhi - 110017', col1X, FOOTER_Y + 9);
+      doc.text('Mon to Sat - 1:00 PM - 7:00 PM', col1X, FOOTER_Y + 12);
+
+      if (dietChartImg) {
+        doc.setFillColor(192, 57, 43);
+        doc.roundedRect(centerColX - centerW / 2, FOOTER_Y + 1, centerW, 14, 1, 1, 'F');
+        putImg(dietChartImg, centerColX - 9, FOOTER_Y + 2, 18, 10);
+        doc.setFontSize(5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+        doc.text('Scan for Diet', centerColX, FOOTER_Y + 14, { align: 'center' });
+      }
+
       doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_RED); doc.setFontSize(7);
-      doc.text('Dr. Rajesh Goel', PW - MR - 2, FOOTER_Y + 3, { align: 'right' });
+      doc.text('Dr. Rajesh Goel', col3X, FOOTER_Y + 3, { align: 'right' });
       doc.setFont('helvetica', 'normal'); doc.setTextColor(85, 85, 85); doc.setFontSize(6);
-      doc.text('MBBS, DNB (Internal Medicine), DNB (Nephrology)', PW - MR - 2, FOOTER_Y + 6, { align: 'right' });
-      doc.text('+91-11-71471471 | www.psrihospital.com', PW - MR - 2, FOOTER_Y + 9, { align: 'right' });
+      doc.text('MBBS, DNB (Internal Medicine), DNB (Nephrology)', col3X, FOOTER_Y + 6, { align: 'right' });
+      doc.text('Fellow Kidney Transplant Medicine', col3X, FOOTER_Y + 9, { align: 'right' });
+      doc.setDrawColor(...COL_RED); doc.setLineWidth(0.2);
+      doc.line(PW - MR - rightW + 4, FOOTER_Y + 10.5, PW - MR - 4, FOOTER_Y + 10.5);
+      doc.setFontSize(5.5); doc.setTextColor(100, 100, 100);
+      doc.text('+91-11-71471471  |  www.psrihospital.com', col3X, FOOTER_Y + 13, { align: 'right' });
     } else {
-      doc.text('Faridabad: Old Faridabad, 18A Main Market', ML + 2, FOOTER_Y + 3);
-      doc.text('Mon to Sat - 9:00 AM - 10:30 AM', ML + 2, FOOTER_Y + 6);
+      doc.setFillColor(248, 250, 252);
+      doc.rect(ML, FOOTER_Y, leftW, 16, 'F');
+      doc.rect(centerColX - centerW / 2, FOOTER_Y, centerW, 16, 'F');
+      doc.rect(PW - MR - rightW, FOOTER_Y, rightW, 16, 'F');
+
+      if (dietChartImg) {
+        doc.setFillColor(9, 81, 135);
+        doc.roundedRect(centerColX - centerW / 2, FOOTER_Y + 1, centerW, 14, 1, 1, 'F');
+        putImg(dietChartImg, centerColX - 9, FOOTER_Y + 2, 18, 10);
+        doc.setFontSize(5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+        doc.text('Diet Chart', centerColX, FOOTER_Y + 14, { align: 'center' });
+      }
+
       doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLUE); doc.setFontSize(7.5);
-      doc.text('KIDNEY CARE CENTRE', PW - MR - 2, FOOTER_Y + 3, { align: 'right' });
+      doc.text('KIDNEY CARE CENTRE', col3X, FOOTER_Y + 3, { align: 'right' });
       doc.setFont('helvetica', 'normal'); doc.setTextColor(85, 85, 85); doc.setFontSize(6);
-      doc.text('Saket: 13 B, K-Block, Gate no. - 2, Saket (By Appointment)', PW - MR - 2, FOOTER_Y + 6, { align: 'right' });
-      doc.text('Mon to Sat - 2:00 PM - 7:00 PM', PW - MR - 2, FOOTER_Y + 9, { align: 'right' });
+      doc.text('Old Faridabad, 18A Main Market', col3X, FOOTER_Y + 6, { align: 'right' });
+      doc.text('Mon to Sat - 9:00 AM - 10:30 AM', col3X, FOOTER_Y + 9, { align: 'right' });
+      doc.setDrawColor(...COL_BLUE); doc.setLineWidth(0.2);
+      doc.line(PW - MR - rightW + 4, FOOTER_Y + 10.5, PW - MR - 4, FOOTER_Y + 10.5);
+      doc.setFontSize(5.5); doc.setTextColor(100, 100, 100);
+      doc.text('Saket: 13 B, K-Block, Gate no. - 2, Saket', col3X, FOOTER_Y + 13, { align: 'right' });
     }
   }
 
