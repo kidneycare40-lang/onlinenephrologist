@@ -1,8 +1,8 @@
 export const SITE_CONFIG = {
   name: 'Online Nephrologist',
-  title: 'Online Nephrologist - Best Nephrologist in Delhi | Book Appointment Online',
+  title: 'Best Nephrologist in Delhi | Online Kidney Doctor',
   description:
-    'Consult Dr Rajesh Goel, best nephrologist in Delhi with 18+ years experience. Book online or in-clinic appointment for CKD, dialysis, kidney transplant, hypertension & kidney stones. AI-powered EMR system for seamless kidney care.',
+    'Consult Dr Rajesh Goel, best nephrologist in Delhi (18+ yrs exp). Online video consultation for CKD, dialysis, kidney transplant & kidney stones.',
   url: 'https://onlinenephrologist.com',
   ogImage: '/images/dr-rajesh-goel.jpg',
   phone: '+919818235613',

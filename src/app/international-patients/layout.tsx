@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'International Patients — Online Nephrology Consultation | Dr Rajesh Goel',
+  title: 'International Patients | Online Kidney Consultation | Dr Goel',
   description: 'Online nephrology consultation for international patients from USA, UK, UAE, Saudi Arabia, Australia, and worldwide. Expert kidney care by Dr Rajesh Goel with video consultations in multiple languages.',
   keywords: [
     'international nephrologist', 'nephrology consultation abroad', 'kidney specialist overseas',

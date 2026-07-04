@@ -6,7 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Dr Rajesh Goel - Best Nephrologist in Delhi | Book Appointment',
+  title: 'Dr Rajesh Goel - Best Nephrologist Delhi | 18+ Yrs',
   description:
     'Dr Rajesh Goel is a Senior Nephrologist & Kidney Transplant Physician in Delhi with 18+ years experience. MBBS, DNB Medicine, DNB Nephrology, Fellow Kidney Transplant. Book appointment online or at PSRI Hospital, Kidney Care Centre.',
   keywords: [

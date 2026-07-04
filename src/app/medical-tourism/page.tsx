@@ -6,7 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Medical Tourism India | Nephrologist Online Consultation | Dr Rajesh Goel',
+  title: 'Medical Tourism India | Kidney Specialist Online | Dr Goel',
   description:
     'Best nephrologist in India for international patients. Online kidney consultation from anywhere in the world. Dr Rajesh Goel - Senior Nephrologist & Kidney Transplant Physician with 18+ years experience. Book video consultation now.',
   keywords: [

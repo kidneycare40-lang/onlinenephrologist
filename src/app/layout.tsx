@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_CONFIG.name}`,
   },
   description: SITE_CONFIG.description,
-  keywords: ['nephrology', 'EMR', 'kidney care', 'nephrologist', 'digital prescriptions'],
+  keywords: ['nephrologist', 'kidney doctor', 'online consultation', 'CKD', 'kidney specialist', 'Delhi', 'dialysis', 'kidney transplant', 'kidney stones', 'online nephrologist', 'kidney care'],
   authors: [{ name: SITE_CONFIG.author }],
   creator: SITE_CONFIG.name,
   publisher: SITE_CONFIG.name,

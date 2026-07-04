@@ -33,10 +33,7 @@ const nextConfig = {
     ];
   },
   experimental: {
-    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', 'sonner'],
-  },
-  serverActions: {
-    bodySizeLimit: '10mb',
+    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
   },
 };
 

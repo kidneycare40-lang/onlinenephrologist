@@ -8,7 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { TestTube, Droplets, Scan, Microscope, ChevronRight, CheckCircle, AlertTriangle, Info, Shield, Phone } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Tests for Kidney Disease | eGFR, Creatinine, Urine Test, Ultrasound | Dr Rajesh Goel Delhi',
+  title: 'Kidney Disease Tests: eGFR, Creatinine & More | Dr Goel',
   description: 'Complete guide to kidney disease tests - eGFR, serum creatinine, urine albumin (uACR), BUN, cystatin C, kidney ultrasound and biopsy. Book kidney function test with Dr Rajesh Goel, Senior Nephrologist in Delhi. Call +91 98182 35613.',
   keywords: [
     'kidney disease tests', 'kidney function test', 'kidney test near me', 'renal function test',

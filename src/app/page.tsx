@@ -11,9 +11,9 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Online Nephrologist Consultation in India | Book Video Call | Dr Rajesh Goel',
+  title: 'Online Nephrologist Consultation India | Dr Rajesh Goel',
   description:
-    'Consult the best nephrologist online in India. Dr Rajesh Goel (18+ years exp) offers video consultation for CKD, high creatinine, kidney failure, dialysis, transplant & all kidney diseases. Book now — starting ₹1000.',
+    'Consult Dr Rajesh Goel online. Best nephrologist in Delhi (18+ yrs). Video consultation for CKD, kidney failure, dialysis, transplant. Book now from ₹1000.',
   keywords: [
     'online nephrologist consultation',
     'consult nephrologist online',
