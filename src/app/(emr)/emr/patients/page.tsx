@@ -342,11 +342,23 @@ export default function PatientListPage() {
                         {getPatientChronic(patient) && (
                           <span className="ml-1.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[11px] font-medium rounded">CKD</span>
                         )}
-                        {patient.source === 'website' && (
-                          <span className="ml-1.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded">Website</span>
+                        {patient.source === 'website' && getPatientClinic(patient) === 'online-intl' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded">Web-Online Intl</span>
                         )}
-                        {patient.source === 'emr' && (
-                          <span className="ml-1.5 px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-medium rounded">EMR</span>
+                        {patient.source === 'website' && getPatientClinic(patient) === 'online' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded">Web-Online</span>
+                        )}
+                        {patient.source === 'website' && getPatientClinic(patient) !== 'online' && getPatientClinic(patient) !== 'online-intl' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded">Web</span>
+                        )}
+                        {patient.source === 'emr' && (getPatientClinic(patient) === 'online' || getPatientClinic(patient) === 'online-intl') && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-purple-50 text-purple-700 text-[11px] font-medium rounded">Online</span>
+                        )}
+                        {patient.source === 'emr' && getPatientClinic(patient) !== 'online' && getPatientClinic(patient) !== 'online-intl' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-green-50 text-green-700 text-[11px] font-medium rounded">Walk-In</span>
+                        )}
+                        {!patient.source && (getPatientClinic(patient) === 'online' || getPatientClinic(patient) === 'online-intl') && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-purple-50 text-purple-700 text-[11px] font-medium rounded">Online</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-600 hidden sm:table-cell">{getPatientPhone(patient)}</td>
@@ -356,12 +368,14 @@ export default function PatientListPage() {
                           getPatientClinic(patient) === 'kcc-saket' && 'bg-amber-50 text-amber-700',
                           getPatientClinic(patient) === 'psri-delhi' && 'bg-purple-50 text-purple-700',
                           getPatientClinic(patient) === 'online' && 'bg-emerald-50 text-emerald-700',
+                          getPatientClinic(patient) === 'online-intl' && 'bg-emerald-50 text-emerald-700',
                           !getPatientClinic(patient) && 'bg-gray-50 text-gray-500',
                         )}>
                           {getPatientClinic(patient) === 'kcc-faridabad' ? 'Faridabad' :
                            getPatientClinic(patient) === 'kcc-saket' ? 'Saket' :
                            getPatientClinic(patient) === 'psri-delhi' ? 'PSRI' :
-                           getPatientClinic(patient) === 'online' ? 'Online' : '—'}
+                           getPatientClinic(patient) === 'online' ? 'Online' :
+                           getPatientClinic(patient) === 'online-intl' ? 'Online Intl' : '—'}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-600">
