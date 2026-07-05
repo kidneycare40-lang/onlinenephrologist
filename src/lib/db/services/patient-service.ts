@@ -265,17 +265,20 @@ export class PatientService {
   }
 
   async create(data: PatientCreate, createdBy?: string): Promise<PatientWithRelations | null> {
+    // Strip nested objects that are NOT DB columns
+    const { address, emergency_contact, clinic_id, ...cleanData } = data as any;
+
     // Generate UHID
-    const clinicPrefix = data.primary_clinic_id ? 'KCC' : 'KCC';
+    const clinicPrefix = cleanData.primary_clinic_id ? 'KCC' : 'KCC';
     const uhid = await this.generateUHID(clinicPrefix);
 
     const patientData = {
-      ...data,
+      ...cleanData,
       uhid,
       total_visits: 0,
       is_active: true,
-      country_code: data.country_code || '+91',
-      preferred_language: data.preferred_language || 'English',
+      country_code: cleanData.country_code || '+91',
+      preferred_language: cleanData.preferred_language || 'English',
       created_by: createdBy,
     };
 
@@ -283,15 +286,15 @@ export class PatientService {
     if (!patient) return null;
 
     // Create address if provided
-    if (data.address) {
-      await this.addressRepo.upsert(patient.id, data.address);
+    if (address) {
+      await this.addressRepo.upsert(patient.id, address);
     }
 
     // Create emergency contact if provided
-    if (data.emergency_contact) {
+    if (emergency_contact) {
       await this.contactRepo.create({
         patient_id: patient.id,
-        ...data.emergency_contact,
+        ...emergency_contact,
       } as Partial<PatientEmergencyContact>);
     }
 

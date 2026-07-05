@@ -247,20 +247,22 @@ export default function AddPatientPage() {
       date_of_birth: dob || undefined,
       gender: formData.gender as 'male' | 'female' | 'other',
       blood_group: formData.bloodGroup || undefined,
-      uhid: formData.uhid,
-      clinic_id: clinicId || 'kcc-faridabad',
       abha_number: formData.abhaNumber || undefined,
-      address: formData.address || undefined,
-      city: formData.city || undefined,
-      state: formData.state || undefined,
-      pincode: formData.pincode || undefined,
-      emergency_contact_name: formData.emergencyContactName || undefined,
-      emergency_contact_phone: formData.emergencyContactPhone || undefined,
-      emergency_contact_relation: formData.emergencyContactRelation || undefined,
-      allergies: formData.allergies,
       medical_history: formData.medicalHistory || undefined,
       insurance_provider: formData.insuranceProvider || undefined,
       insurance_number: formData.insuranceNumber || undefined,
+      address: (formData.address || formData.city || formData.state || formData.pincode) ? {
+        address_line_1: formData.address || '',
+        city: formData.city || '',
+        state: formData.state || '',
+        pincode: formData.pincode || '',
+        country: 'India',
+      } : undefined,
+      emergency_contact: (formData.emergencyContactName || formData.emergencyContactPhone) ? {
+        contact_name: formData.emergencyContactName || '',
+        phone: formData.emergencyContactPhone || '',
+        relationship: formData.emergencyContactRelation || '',
+      } : undefined,
     }).catch(() => {});
 
     await new Promise((r) => setTimeout(r, 800));

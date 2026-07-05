@@ -256,32 +256,33 @@ export default function PatientDetailPage() {
             <div className="flex flex-wrap gap-2 flex-shrink-0 no-print">
               <Link
                 href={`/emr/consultation/${patient.id}`}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors min-h-[44px]"
               >
                 <Stethoscope className="h-3.5 w-3.5" />
                 New Consultation
               </Link>
               <button
                 onClick={() => router.push(`/book-appointment?patientId=${patient.id}`)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors min-h-[44px]">
                 <Calendar className="h-3.5 w-3.5" />
-                Book Appointment
+                <span className="hidden sm:inline">Book Appointment</span>
+                <span className="sm:hidden">Book</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors min-h-[44px]">
                 <Printer className="h-3.5 w-3.5" />
                 Print
               </button>
               <button
                 onClick={() => router.push(`/emr/patients/add?edit=${patient.id}`)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors min-h-[44px]">
                 <Edit className="h-3.5 w-3.5" />
                 Edit
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors min-h-[44px]"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete

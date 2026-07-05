@@ -893,6 +893,7 @@ export default function ConsultationPage() {
             uhid={patient.uhid}
             phone={patient.phone}
             allergies={patient.allergies}
+            patientId={patient.id}
           />
 
           <div className="flex-1 overflow-y-auto pb-20">

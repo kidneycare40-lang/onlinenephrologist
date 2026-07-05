@@ -273,14 +273,9 @@ export default function TopNav() {
       date_of_birth: dob || undefined,
       gender: patientGender === 'FEMALE' ? 'female' : patientGender === 'OTHER' ? 'other' : 'male',
       blood_group: patientBloodGroup || undefined,
-      uhid,
-      clinic_id: clinicId || 'kcc-faridabad',
       abha_number: patientAbha || undefined,
-      address: patientAddress || undefined,
-      city: patientCity || undefined,
-      pincode: patientPin || undefined,
-      allergies: patientAllergies ? patientAllergies.split(',').map((a: string) => a.trim()).filter(Boolean) : [],
       medical_history: patientHistory || undefined,
+      insurance_provider: patientInsurance || undefined,
     }).catch(() => {});
 
     setTimeout(() => {

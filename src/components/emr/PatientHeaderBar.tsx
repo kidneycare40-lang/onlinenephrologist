@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { User, Phone, Plus, Tag, X, AlertTriangle } from 'lucide-react';
+import { User, Phone, Plus, Tag, X, AlertTriangle, Pencil } from 'lucide-react';
 
 interface PatientHeaderBarProps {
   firstName: string;
@@ -12,6 +13,7 @@ interface PatientHeaderBarProps {
   uhid: string;
   phone: string;
   allergies?: string[];
+  patientId?: string;
 }
 
 export default function PatientHeaderBar({
@@ -22,7 +24,9 @@ export default function PatientHeaderBar({
   uhid,
   phone,
   allergies = [],
+  patientId,
 }: PatientHeaderBarProps) {
+  const router = useRouter();
   const [showAlerts, setShowAlerts] = useState(false);
   const [showTag, setShowTag] = useState(false);
   const [patientTags, setPatientTags] = useState<string[]>([]);
@@ -136,6 +140,17 @@ export default function PatientHeaderBar({
           <Phone className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Call</span>
         </a>
+
+        {/* Edit patient button */}
+        {patientId && (
+          <button
+            onClick={() => router.push(`/emr/patients/${patientId}`)}
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-200 transition-colors touch-target"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Edit</span>
+          </button>
+        )}
       </div>
 
       {/* Alerts popup */}
