@@ -12,6 +12,7 @@ const clinicMap: Record<string, ClinicInfo> = {
   'kcc-faridabad': { id: 'kcc-faridabad', name: 'Kidney Care Centre - Faridabad', parentName: 'Kidney Care Centre' },
   'kcc-saket': { id: 'kcc-saket', name: 'Kidney Care Centre - Saket', parentName: 'Kidney Care Centre' },
   'psri-delhi': { id: 'psri-delhi', name: 'PSRI Hospital Delhi', parentName: 'PSRI Hospital' },
+  'online': { id: 'online', name: 'Online Consultation', parentName: 'Online' },
 };
 
 interface ClinicContextType {

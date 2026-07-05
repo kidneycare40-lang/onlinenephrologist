@@ -16,6 +16,7 @@ const clinicOptions = [
   { id: 'kcc-faridabad', name: 'Kidney Care Centre - Faridabad', parent: 'Kidney Care Centre', address: 'Sector 15, Faridabad' },
   { id: 'kcc-saket', name: 'Kidney Care Centre - Saket', parent: 'Kidney Care Centre', address: 'Saket, New Delhi' },
   { id: 'psri-delhi', name: 'PSRI Hospital Delhi', parent: 'PSRI Hospital', address: 'Press Enclave Marg, Delhi' },
+  { id: 'online', name: 'Online Consultation', parent: 'Online', address: 'Video / Phone' },
 ];
 
 const navLinks = [
@@ -255,6 +256,7 @@ export default function TopNav() {
       familyMembers: [],
       isActive: true,
       isChronic: false,
+      source: 'emr',
       createdAt: now.toISOString().split('T')[0],
       lastVisit: now.toISOString().split('T')[0],
       totalVisits: 1,
@@ -323,16 +325,20 @@ export default function TopNav() {
             <div
               className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold mr-2"
               style={{
-                backgroundColor: '#facc15',
-                color: '#1e293b',
-                boxShadow: '0 4px 12px rgba(250,204,21,0.4)',
-                border: '2px solid rgba(253,224,71,0.6)',
+                backgroundColor: clinicId === 'online' ? '#ecfdf5' : '#facc15',
+                color: clinicId === 'online' ? '#065f46' : '#1e293b',
+                boxShadow: clinicId === 'online' ? '0 4px 12px rgba(16,185,129,0.3)' : '0 4px 12px rgba(250,204,21,0.4)',
+                border: clinicId === 'online' ? '2px solid rgba(52,211,153,0.5)' : '2px solid rgba(253,224,71,0.6)',
               }}
             >
-              <Building2 className="h-4 w-4" />
+              {clinicId === 'online' ? <Video className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
               <span>{clinic.parentName}</span>
-              <span style={{ color: '#854d0e' }}>|</span>
-              <span>{clinic.name.split(' - ')[1]}</span>
+              {clinic.name.includes(' - ') && (
+                <>
+                  <span style={{ color: clinicId === 'online' ? '#047857' : '#854d0e' }}>|</span>
+                  <span>{clinic.name.split(' - ')[1]}</span>
+                </>
+              )}
             </div>
           )}
           <Link href="/emr/ai" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 transition-colors text-xs font-medium">
