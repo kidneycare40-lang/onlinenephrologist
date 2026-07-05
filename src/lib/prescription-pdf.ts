@@ -377,6 +377,9 @@ export async function generatePrescriptionPDF(
   y += 6;
   doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLACK);
   doc.text('DR. RAJESH GOEL', PW - MR, y, { align: 'right' });
+  y += 4;
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...COL_GRAY);
+  doc.text('Sr. Nephrologist', PW - MR, y, { align: 'right' });
 
   const lastPage = doc.getNumberOfPages();
   const dietChartImg = await loadImg('/diet-chart.png');

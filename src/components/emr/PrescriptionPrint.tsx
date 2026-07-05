@@ -405,6 +405,7 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                 <div className="rx-signature" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px', pageBreakInside: 'avoid' }}>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '10.5pt', fontWeight: 'bold' }}>DR. RAJESH GOEL</div>
+                    <div style={{ fontSize: '8.5pt', color: '#555' }}>Sr. Nephrologist</div>
                   </div>
                 </div>
 
