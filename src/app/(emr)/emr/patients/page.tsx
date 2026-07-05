@@ -330,6 +330,12 @@ export default function PatientListPage() {
                         {getPatientChronic(patient) && (
                           <span className="ml-1.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[11px] font-medium rounded">CKD</span>
                         )}
+                        {patient.source === 'website' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded">Website</span>
+                        )}
+                        {patient.source === 'emr' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-medium rounded">EMR</span>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-600 hidden sm:table-cell">{getPatientPhone(patient)}</td>
                       <td className="px-4 py-2.5 hidden md:table-cell">

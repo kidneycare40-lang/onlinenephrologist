@@ -25,11 +25,24 @@ interface PrescriptionPDFDiagnosis {
   name: string;
 }
 
+interface PrescriptionPDFVitals {
+  bloodPressure?: string;
+  heartRate?: string;
+  temperature?: string;
+  spo2?: string;
+  weight?: string;
+  height?: string;
+  bmi?: string;
+  creatinine?: string;
+  egfr?: string;
+}
+
 interface PrescriptionPDFConsultation {
   prescriptions: PrescriptionPDFMedicine[];
   diagnoses: PrescriptionPDFDiagnosis[];
   advice?: string;
   followUpDate?: string;
+  vitals?: PrescriptionPDFVitals;
 }
 
 interface PrescriptionPDFLabResult {
@@ -178,6 +191,39 @@ export async function generatePrescriptionPDF(
   doc.text(`${dateStr} ${timeStr}`, PW - MR - 2, y - 0.5, { align: 'right' });
   drawHLine(y + 3.5, COL_GRAY, 0.4);
   y += 9;
+
+  // Vitals bar
+  if (consultation.vitals) {
+    const v = consultation.vitals;
+    const vItems: { label: string; value: string }[] = [];
+    if (v.bloodPressure) vItems.push({ label: 'BP', value: v.bloodPressure });
+    if (v.heartRate) vItems.push({ label: 'Pulse', value: `${v.heartRate} bpm` });
+    if (v.temperature) vItems.push({ label: 'Temp', value: `${v.temperature}°F` });
+    if (v.spo2) vItems.push({ label: 'SpO2', value: `${v.spo2}%` });
+    if (v.weight) vItems.push({ label: 'Wt', value: `${v.weight} kg` });
+    if (v.height) vItems.push({ label: 'Ht', value: `${v.height} cm` });
+    if (v.bmi) vItems.push({ label: 'BMI', value: `${v.bmi}` });
+    if (v.creatinine) vItems.push({ label: 'Creat', value: `${v.creatinine} mg/dL` });
+    if (v.egfr) vItems.push({ label: 'eGFR', value: `${v.egfr} mL/min` });
+    if (vItems.length > 0) {
+      doc.setFillColor(240, 247, 255);
+      doc.rect(ML, y - 3, CW, 7, 'F');
+      doc.setDrawColor(200, 210, 220);
+      doc.setLineWidth(0.2);
+      doc.line(ML, y - 3, PW - MR, y - 3);
+      doc.line(ML, y + 4, PW - MR, y + 4);
+      let vx = ML + 2;
+      for (const it of vItems) {
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLUE);
+        doc.text(`${it.label}:`, vx, y);
+        vx += doc.getTextWidth(`${it.label}: `);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(...COL_GRAY);
+        doc.text(it.value, vx, y);
+        vx += doc.getTextWidth(it.value) + 6;
+      }
+      y += 8;
+    }
+  }
 
   if (labResults.length > 0) {
     const dateGroups: Record<string, PrescriptionPDFLabResult[]> = {};

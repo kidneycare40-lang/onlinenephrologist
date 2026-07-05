@@ -32,6 +32,7 @@ export interface EMRPatient {
   bloodGroup?: string;
   uhid: string;
   clinicId: string;
+  source?: 'website' | 'emr' | 'whatsapp' | 'referral' | 'other';
   abhaNumber?: string;
   aadhaar?: string;
   address?: string;
@@ -70,6 +71,8 @@ export interface Vitals {
   bmi?: string;
   spo2?: string;
   bloodSugar?: string;
+  creatinine?: string;
+  egfr?: string;
 }
 
 export interface Diagnosis {

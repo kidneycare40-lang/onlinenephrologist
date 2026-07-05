@@ -231,7 +231,7 @@ export default function ConsultationListPage() {
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Token</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Patient</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Phone</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Phone</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Time</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Payment</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Status</th>
@@ -324,7 +324,10 @@ export default function ConsultationListPage() {
                         {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-gray-900">{name}</p>
+                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">Web</span>
+                        </div>
                         <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'}</p>
                       </div>
                     </div>
@@ -385,7 +388,10 @@ export default function ConsultationListPage() {
                         {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-gray-900">{name}</p>
+                          <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded">EMR</span>
+                        </div>
                         <p className="text-xs text-gray-500">{age}Y, {gender} · {sc.prescriptions?.length || 0} Rx</p>
                       </div>
                     </div>
@@ -501,7 +507,10 @@ export default function ConsultationListPage() {
                     {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">{name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-gray-900">{name}</p>
+                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">Web</span>
+                    </div>
                     <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'} · ₹{b.consultationFee}</p>
                   </div>
                 </div>
@@ -540,7 +549,10 @@ export default function ConsultationListPage() {
                     {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">{name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-gray-900">{name}</p>
+                      <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded">EMR</span>
+                    </div>
                     <p className="text-xs text-gray-500">{age}Y, {gender} · #{tokenMap.get(`sc:${sc.patientId}`) || sc.tokenId || '—'} · {medCount} Rx</p>
                   </div>
                 </div>

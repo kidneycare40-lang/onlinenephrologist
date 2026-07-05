@@ -263,6 +263,7 @@ export default function ConsultationPage() {
           medicalHistory: '',
           isChronic: false,
           isActive: true,
+          source: 'website',
           createdAt: booking.createdAt || new Date().toISOString(),
           lastVisit: booking.date,
           totalVisits: 0,
@@ -971,7 +972,7 @@ export default function ConsultationPage() {
 
               <ErrorBoundary>
                 <div id="section-vitals">
-                  <VitalsSection vitals={consultation.vitals} onChange={updateVitals} />
+                  <VitalsSection vitals={consultation.vitals} onChange={updateVitals} patientAge={ageYears} patientGender={patient.gender} />
                 </div>
               </ErrorBoundary>
 

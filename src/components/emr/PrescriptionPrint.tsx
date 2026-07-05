@@ -216,6 +216,31 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                     Date &amp; Time: {dateStr} {timeStr}
                   </div>
                 </div>
+
+                {(() => {
+                  const v = consultation.vitals;
+                  const items: { label: string; value: string }[] = [];
+                  if (v.bloodPressure) items.push({ label: 'BP', value: v.bloodPressure });
+                  if (v.heartRate) items.push({ label: 'Pulse', value: `${v.heartRate} bpm` });
+                  if (v.temperature) items.push({ label: 'Temp', value: `${v.temperature}°F` });
+                  if (v.spo2) items.push({ label: 'SpO2', value: `${v.spo2}%` });
+                  if (v.weight) items.push({ label: 'Wt', value: `${v.weight} kg` });
+                  if (v.height) items.push({ label: 'Ht', value: `${v.height} cm` });
+                  if (v.bmi) items.push({ label: 'BMI', value: `${v.bmi} kg/m²` });
+                  if (v.creatinine) items.push({ label: 'Creat', value: `${v.creatinine} mg/dL` });
+                  if (v.egfr) items.push({ label: 'eGFR', value: `${v.egfr} mL/min` });
+                  if (items.length === 0) return null;
+                  return (
+                    <div style={{ padding: '5px 10px', fontSize: '8.5pt', background: '#f0f7ff', borderBottom: '1px solid #ddd', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {items.map((it, idx) => (
+                        <span key={idx} style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                          <span style={{ fontWeight: 'bold', color: '#095187' }}>{it.label}:</span>{' '}
+                          <span style={{ color: '#333' }}>{it.value}</span>
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </td>
             </tr>
             <tr>

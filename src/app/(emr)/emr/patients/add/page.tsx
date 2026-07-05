@@ -229,6 +229,7 @@ export default function AddPatientPage() {
       })),
       isActive: true,
       isChronic: false,
+      source: 'emr',
       createdAt: now.toISOString().split('T')[0],
       lastVisit: now.toISOString().split('T')[0],
       totalVisits: 1,

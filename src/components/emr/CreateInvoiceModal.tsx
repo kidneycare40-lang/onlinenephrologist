@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Plus, Trash2, Search } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
-import { patients } from '@/lib/data/emr-mock';
+import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { useClinic } from '@/lib/emr-clinic-context';
+import { patientsApi } from '@/lib/api-client';
 import type { EMRInvoice, InvoiceItem, InvoiceStatus, PaymentMethod } from '@/types/emr';
 
 const clinicLabels: Record<string, string> = {
@@ -36,6 +38,9 @@ const serviceTemplates = [
 export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingInvoice }: CreateInvoiceModalProps) {
   const { clinicId: currentClinicId } = useClinic();
   const [patientSearch, setPatientSearch] = useState('');
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [allPatients, setAllPatients] = useState<any[]>(mockPatients);
   const [selectedPatient, setSelectedPatient] = useState<{
     id: string;
     name: string;
@@ -67,12 +72,93 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   const [paidAmount, setPaidAmount] = useState(existingInvoice?.paidAmount || 0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(existingInvoice?.payments?.[0]?.method || 'UPI');
 
-  const filteredPatients = patients.filter(
+  useEffect(() => {
+    if (!isOpen) return;
+    const load = async () => {
+      try {
+        const res = await patientsApi.list();
+        if (res?.data?.length) {
+          const mapped = res.data.map((p: any) => ({
+            id: p.id,
+            firstName: p.first_name,
+            lastName: p.last_name,
+            phone: p.phone || '',
+            uhid: p.uhid || '',
+            dateOfBirth: p.date_of_birth || '',
+            gender: p.gender === 'female' ? 'Female' : p.gender === 'other' ? 'Other' : 'Male',
+            address: p.address || '',
+            clinicId: p.clinic_id || 'kcc-faridabad',
+          }));
+          setAllPatients(mapped);
+          return;
+        }
+      } catch {}
+      try {
+        const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        const consultationList = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+        const appointments = JSON.parse(localStorage.getItem('emr_appointments') || '[]');
+        const bookingPatients = bookings.map((b: any) => ({
+          id: b.patientId || `obp-${b.bookingId}`,
+          firstName: b.firstName || '',
+          lastName: b.lastName || '',
+          phone: b.phone || '',
+          uhid: '',
+          dateOfBirth: b.age ? `${new Date().getFullYear() - parseInt(b.age)}-01-01` : '',
+          gender: b.gender || 'Male',
+          address: '',
+          clinicId: b.clinicId || 'online',
+        }));
+        const addedIds = new Set(added.map((p: any) => p.id));
+        const bookingIds = new Set(bookingPatients.map((p: any) => p.id));
+        const apptIds = new Set();
+        const consultOnlyPatients = consultationList
+          .filter((c: any) => c.patientId && !addedIds.has(c.patientId) && !bookingIds.has(c.patientId))
+          .map((c: any) => {
+            apptIds.add(c.patientId);
+            const nameParts = (c.patientName || '').split(' ').filter(Boolean);
+            return {
+              id: c.patientId,
+              firstName: nameParts[0] || c.patientName || '',
+              lastName: nameParts.slice(1).join(' ') || '',
+              phone: c.patientPhone || '',
+              uhid: c.patientUHID || '',
+              dateOfBirth: c.patientDOB || '',
+              gender: c.patientGender || 'Male',
+              address: '',
+              clinicId: c.clinicId || 'kcc-faridabad',
+            };
+          });
+        const apptOnlyPatients = appointments
+          .filter((a: any) => a.patientId && !addedIds.has(a.patientId) && !bookingIds.has(a.patientId) && !apptIds.has(a.patientId))
+          .map((a: any) => {
+            const nameParts = (a.patientName || '').split(' ').filter(Boolean);
+            return {
+              id: a.patientId,
+              firstName: nameParts[0] || a.patientName || '',
+              lastName: nameParts.slice(1).join(' ') || '',
+              phone: a.patientPhone || '',
+              uhid: '',
+              dateOfBirth: '',
+              gender: 'Male' as const,
+              address: '',
+              clinicId: a.clinicId || 'kcc-faridabad',
+            };
+          });
+        const combined = [...mockPatients, ...added, ...bookingPatients, ...consultOnlyPatients, ...apptOnlyPatients];
+        const unique = combined.filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === p.id) === i);
+        setAllPatients(unique);
+      } catch {}
+    };
+    load();
+  }, [isOpen]);
+
+  const filteredPatients = allPatients.filter(
     (p) =>
-      p.firstName.toLowerCase().includes(patientSearch.toLowerCase()) ||
-      p.lastName.toLowerCase().includes(patientSearch.toLowerCase()) ||
-      p.phone.includes(patientSearch) ||
-      p.uhid.toLowerCase().includes(patientSearch.toLowerCase())
+      (p.firstName || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
+      (p.lastName || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
+      (p.phone || '').includes(patientSearch) ||
+      (p.uhid || '').toLowerCase().includes(patientSearch.toLowerCase())
   );
 
   const addItem = (template?: typeof serviceTemplates[0]) => {
@@ -109,7 +195,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const selectPatient = (patient: typeof patients[0]) => {
+  const selectPatient = (patient: typeof mockPatients[0]) => {
     setSelectedPatient({
       id: patient.id,
       name: `${patient.firstName} ${patient.lastName}`,
@@ -227,17 +313,32 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
                 </button>
               </div>
             ) : (
-              <div className="relative">
+              <div className="relative" ref={searchRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   value={patientSearch}
-                  onChange={(e) => setPatientSearch(e.target.value)}
+                  onChange={(e) => {
+                    setPatientSearch(e.target.value);
+                    if (searchRef.current) {
+                      const rect = searchRef.current.getBoundingClientRect();
+                      setDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
+                    }
+                  }}
+                  onFocus={() => {
+                    if (searchRef.current) {
+                      const rect = searchRef.current.getBoundingClientRect();
+                      setDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
+                    }
+                  }}
                   placeholder="Search patient by name, phone, or UHID..."
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20"
                 />
-                {patientSearch && filteredPatients.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {patientSearch && filteredPatients.length > 0 && dropdownPos && typeof document !== 'undefined' && createPortal(
+                  <div
+                    className="bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                    style={{ position: 'absolute', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+                  >
                     {filteredPatients.map((patient) => (
                       <button
                         key={patient.id}
@@ -253,7 +354,8 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
                         <p className="text-xs text-gray-500">{patient.phone} | {patient.uhid}</p>
                       </button>
                     ))}
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             )}
