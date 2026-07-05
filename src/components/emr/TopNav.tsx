@@ -62,6 +62,7 @@ export default function TopNav() {
   const [patientHistory, setPatientHistory] = useState('');
   const [patientInsurance, setPatientInsurance] = useState('');
   const [patientAbha, setPatientAbha] = useState('');
+  const [patientReferral, setPatientReferral] = useState('');
   const [patientUhid, setPatientUhid] = useState('');
   const [addingPatient, setAddingPatient] = useState(false);
 
@@ -213,6 +214,7 @@ export default function TopNav() {
     setPatientHistory('');
     setPatientInsurance('');
     setPatientAbha('');
+    setPatientReferral('');
     setPatientUhid('');
   }
 
@@ -257,6 +259,7 @@ export default function TopNav() {
       isActive: true,
       isChronic: false,
       source: 'emr',
+      referralDoctor: patientReferral || undefined,
       createdAt: now.toISOString().split('T')[0],
       lastVisit: now.toISOString().split('T')[0],
       totalVisits: 1,
@@ -632,6 +635,11 @@ export default function TopNav() {
                       <input type="text" value={patientInsurance} onChange={(e) => setPatientInsurance(e.target.value)} placeholder="Provider & Number"
                         className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1.5 block">Referred By (Doctor Name)</label>
+                    <input type="text" value={patientReferral} onChange={(e) => setPatientReferral(e.target.value)} placeholder="Dr. name (if referred)"
+                      className="w-full h-11 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30" />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 mb-1.5 block">Allergies</label>

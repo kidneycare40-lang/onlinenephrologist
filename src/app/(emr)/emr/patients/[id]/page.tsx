@@ -247,6 +247,11 @@ export default function PatientDetailPage() {
                     {patient.bloodGroup}
                   </span>
                 )}
+                {patient.referralDoctor && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                    Referred by: {patient.referralDoctor}
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
                 <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" />{patient.phone}</span>

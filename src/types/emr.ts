@@ -33,6 +33,7 @@ export interface EMRPatient {
   uhid: string;
   clinicId: string;
   source?: 'website' | 'emr' | 'whatsapp' | 'referral' | 'other';
+  referralDoctor?: string;
   abhaNumber?: string;
   aadhaar?: string;
   address?: string;

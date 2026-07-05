@@ -41,6 +41,7 @@ interface FormData {
   medicalHistory: string;
   insuranceProvider: string;
   insuranceNumber: string;
+  referralDoctor: string;
   familyMembers: FamilyMemberForm[];
 }
 
@@ -98,6 +99,7 @@ const initialFormData: FormData = {
   medicalHistory: '',
   insuranceProvider: '',
   insuranceNumber: '',
+  referralDoctor: '',
   familyMembers: [],
 };
 
@@ -214,6 +216,7 @@ export default function AddPatientPage() {
       city: formData.city || undefined,
       state: formData.state || undefined,
       pincode: formData.pincode || undefined,
+      referralDoctor: formData.referralDoctor || undefined,
       emergencyContactName: formData.emergencyContactName || undefined,
       emergencyContactPhone: formData.emergencyContactPhone || undefined,
       emergencyContactRelation: formData.emergencyContactRelation || undefined,
@@ -493,6 +496,7 @@ export default function AddPatientPage() {
               {renderInput('Insurance Provider', 'insuranceProvider', 'text', 'e.g., Star Health')}
               {renderInput('Insurance Number', 'insuranceNumber', 'text', 'Policy number')}
             </div>
+            {renderInput('Referred By (Doctor Name)', 'referralDoctor', 'text', 'Dr. name (if referred)')}
           </div>
         )}
 
