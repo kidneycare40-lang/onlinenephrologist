@@ -138,6 +138,31 @@ export default function ConsultationListPage() {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
+  // Generate sequential token numbers for ALL patients (appointments + saved)
+  const tokenMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const allEntries: { id: string; time: string; date: string }[] = [];
+
+    for (const a of filtered) {
+      allEntries.push({ id: `apt:${a.patientId}`, time: a.time || '99:99', date: a.date || dateFilter });
+    }
+    for (const sc of filteredSaved) {
+      allEntries.push({ id: `sc:${sc.patientId}`, time: '00:00', date: sc.date || dateFilter });
+    }
+
+    allEntries.sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return a.time.localeCompare(b.time);
+    });
+
+    let counter = 1;
+    for (const entry of allEntries) {
+      map.set(entry.id, `T${String(counter).padStart(3, '0')}`);
+      counter++;
+    }
+    return map;
+  }, [filtered, filteredSaved, dateFilter]);
+
   const waiting = filtered.filter((a) => a.status === 'WAITING').length + filteredOnline.filter((b) => b.status === 'pending').length;
   const inProgress = filtered.filter((a) => a.status === 'IN_PROGRESS').length + filteredSaved.filter((sc) => sc.status === 'IN_PROGRESS').length;
   const completed = filtered.filter((a) => a.status === 'COMPLETED').length + filteredOnline.filter((b) => b.status !== 'pending').length + filteredSaved.filter((sc) => sc.status === 'COMPLETED').length;
@@ -224,7 +249,7 @@ export default function ConsultationListPage() {
               return (
                 <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
-                    <span className="text-sm font-bold text-[#0A75BB]">#{a.tokenId}</span>
+                    <span className="text-sm font-bold text-[#0A75BB]">#{tokenMap.get(`apt:${a.patientId}`) || a.tokenId}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
@@ -352,7 +377,7 @@ export default function ConsultationListPage() {
               return (
                 <tr key={sc.id} className="hover:bg-purple-50/30 transition-colors border-t border-purple-100">
                   <td className="px-4 py-3">
-                    <span className="text-sm font-bold text-purple-600">#{sc.id.slice(-7).toUpperCase()}</span>
+                    <span className="text-sm font-bold text-purple-600">#{tokenMap.get(`sc:${sc.patientId}`) || sc.tokenId || sc.id.slice(-4).toUpperCase()}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
@@ -439,7 +464,7 @@ export default function ConsultationListPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-900">{name}</p>
-                    <p className="text-xs text-gray-500">{age}Y, {gender} · #{a.tokenId}</p>
+                    <p className="text-xs text-gray-500">{age}Y, {gender} · #{tokenMap.get(`apt:${a.patientId}`) || a.tokenId}</p>
                   </div>
                 </div>
                 <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full', status.color)}>
@@ -516,7 +541,7 @@ export default function ConsultationListPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-900">{name}</p>
-                    <p className="text-xs text-gray-500">{age}Y, {gender} · {medCount} Rx</p>
+                    <p className="text-xs text-gray-500">{age}Y, {gender} · #{tokenMap.get(`sc:${sc.patientId}`) || sc.tokenId || '—'} · {medCount} Rx</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
