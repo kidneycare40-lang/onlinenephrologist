@@ -257,7 +257,10 @@ export default function ConsultationListPage() {
                         {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">{name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold text-gray-900">{name}</p>
+                          <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[10px] font-medium rounded">Walk-In</span>
+                        </div>
                         <p className="text-xs text-gray-500">{age}Y, {gender}</p>
                       </div>
                     </div>
@@ -390,7 +393,7 @@ export default function ConsultationListPage() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-semibold text-gray-900">{name}</p>
-                          <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded">EMR</span>
+                          <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[10px] font-medium rounded">Walk-In</span>
                         </div>
                         <p className="text-xs text-gray-500">{age}Y, {gender} · {sc.prescriptions?.length || 0} Rx</p>
                       </div>
@@ -469,7 +472,10 @@ export default function ConsultationListPage() {
                     {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">{name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-gray-900">{name}</p>
+                      <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[10px] font-medium rounded">Walk-In</span>
+                    </div>
                     <p className="text-xs text-gray-500">{age}Y, {gender} · #{tokenMap.get(`apt:${a.patientId}`) || a.tokenId}</p>
                   </div>
                 </div>
@@ -551,7 +557,7 @@ export default function ConsultationListPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-bold text-gray-900">{name}</p>
-                      <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-medium rounded">EMR</span>
+                      <span className="px-1.5 py-0.5 bg-green-50 text-green-700 text-[10px] font-medium rounded">Walk-In</span>
                     </div>
                     <p className="text-xs text-gray-500">{age}Y, {gender} · #{tokenMap.get(`sc:${sc.patientId}`) || sc.tokenId || '—'} · {medCount} Rx</p>
                   </div>
