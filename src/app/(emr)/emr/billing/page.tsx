@@ -87,6 +87,20 @@ function apiInvoiceToEMR(apiInv: any): EMRInvoice {
   };
 }
 
+const BILLING_STORAGE_KEY = 'emr_billing_invoices';
+
+function loadInvoicesFromStorage(): EMRInvoice[] {
+  try {
+    return JSON.parse(localStorage.getItem(BILLING_STORAGE_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveInvoicesToStorage(invoices: EMRInvoice[]) {
+  try {
+    localStorage.setItem(BILLING_STORAGE_KEY, JSON.stringify(invoices));
+  } catch {}
+}
+
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<EMRInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,21 +114,33 @@ export default function BillingPage() {
 
   const refreshData = useCallback(async () => {
     setLoading(true);
+    const storageInvoices = loadInvoicesFromStorage();
+
     try {
       const params: Record<string, string> = {};
       if (statusFilter !== 'ALL') params.status = statusFilter;
       const result = await billingApi.list(params).catch(() => null);
 
-      if (result && Array.isArray(result.data)) {
-        setInvoices(result.data.map(apiInvoiceToEMR));
-      } else if (result && Array.isArray(result)) {
-        setInvoices(result.map(apiInvoiceToEMR));
+      if (result && Array.isArray(result.data) && result.data.length > 0) {
+        const apiInvoices = result.data.map(apiInvoiceToEMR);
+        setInvoices(apiInvoices);
+        saveInvoicesToStorage(apiInvoices);
+      } else if (result && Array.isArray(result) && result.length > 0) {
+        const apiInvoices = result.map(apiInvoiceToEMR);
+        setInvoices(apiInvoices);
+        saveInvoicesToStorage(apiInvoices);
+      } else if (storageInvoices.length > 0) {
+        setInvoices(storageInvoices);
       } else {
-        // Fallback to mock data
         setInvoices(mockInvoices);
+        saveInvoicesToStorage(mockInvoices);
       }
     } catch {
-      setInvoices(mockInvoices);
+      if (storageInvoices.length > 0) {
+        setInvoices(storageInvoices);
+      } else {
+        setInvoices(mockInvoices);
+      }
     } finally {
       setLoading(false);
     }
@@ -237,7 +263,9 @@ export default function BillingPage() {
       try {
         await billingApi.update(invoice.id, invoice).catch(() => null);
       } catch {}
-      setInvoices(invoices.map((inv) => (inv.id === invoice.id ? invoice : inv)));
+      const updated = invoices.map((inv) => (inv.id === invoice.id ? invoice : inv));
+      setInvoices(updated);
+      saveInvoicesToStorage(updated);
     } else {
       // Create new
       try {
@@ -247,7 +275,9 @@ export default function BillingPage() {
           invoice.invoiceNumber = result.invoice_number || invoice.invoiceNumber;
         }
       } catch {}
-      setInvoices([invoice, ...invoices]);
+      const updated = [invoice, ...invoices];
+      setInvoices(updated);
+      saveInvoicesToStorage(updated);
     }
     setEditingInvoice(null);
   };
@@ -257,7 +287,9 @@ export default function BillingPage() {
       try {
         await billingApi.delete(id).catch(() => null);
       } catch {}
-      setInvoices(invoices.filter((inv) => inv.id !== id));
+      const updated = invoices.filter((inv) => inv.id !== id);
+      setInvoices(updated);
+      saveInvoicesToStorage(updated);
       setSelectedInvoice(null);
     }
   };
