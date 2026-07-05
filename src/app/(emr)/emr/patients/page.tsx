@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi, ApiError } from '@/lib/api-client';
+import { patients as mockPatients } from '@/lib/data/emr-mock';
 
 function calculateAge(dob: string): number {
   if (!dob) return 0;
@@ -67,6 +68,14 @@ export default function PatientListPage() {
       const result = await patientsApi.list(params);
       let apiPatients = result.data || [];
 
+      // If API returned nothing, include mock patients as fallback
+      if (apiPatients.length === 0) {
+        for (const mp of mockPatients) {
+          if (clinicFilter && clinicFilter !== 'all' && mp.clinicId && mp.clinicId !== clinicFilter) continue;
+          apiPatients.push(mp);
+        }
+      }
+
       // Also load localStorage patients and merge (avoid duplicates by phone)
       try {
         const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
@@ -98,9 +107,16 @@ export default function PatientListPage() {
       setAllPatients(apiPatients);
     } catch (err: any) {
       setError(err.message);
-      // Fallback: try loading from localStorage
+      // Fallback: try loading from localStorage + mock data
       try {
         const dynamicPatients: any[] = [];
+
+        // Include mock patients first
+        for (const mp of mockPatients) {
+          if (clinicFilter && clinicFilter !== 'all' && mp.clinicId && mp.clinicId !== clinicFilter) continue;
+          dynamicPatients.push(mp);
+        }
+
         const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
         if (Array.isArray(added)) {
           const filtered = clinicFilter && clinicFilter !== 'all'
