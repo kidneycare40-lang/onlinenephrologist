@@ -219,6 +219,29 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     setPatientSearch('');
   };
 
+  const selectCustomPatient = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSelectedPatient({
+      id: `custom-${Date.now()}`,
+      name: trimmed,
+      phone: '',
+      clinicId: currentClinicId || 'kcc-faridabad',
+    });
+    const fee = clinicFeeMap[currentClinicId || 'kcc-faridabad'] || clinicFeeMap['kcc-faridabad'];
+    setItems([{
+      id: `item-${Date.now()}`,
+      description: fee.description,
+      qty: 1,
+      rate: fee.rate,
+      amount: fee.rate,
+      gstRate: 0,
+      gstAmount: 0,
+      total: fee.rate,
+    }]);
+    setPatientSearch('');
+  };
+
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
   const totalGst = items.reduce((sum, item) => sum + item.gstAmount, 0);
   const discountAmount = discountType === 'PERCENTAGE' ? (subtotal * discount) / 100 : discount;
@@ -354,6 +377,26 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
                         <p className="text-xs text-gray-500">{patient.phone} | {patient.uhid}</p>
                       </button>
                     ))}
+                  </div>,
+                  document.body
+                )}
+                {patientSearch && filteredPatients.length === 0 && dropdownPos && typeof document !== 'undefined' && createPortal(
+                  <div
+                    className="bg-white border border-gray-200 rounded-lg shadow-lg"
+                    style={{ position: 'absolute', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+                  >
+                    <button
+                      onClick={() => selectCustomPatient(patientSearch)}
+                      className="w-full px-4 py-3 text-left hover:bg-[#0A75BB]/5 border-b border-gray-100 flex items-center gap-3"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#0A75BB]/10 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-[#0A75BB]">+</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-[#0A75BB]">Bill &quot;{patientSearch.trim()}&quot;</p>
+                        <p className="text-[11px] text-gray-400">No matching patient found — create invoice anyway</p>
+                      </div>
+                    </button>
                   </div>,
                   document.body
                 )}
