@@ -199,14 +199,14 @@ export default function ConsultationListPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Token</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Patient</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Phone</th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Phone</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Time</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Payment</th>
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Status</th>
@@ -237,7 +237,7 @@ export default function ConsultationListPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-4 py-3">
                     <span className="text-sm text-gray-600">{patient?.phone || '—'}</span>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
@@ -284,159 +284,262 @@ export default function ConsultationListPage() {
                 </tr>
               );
             })}
+            {filteredOnline.map((b) => {
+              const name = `${b.firstName} ${b.lastName}`;
+              const status = b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
+
+              return (
+                <tr key={b.bookingId} className="hover:bg-cyan-50/30 transition-colors border-t border-cyan-100">
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-bold text-cyan-600">#{b.bookingId.slice(-6).toUpperCase()}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{name}</p>
+                        <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-gray-600">{b.phone}</span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <span className="text-sm text-gray-600">{b.time}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn(
+                      'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full',
+                      b.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                    )}>
+                      <CreditCard className="h-3 w-3" />
+                      ₹{b.consultationFee} {b.paymentStatus === 'paid' ? '' : '(Unpaid)'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-full', status.color)}>
+                      {status.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      {b.phone && (
+                        <a href={`tel:${b.phone}`} className="p-2.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                          <Phone className="h-4 w-4" />
+                        </a>
+                      )}
+                      <Link
+                        href={`/emr/consultation/${b.bookingId}`}
+                        className="inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg bg-[#0A75BB] text-white hover:bg-[#085D94] transition-colors"
+                      >
+                        <Play className="h-3 w-3" /> Start Rx
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {filteredSaved.map((sc) => {
+              const pat = allPatients.find((p) => p.id === sc.patientId);
+              const name = pat ? `${pat.firstName} ${pat.lastName}` : 'Unknown Patient';
+              const age = pat ? calculateAge(new Date(pat.dateOfBirth)) : 0;
+              const gender = pat?.gender?.[0] || '?';
+              const status = statusConfig[sc.status] || statusConfig.COMPLETED;
+
+              return (
+                <tr key={sc.id} className="hover:bg-purple-50/30 transition-colors border-t border-purple-100">
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-bold text-purple-600">#{sc.id.slice(-7).toUpperCase()}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{name}</p>
+                        <p className="text-xs text-gray-500">{age}Y, {gender} · {sc.prescriptions?.length || 0} Rx</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-gray-600">{pat?.phone || '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <span className="text-sm text-gray-600">{sc.date}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                      Saved
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-full', status.color)}>
+                      {status.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      {pat?.phone && (
+                        <a href={`tel:${pat.phone}`} className="p-2.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
+                          <Phone className="h-4 w-4" />
+                        </a>
+                      )}
+                      <Link
+                        href={`/emr/consultation/${sc.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                      >
+                        <Eye className="h-3 w-3" /> View Rx
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        </div>
-
-        {filteredOnline.length > 0 && (
-          <>
-            <div className="px-4 py-2 bg-cyan-50/50 border-t border-gray-200">
-              <p className="text-[11px] font-semibold text-cyan-600 uppercase">Online Bookings from Website ({filteredOnline.length})</p>
-            </div>
-            <tbody className="divide-y divide-gray-100">
-              {filteredOnline.map((b) => {
-                const name = `${b.firstName} ${b.lastName}`;
-                const status = b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
-
-                return (
-                  <tr key={b.bookingId} className="hover:bg-cyan-50/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className="text-sm font-bold text-cyan-600">#{b.bookingId.slice(-6).toUpperCase()}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                          {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{name}</p>
-                          <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-sm text-gray-600">{b.phone}</span>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-sm text-gray-600">{b.time}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        'inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full',
-                        b.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                      )}>
-                        <CreditCard className="h-3 w-3" />
-                        ₹{b.consultationFee} {b.paymentStatus === 'paid' ? '' : '(Unpaid)'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-full', status.color)}>
-                        {status.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {b.phone && (
-                          <a href={`tel:${b.phone}`} className="p-2.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
-                            <Phone className="h-4 w-4" />
-                          </a>
-                        )}
-                        <Link
-                          href={`/emr/consultation/${b.bookingId}`}
-                          className="inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg bg-[#0A75BB] text-white hover:bg-[#085D94] transition-colors"
-                        >
-                          <Play className="h-3 w-3" /> Start Rx
-                        </Link>
-                        <button
-                          onClick={() => setDeleteBookingId(b.bookingId)}
-                          className="p-2.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Delete booking"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </>
-        )}
-
-        {filteredSaved.length > 0 && (
-          <>
-            <div className="px-4 py-2 bg-purple-50/50 border-t border-gray-200">
-              <p className="text-[11px] font-semibold text-purple-600 uppercase">Saved Consultations ({filteredSaved.length})</p>
-            </div>
-            <tbody className="divide-y divide-gray-100">
-              {filteredSaved.map((sc) => {
-                const pat = allPatients.find((p) => p.id === sc.patientId);
-                const name = pat ? `${pat.firstName} ${pat.lastName}` : 'Unknown Patient';
-                const age = pat ? calculateAge(new Date(pat.dateOfBirth)) : 0;
-                const gender = pat?.gender?.[0] || '?';
-                const status = statusConfig[sc.status] || statusConfig.COMPLETED;
-                const diagStr = sc.diagnoses?.map((d) => d.name).join(', ') || '';
-                const medCount = sc.prescriptions?.length || 0;
-
-                return (
-                  <tr key={sc.id} className="hover:bg-purple-50/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className="text-sm font-bold text-purple-600">#{sc.id.slice(-7).toUpperCase()}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                          {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{name}</p>
-                          <p className="text-xs text-gray-500">{age}Y, {gender}{diagStr ? ` · ${diagStr}` : ''}{medCount > 0 ? ` · ${medCount} Rx` : ''}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-sm text-gray-600">{pat?.phone || '—'}</span>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-sm text-gray-600">{sc.date}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
-                        Saved
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn('inline-flex px-2 py-0.5 text-xs font-medium rounded-full', status.color)}>
-                        {status.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {pat?.phone && (
-                          <a href={`tel:${pat.phone}`} className="p-2.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="Call">
-                            <Phone className="h-4 w-4" />
-                          </a>
-                        )}
-                        <Link
-                          href={`/emr/consultation/${sc.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
-                        >
-                          <Eye className="h-3 w-3" /> View Rx
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </>
-        )}
-
         {filtered.length === 0 && filteredOnline.length === 0 && filteredSaved.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <p className="text-sm">No consultations found</p>
           </div>
         )}
+      </div>
+
+      {/* Mobile card layout */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 && filteredOnline.length === 0 && filteredSaved.length === 0 && (
+          <div className="text-center py-12 text-gray-400 bg-white border border-gray-200 rounded-xl">
+            <p className="text-sm">No consultations found</p>
+          </div>
+        )}
+
+        {filtered.map((a) => {
+          const patient = allPatients.find((p) => p.id === a.patientId);
+          const name = patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown';
+          const age = patient ? calculateAge(new Date(patient.dateOfBirth)) : 0;
+          const gender = patient?.gender === 'Male' ? 'M' : patient?.gender === 'Female' ? 'F' : 'O';
+          const status = statusConfig[a.status] || statusConfig.WAITING;
+          const consultId = (() => {
+            const mockConsult = consultations.find((c) => c.patientId === a.patientId);
+            if (mockConsult) return mockConsult.id;
+            const savedConsult = savedConsultations.find((c) => c.patientId === a.patientId);
+            if (savedConsult) return savedConsult.id;
+            return a.patientId;
+          })();
+
+          return (
+            <div key={a.id} className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0A75BB] to-[#085D94] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{name}</p>
+                    <p className="text-xs text-gray-500">{age}Y, {gender} · #{a.tokenId}</p>
+                  </div>
+                </div>
+                <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full', status.color)}>
+                  {status.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href={`tel:${patient?.phone}`} className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                  <Phone className="h-3.5 w-3.5" /> Call
+                </a>
+                <Link
+                  href={`/emr/consultation/${consultId}`}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold rounded-lg transition-colors',
+                    a.status === 'WAITING' ? 'bg-[#0A75BB] text-white hover:bg-[#085D94]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  )}
+                >
+                  {a.status === 'WAITING' ? <><Play className="h-3.5 w-3.5" /> Start</> : <><Eye className="h-3.5 w-3.5" /> Open</>}
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredOnline.map((b) => {
+          const name = `${b.firstName} ${b.lastName}`;
+          const status = b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
+
+          return (
+            <div key={b.bookingId} className="bg-white border border-cyan-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{name}</p>
+                    <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'} · ₹{b.consultationFee}</p>
+                  </div>
+                </div>
+                <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full', status.color)}>
+                  {status.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href={`tel:${b.phone}`} className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                  <Phone className="h-3.5 w-3.5" /> Call
+                </a>
+                <Link
+                  href={`/emr/consultation/${b.bookingId}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold bg-[#0A75BB] text-white rounded-lg hover:bg-[#085D94] transition-colors"
+                >
+                  <Play className="h-3.5 w-3.5" /> Start Rx
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredSaved.map((sc) => {
+          const pat = allPatients.find((p) => p.id === sc.patientId);
+          const name = pat ? `${pat.firstName} ${pat.lastName}` : 'Unknown Patient';
+          const age = pat ? calculateAge(new Date(pat.dateOfBirth)) : 0;
+          const gender = pat?.gender?.[0] || '?';
+          const status = statusConfig[sc.status] || statusConfig.COMPLETED;
+          const medCount = sc.prescriptions?.length || 0;
+
+          return (
+            <div key={sc.id} className="bg-white border border-purple-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{name}</p>
+                    <p className="text-xs text-gray-500">{age}Y, {gender} · {medCount} Rx</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-700">Saved</span>
+                  <span className={cn('px-2 py-0.5 text-[10px] font-semibold rounded-full', status.color)}>
+                    {status.label}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href={`tel:${pat?.phone}`} className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                  <Phone className="h-3.5 w-3.5" /> Call
+                </a>
+                <Link
+                  href={`/emr/consultation/${sc.id}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <Eye className="h-3.5 w-3.5" /> View Rx
+                </Link>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <p className="text-xs text-gray-400 text-center">
