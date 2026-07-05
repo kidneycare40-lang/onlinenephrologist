@@ -608,16 +608,58 @@ export default function ConsultationPage() {
     showToastMessage('Generating PDF...', 'success');
 
     try {
-      const { generatePrescriptionPDF } = await import('@/lib/prescription-pdf');
+      const { default: html2pdf } = await import('html2pdf.js');
+      const { default: ReactPDF } = await import('@/components/emr/PrescriptionPrint');
 
-      const pdfBlob = await generatePrescriptionPDF(
-        patient,
-        consultation,
-        testRequests,
-        testRequestByWhen,
-        patientLabResults,
-        clinicId ?? undefined,
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '210mm';
+      container.style.background = 'white';
+      document.body.appendChild(container);
+
+      const { createRoot } = await import('react-dom/client');
+      const root = createRoot(container);
+      await new Promise<void>((resolve) => {
+        root.render(
+          <ReactPDF
+            patient={patient}
+            consultation={consultation}
+            consultationDate={new Date().toLocaleDateString('en-IN')}
+            testRequests={testRequests}
+            testRequestByWhen={testRequestByWhen}
+            labResults={patientLabResults}
+            clinicId={clinicId ?? undefined}
+          />
+        );
+        setTimeout(resolve, 500);
+      });
+
+      const images = container.querySelectorAll('img');
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((res) => {
+              if (img.complete) res();
+              else { img.onload = () => res(); img.onerror = () => res(); }
+            })
+        )
       );
+      await new Promise((r) => setTimeout(r, 300));
+
+      const pdfBlob = await html2pdf()
+        .set({
+          margin: 0,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(container)
+        .outputPdf('blob');
+
+      root.unmount();
+      document.body.removeChild(container);
 
       const pdfFile = new File([pdfBlob], `Prescription_${patient.firstName}_${patient.lastName}.pdf`, { type: 'application/pdf' });
 
@@ -662,21 +704,59 @@ export default function ConsultationPage() {
     if (!consultation || !patient) return;
     showToastMessage('Generating PDF...', 'success');
     try {
-      const { generatePrescriptionPDF } = await import('@/lib/prescription-pdf');
-      const pdfBlob = await generatePrescriptionPDF(
-        patient,
-        consultation,
-        testRequests,
-        testRequestByWhen,
-        patientLabResults,
-        clinicId ?? undefined,
+      const { default: html2pdf } = await import('html2pdf.js');
+      const { default: ReactPDF } = await import('@/components/emr/PrescriptionPrint');
+
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '210mm';
+      container.style.background = 'white';
+      document.body.appendChild(container);
+
+      const { createRoot } = await import('react-dom/client');
+      const root = createRoot(container);
+      await new Promise<void>((resolve) => {
+        root.render(
+          <ReactPDF
+            patient={patient}
+            consultation={consultation}
+            consultationDate={new Date().toLocaleDateString('en-IN')}
+            testRequests={testRequests}
+            testRequestByWhen={testRequestByWhen}
+            labResults={patientLabResults}
+            clinicId={clinicId ?? undefined}
+          />
+        );
+        setTimeout(resolve, 500);
+      });
+
+      const images = container.querySelectorAll('img');
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((res) => {
+              if (img.complete) res();
+              else { img.onload = () => res(); img.onerror = () => res(); }
+            })
+        )
       );
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Prescription_${patient.firstName}_${patient.lastName}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await new Promise((r) => setTimeout(r, 300));
+
+      const pdf = await html2pdf()
+        .set({
+          margin: 0,
+          filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(container)
+        .save();
+
+      root.unmount();
+      document.body.removeChild(container);
       showToastMessage('PDF downloaded');
     } catch (err) {
       console.error('PDF generation failed:', err);

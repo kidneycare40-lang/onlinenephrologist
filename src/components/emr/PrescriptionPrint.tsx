@@ -256,6 +256,16 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                   </div>
                 </div>
 
+                <div style={{ padding: '4px 10px', fontSize: '8.5pt', borderBottom: '1px solid #eee' }}>
+                  <span style={{ fontWeight: 'bold', color: accentColor }}>Source: {(() => {
+                    if (clinicId === 'psri-delhi') return 'PSRI Walk-In';
+                    if (clinicId === 'online-intl') return 'International Consultation';
+                    if (clinicId === 'online') return 'Online Consultation';
+                    if ((patient as any).source === 'website') return 'KCC - Website Booking';
+                    return 'KCC Walk-In';
+                  })()}</span>
+                </div>
+
                 {(() => {
                   const v = consultation.vitals;
                   const items: { label: string; value: string }[] = [];
