@@ -6,8 +6,7 @@ import {
   Calendar,
   Users,
   FileText,
-  Settings,
-  MoreHorizontal,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +15,7 @@ const NAV_ITEMS = [
   { href: '/emr/appointments', icon: Calendar, label: 'Appts' },
   { href: '/emr/patients', icon: Users, label: 'Patients' },
   { href: '/emr/consultation', icon: FileText, label: 'Rx' },
-  { href: '/emr/settings', icon: Settings, label: 'More' },
+  { href: '/emr/billing', icon: Receipt, label: 'Billing' },
 ];
 
 export default function MobileBottomNav() {
