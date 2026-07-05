@@ -16,13 +16,15 @@ import ConsultationSettingsComponent from '@/components/emr/ConsultationSettings
 import ClinicSettingsTab from '@/components/emr/ClinicSettingsTab';
 import CalculatorsSettings from '@/components/emr/CalculatorsSettings';
 import TemplateManager from '@/components/emr/TemplateManager';
+import UsersRolesSettings from '@/components/emr/UsersRolesSettings';
 import { loadBillingSettings, saveBillingSettings, type BillingSettings } from '@/lib/billing-settings';
 
-type SettingsTab = 'profile' | 'clinic' | 'notifications' | 'prescription' | 'templates' | 'ai' | 'billing' | 'booking' | 'consultation' | 'calculators';
+type SettingsTab = 'profile' | 'clinic' | 'notifications' | 'prescription' | 'templates' | 'ai' | 'billing' | 'booking' | 'consultation' | 'calculators' | 'users';
 
 const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'profile', label: 'Profile', icon: <User className="h-4 w-4" /> },
   { id: 'clinic', label: 'Clinic', icon: <Building2 className="h-4 w-4" /> },
+  { id: 'users', label: 'Users & Roles', icon: <Lock className="h-4 w-4" /> },
   { id: 'consultation', label: 'Consultation', icon: <Stethoscope className="h-4 w-4" /> },
   { id: 'booking', label: 'Booking Settings', icon: <Calendar className="h-4 w-4" /> },
   { id: 'notifications', label: 'Notifications', icon: <Bell className="h-4 w-4" /> },
@@ -1356,6 +1358,9 @@ export default function SettingsPage() {
 
           {/* CALCULATORS */}
           {activeTab === 'calculators' && <CalculatorsSettings />}
+
+          {/* USERS & ROLES */}
+          {activeTab === 'users' && <UsersRolesSettings />}
         </div>
       </div>
     </div>

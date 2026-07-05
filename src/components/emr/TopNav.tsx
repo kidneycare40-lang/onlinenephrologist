@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
+import { useAuth } from '@/lib/emr-auth-context';
 import { patientsApi } from '@/lib/api-client';
 
 const clinicOptions = [
@@ -35,6 +36,7 @@ export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { clinic, clinicId, setClinicId, clearClinic } = useClinic();
+  const { user, logout, can } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -405,7 +407,9 @@ export default function TopNav() {
 
           <div ref={profileRef} className="relative">
             <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white">RG</div>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white">
+                {user?.name?.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || 'U'}
+              </div>
               <ChevronDown className={cn('hidden sm:block h-3.5 w-3.5 text-white/50 transition-transform', profileOpen && 'rotate-180')} />
             </button>
             {profileOpen && (
@@ -413,8 +417,8 @@ export default function TopNav() {
                 {!clinicSwitchOpen ? (
                   <>
                     <div className="px-3 py-2.5 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-900">Dr. Rajesh Goel</p>
-                      <p className="text-[11px] text-gray-500">Nephrologist</p>
+                      <p className="text-sm font-semibold text-gray-900">{user?.name || 'User'}</p>
+                      <p className="text-[11px] text-gray-500 capitalize">{user?.role || 'role'}</p>
                       {clinic && (
                         <div
                           className="flex items-center gap-1.5 mt-1.5 px-2 py-1 rounded-full"
@@ -432,8 +436,13 @@ export default function TopNav() {
                       <Building2 className="h-4 w-4 text-gray-400" /> Switch Clinic
                       <ChevronDown className="h-3 w-3 text-gray-400 ml-auto -rotate-90" />
                     </button>
+                    {can('settings') && (
+                      <button onClick={() => { setProfileOpen(false); router.push('/emr/settings'); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <Settings className="h-4 w-4 text-gray-400" /> Settings
+                      </button>
+                    )}
                     <div className="border-t border-gray-100 mt-1 pt-1">
-                      <button onClick={() => { clearClinic(); router.push('/emr/login'); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                      <button onClick={() => { logout(); clearClinic(); router.push('/emr/login'); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
                         <LogOut className="h-4 w-4" /> Sign Out
                       </button>
                     </div>

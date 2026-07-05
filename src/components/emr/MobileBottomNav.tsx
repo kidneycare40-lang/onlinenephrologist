@@ -9,18 +9,22 @@ import {
   Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/emr-auth-context';
 
 const NAV_ITEMS = [
-  { href: '/emr/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { href: '/emr/appointments', icon: Calendar, label: 'Appts' },
-  { href: '/emr/patients', icon: Users, label: 'Patients' },
-  { href: '/emr/consultation', icon: FileText, label: 'Rx' },
-  { href: '/emr/billing', icon: Receipt, label: 'Billing' },
+  { href: '/emr/dashboard', icon: LayoutDashboard, label: 'Home', permission: 'dashboard' as const },
+  { href: '/emr/appointments', icon: Calendar, label: 'Appts', permission: 'appointments' as const },
+  { href: '/emr/patients', icon: Users, label: 'Patients', permission: 'patients' as const },
+  { href: '/emr/consultation', icon: FileText, label: 'Rx', permission: 'consultation' as const },
+  { href: '/emr/billing', icon: Receipt, label: 'Billing', permission: 'billing' as const },
 ];
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { can } = useAuth();
+
+  const filteredItems = NAV_ITEMS.filter((item) => can(item.permission));
 
   const isActive = (href: string) => {
     if (href === '/emr/dashboard') return pathname === '/emr/dashboard' || pathname === '/emr';
@@ -35,7 +39,7 @@ export default function MobileBottomNav() {
       style={{ touchAction: 'manipulation', pointerEvents: 'auto' }}
     >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
-        {NAV_ITEMS.map((item) => {
+        {filteredItems.map((item) => {
           const active = isActive(item.href);
           return (
             <button
