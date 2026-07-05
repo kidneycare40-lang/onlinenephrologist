@@ -66,6 +66,7 @@ function dosagePattern(freq: string, route: string): string {
 
 const COL_BLUE: [number, number, number] = [9, 81, 135];
 const COL_RED: [number, number, number] = [192, 57, 43];
+const COL_GREEN: [number, number, number] = [5, 150, 105];
 const COL_BLACK: [number, number, number] = [0, 0, 0];
 const COL_GRAY: [number, number, number] = [51, 51, 51];
 const COL_LIGHT: [number, number, number] = [229, 231, 235];
@@ -89,7 +90,8 @@ export async function generatePrescriptionPDF(
   const MAX_Y = FOOTER_Y - 10;
   let y = 10;
   const isPsri = clinicId === 'psri-delhi';
-  const accentColor = isPsri ? COL_RED : COL_BLUE;
+  const isOnline = clinicId === 'online' || clinicId === 'online-intl';
+  const accentColor = isPsri ? COL_RED : isOnline ? COL_GREEN : COL_BLUE;
 
   const ensureSpace = (needed: number) => {
     if (y + needed > MAX_Y) { doc.addPage(); y = 15; }
@@ -160,7 +162,7 @@ export async function generatePrescriptionPDF(
     doc.text('Mon-Saturday 1PM to 7PM', PW - MR, ty, { align: 'right' });
   } else {
     let ty = y + 4;
-    doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLUE);
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(...accentColor);
     doc.text('Dr. Rajesh Goel', PW - MR, ty, { align: 'right' });
     ty += 4.5;
     doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_GRAY);
@@ -183,7 +185,8 @@ export async function generatePrescriptionPDF(
   const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  doc.setFillColor(240, 244, 248);
+  const infoBarBg: [number, number, number] = isOnline ? [236, 253, 245] : isPsri ? [254, 242, 242] : [240, 244, 248];
+  doc.setFillColor(...infoBarBg);
   doc.rect(ML, y - 3.5, CW, 7, 'F');
   doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLACK);
   doc.text(`${patient.uhid}: MR. ${patient.firstName.toUpperCase()} ${patient.lastName.toUpperCase()} (${age}y, ${patient.gender}) - ${patient.phone}`, ML + 2, y - 0.5);
@@ -206,7 +209,8 @@ export async function generatePrescriptionPDF(
     if (v.creatinine) vItems.push({ label: 'Creat', value: `${v.creatinine} mg/dL` });
     if (v.egfr) vItems.push({ label: 'eGFR', value: `${v.egfr} mL/min` });
     if (vItems.length > 0) {
-      doc.setFillColor(240, 247, 255);
+      const vitalsBgPdf: [number, number, number] = isOnline ? [236, 253, 245] : isPsri ? [254, 242, 242] : [240, 247, 255];
+      doc.setFillColor(...vitalsBgPdf);
       doc.rect(ML, y - 3, CW, 7, 'F');
       doc.setDrawColor(200, 210, 220);
       doc.setLineWidth(0.2);
@@ -214,7 +218,7 @@ export async function generatePrescriptionPDF(
       doc.line(ML, y + 4, PW - MR, y + 4);
       let vx = ML + 2;
       for (const it of vItems) {
-        doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLUE);
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...accentColor);
         doc.text(`${it.label}:`, vx, y);
         vx += doc.getTextWidth(`${it.label}: `);
         doc.setFont('helvetica', 'normal'); doc.setTextColor(...COL_GRAY);

@@ -147,6 +147,18 @@ export default function PatientListPage() {
   const filtered = useMemo(() => {
     let result = [...allPatients];
 
+    // Apply clinic filter
+    if (clinicFilter && clinicFilter !== 'all') {
+      result = result.filter((p: any) => {
+        const pClinic = (p.clinicId || p.primary_clinic_id || '').toLowerCase();
+        if (clinicFilter === 'clinic') return pClinic === 'kcc-faridabad' || pClinic === 'kcc-saket';
+        if (clinicFilter === 'hospital') return pClinic === 'psri-delhi';
+        if (clinicFilter === 'online-intl') return pClinic === 'online-intl' || pClinic === 'online_intl';
+        if (clinicFilter === 'online') return pClinic === 'online';
+        return pClinic === clinicFilter;
+      });
+    }
+
     // Client-side date filtering (API may not filter dates yet)
     if (fromDate) {
       result = result.filter((p: any) => {
@@ -256,11 +268,11 @@ export default function PatientListPage() {
             <Filter className="h-3.5 w-3.5 text-gray-400" />
             <select value={clinicFilter} onChange={(e) => handleClinicFilterChange(e.target.value)}
               className="text-xs text-gray-700 focus:outline-none bg-transparent">
-              <option value="all">All Clinics</option>
-              <option value="kcc-faridabad">KCC Faridabad</option>
-              <option value="kcc-saket">KCC Saket</option>
-              <option value="psri-delhi">PSRI Hospital</option>
-              <option value="online">Online</option>
+              <option value="all">All Patients</option>
+              <option value="clinic">Clinic (KCC Faridabad + Saket)</option>
+              <option value="hospital">Hospital (PSRI)</option>
+              <option value="online">Online — Indian</option>
+              <option value="online-intl">Online — International</option>
             </select>
           </div>
           {/* Date Range */}

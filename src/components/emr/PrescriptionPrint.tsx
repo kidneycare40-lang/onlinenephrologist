@@ -20,10 +20,49 @@ interface PrescriptionPrintProps {
 const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
   ({ patient, consultation, consultationDate, testRequests = [], testRequestByWhen, labResults = [], useLetterhead = false, useCustom = false, customHeaderImage = '', customFooterImage = '', clinicId }, ref) => {
     const isPsri = clinicId === 'psri-delhi';
+    const isOnline = clinicId === 'online' || clinicId === 'online-intl';
+    const accentColor = isPsri ? '#c0392b' : isOnline ? '#059669' : '#095187';
     const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const onlineHeaderContent = (
+      <div style={{ padding: '0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: '6px', borderBottom: `2.5px solid ${accentColor}` }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img src="/images/kidney_logo.png" alt="Online Consultation" style={{ height: '55px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+            <div style={{ width: '1.5px', background: '#999', alignSelf: 'stretch', marginTop: '4px', marginBottom: '6px' }} />
+            <div style={{ textAlign: 'right', lineHeight: '1.3' }}>
+              <div style={{ fontSize: '15pt', fontWeight: 'bold', color: accentColor }}>Dr. Rajesh Goel</div>
+              <div style={{ fontSize: '8.5pt', color: '#333', fontWeight: 'bold' }}>Senior Nephrologist &amp; Kidney Transplant Physician</div>
+              <div style={{ fontSize: '8.5pt', color: '#333', fontWeight: 'bold' }}>FELLOW (KIDNEY TRANSPLANT MEDICINE)</div>
+              <div style={{ fontSize: '8.5pt', color: '#333', fontWeight: 'bold' }}>DMC/R/734</div>
+              <div style={{ fontSize: '9.5pt', color: '#dc2626', fontWeight: 'bold', marginTop: '4px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#dc2626"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                +91 9818235688
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#ecfdf5', borderBottom: '1px solid #ccc', paddingLeft: '12px', paddingRight: '0px', paddingTop: '5px', paddingBottom: '5px', fontSize: '8.5pt' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: accentColor, fontWeight: 'bold' }}>
+              <img src="/icons/Web2.png" alt="" style={{ width: '18px', height: '18px' }} />
+              onlinenephrologist.com
+            </span>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', marginRight: '0px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#0d6b2e', fontWeight: 'bold' }}>
+              <img src="/icons/Whatsapp.png" alt="" style={{ width: '22px', height: '22px' }} />
+              <span style={{ fontSize: '14pt' }}>+91 9818235613</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    );
 
     const kccHeaderContent = (
       <div style={{ padding: '0' }}>
@@ -166,7 +205,7 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
       </div>
     );
 
-    const headerContent = !useLetterhead && !useCustom && (isPsri ? psriHeaderContent : kccHeaderContent);
+    const headerContent = !useLetterhead && !useCustom && (isPsri ? psriHeaderContent : isOnline ? onlineHeaderContent : kccHeaderContent);
     const footerContent = !useLetterhead && !useCustom && (isPsri ? psriFooterContent : kccFooterContent);
 
     function frequencyToDosagePattern(freq: string, route: string): string {
@@ -230,11 +269,13 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                   if (v.creatinine) items.push({ label: 'Creat', value: `${v.creatinine} mg/dL` });
                   if (v.egfr) items.push({ label: 'eGFR', value: `${v.egfr} mL/min` });
                   if (items.length === 0) return null;
+                  const vitalsBg = isOnline ? '#ecfdf5' : isPsri ? '#fef2f2' : '#f0f7ff';
+                  const vitalsLabelColor = isOnline ? '#059669' : isPsri ? '#c0392b' : '#095187';
                   return (
-                    <div style={{ padding: '5px 10px', fontSize: '8.5pt', background: '#f0f7ff', borderBottom: '1px solid #ddd', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ padding: '5px 10px', fontSize: '8.5pt', background: vitalsBg, borderBottom: '1px solid #ddd', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                       {items.map((it, idx) => (
                         <span key={idx} style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                          <span style={{ fontWeight: 'bold', color: '#095187' }}>{it.label}:</span>{' '}
+                          <span style={{ fontWeight: 'bold', color: vitalsLabelColor }}>{it.label}:</span>{' '}
                           <span style={{ color: '#333' }}>{it.value}</span>
                         </span>
                       ))}

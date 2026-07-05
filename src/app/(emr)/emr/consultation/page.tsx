@@ -117,7 +117,7 @@ export default function ConsultationListPage() {
   const filteredOnline = onlineBookings.filter((b) => {
     // Clinic filter for online bookings
     if (clinicId) {
-      const BOOKING_CLINIC_MAP: Record<string, string> = { 'online': 'online', 'faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'saket': 'kcc-saket' };
+      const BOOKING_CLINIC_MAP: Record<string, string> = { 'online': 'online', 'online-intl': 'online', 'faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'saket': 'kcc-saket' };
       const mappedId = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId;
       if (mappedId !== clinicId) return false;
     }
@@ -329,7 +329,12 @@ export default function ConsultationListPage() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-semibold text-gray-900">{name}</p>
-                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">Web</span>
+                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">
+                            {b.consultationType === 'online_intl' ? 'Web-Online Intl' :
+                             b.consultationType === 'online' ? 'Web-Online' :
+                             b.clinicId === 'online' || b.clinicId === 'online-intl' ? 'Web-Online' :
+                             'Web'}
+                          </span>
                         </div>
                         <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'}</p>
                       </div>
@@ -519,7 +524,12 @@ export default function ConsultationListPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-bold text-gray-900">{name}</p>
-                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">Web</span>
+                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">
+                        {b.consultationType === 'online_intl' ? 'Web-Online Intl' :
+                         b.consultationType === 'online' ? 'Web-Online' :
+                         b.clinicId === 'online' || b.clinicId === 'online-intl' ? 'Web-Online' :
+                         'Web'}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'} · ₹{b.consultationFee}</p>
                   </div>
