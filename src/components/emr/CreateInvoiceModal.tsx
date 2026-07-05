@@ -228,19 +228,13 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
       phone: '',
       clinicId: currentClinicId || 'kcc-faridabad',
     });
-    const fee = clinicFeeMap[currentClinicId || 'kcc-faridabad'] || clinicFeeMap['kcc-faridabad'];
-    setItems([{
-      id: `item-${Date.now()}`,
-      description: fee.description,
-      qty: 1,
-      rate: fee.rate,
-      amount: fee.rate,
-      gstRate: 0,
-      gstAmount: 0,
-      total: fee.rate,
-    }]);
     setPatientSearch('');
   };
+
+  const [adminBypassUnlocked, setAdminBypassUnlocked] = useState(false);
+  const [adminPin, setAdminPin] = useState('');
+  const [showAdminPin, setShowAdminPin] = useState(false);
+  const ADMIN_PIN = '2024';
 
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
   const totalGst = items.reduce((sum, item) => sum + item.gstAmount, 0);
@@ -377,24 +371,56 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
                         <p className="text-xs text-gray-500">{patient.phone} | {patient.uhid}</p>
                       </button>
                     ))}
+                    {adminBypassUnlocked && (
+                      <button
+                        onClick={() => selectCustomPatient(patientSearch)}
+                        className="w-full px-4 py-3 text-left hover:bg-amber-50 border-t border-amber-200 flex items-center gap-3 bg-amber-50/50"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-amber-700">A</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-amber-800">Admin: Bill &quot;{patientSearch.trim()}&quot; anyway</p>
+                          <p className="text-[11px] text-amber-500">Bypass patient lookup — no consultation required</p>
+                        </div>
+                      </button>
+                    )}
                   </div>,
                   document.body
                 )}
-                {patientSearch && filteredPatients.length === 0 && dropdownPos && typeof document !== 'undefined' && createPortal(
+                {patientSearch && filteredPatients.length === 0 && !adminBypassUnlocked && dropdownPos && typeof document !== 'undefined' && createPortal(
+                  <div
+                    className="bg-white border border-gray-200 rounded-lg shadow-lg"
+                    style={{ position: 'absolute', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+                  >
+                    <div className="px-4 py-6 text-center">
+                      <p className="text-sm text-gray-500">No patients found for &quot;{patientSearch.trim()}&quot;</p>
+                      <p className="text-[11px] text-gray-400 mt-1">Patient must be added via EMR or online booking first</p>
+                    </div>
+                    <button
+                      onClick={() => setShowAdminPin(true)}
+                      className="w-full px-4 py-2.5 text-left text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 border-t border-gray-100 transition-colors"
+                    >
+                      Admin override
+                    </button>
+                  </div>,
+                  document.body
+                )}
+                {patientSearch && filteredPatients.length === 0 && adminBypassUnlocked && dropdownPos && typeof document !== 'undefined' && createPortal(
                   <div
                     className="bg-white border border-gray-200 rounded-lg shadow-lg"
                     style={{ position: 'absolute', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
                   >
                     <button
                       onClick={() => selectCustomPatient(patientSearch)}
-                      className="w-full px-4 py-3 text-left hover:bg-[#0A75BB]/5 border-b border-gray-100 flex items-center gap-3"
+                      className="w-full px-4 py-3 text-left hover:bg-amber-50 flex items-center gap-3 bg-amber-50/50"
                     >
-                      <div className="w-8 h-8 rounded-full bg-[#0A75BB]/10 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-[#0A75BB]">+</span>
+                      <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-amber-700">A</span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#0A75BB]">Bill &quot;{patientSearch.trim()}&quot;</p>
-                        <p className="text-[11px] text-gray-400">No matching patient found — create invoice anyway</p>
+                        <p className="text-sm font-medium text-amber-800">Admin: Bill &quot;{patientSearch.trim()}&quot;</p>
+                        <p className="text-[11px] text-amber-500">Bypass patient lookup — no consultation required</p>
                       </div>
                     </button>
                   </div>,
@@ -643,6 +669,51 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
           </button>
         </div>
       </div>
+
+      {/* Admin PIN Dialog */}
+      {showAdminPin && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Admin Verification</h3>
+            <p className="text-xs text-gray-500 mb-4">Enter admin PIN to bypass patient lookup</p>
+            <input
+              type="password"
+              value={adminPin}
+              onChange={(e) => setAdminPin(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && adminPin === ADMIN_PIN) {
+                  setAdminBypassUnlocked(true);
+                  setShowAdminPin(false);
+                  setAdminPin('');
+                }
+              }}
+              placeholder="Enter PIN"
+              autoFocus
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 mb-4"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => { setShowAdminPin(false); setAdminPin(''); }}
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (adminPin === ADMIN_PIN) {
+                    setAdminBypassUnlocked(true);
+                    setShowAdminPin(false);
+                    setAdminPin('');
+                  }
+                }}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+              >
+                Verify
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
