@@ -78,8 +78,9 @@ export default function VitalsSection({ vitals, onChange, patientAge, patientGen
               type="text"
               value={vitals.creatinine || ''}
               onChange={(e) => {
-                onChange('creatinine', e.target.value);
-                const egfr = calculateEGFR(e.target.value, patientAge || 0, patientGender || '');
+                const val = e.target.value;
+                const egfr = calculateEGFR(val, patientAge || 0, patientGender || '');
+                onChange('creatinine', val);
                 onChange('egfr', egfr);
               }}
               className="w-24 px-2 h-11 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] focus:border-[#0A75BB] text-center"

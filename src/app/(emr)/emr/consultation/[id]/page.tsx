@@ -349,13 +349,16 @@ export default function ConsultationPage() {
 
   const updateVitals = (field: keyof Vitals, value: string) => {
     if (!consultation) return;
-    const newVitals = { ...consultation.vitals, [field]: value };
-    if (field === 'weight' || field === 'height') {
-      const w = field === 'weight' ? value : consultation.vitals.weight || '';
-      const h = field === 'height' ? value : consultation.vitals.height || '';
-      newVitals.bmi = calculateBMI(w, h);
-    }
-    setConsultation({ ...consultation, vitals: newVitals });
+    setConsultation(prev => {
+      if (!prev) return prev;
+      const newVitals = { ...prev.vitals, [field]: value };
+      if (field === 'weight' || field === 'height') {
+        const w = field === 'weight' ? value : prev.vitals.weight || '';
+        const h = field === 'height' ? value : prev.vitals.height || '';
+        newVitals.bmi = calculateBMI(w, h);
+      }
+      return { ...prev, vitals: newVitals };
+    });
   };
 
   const updateField = (field: keyof EMRConsultation, value: string) => {
@@ -397,19 +400,22 @@ export default function ConsultationPage() {
 
   const handleApplyVitals = (vitals: OCRResult['vitals']) => {
     if (!consultation) return;
-    const newVitals = { ...consultation.vitals };
-    if (vitals.systolic && vitals.diastolic) {
-      newVitals.bloodPressure = `${vitals.systolic}/${vitals.diastolic}`;
-    }
-    if (vitals.pulse) newVitals.pulse = vitals.pulse;
-    if (vitals.spo2) newVitals.spo2 = vitals.spo2;
-    if (vitals.weight) newVitals.weight = vitals.weight;
-    if (vitals.height) newVitals.height = vitals.height;
-    if (vitals.temperature) newVitals.temperature = vitals.temperature;
-    if (vitals.weight && vitals.height) {
-      newVitals.bmi = calculateBMI(vitals.weight, vitals.height);
-    }
-    setConsultation({ ...consultation, vitals: newVitals });
+    setConsultation(prev => {
+      if (!prev) return prev;
+      const newVitals = { ...prev.vitals };
+      if (vitals.systolic && vitals.diastolic) {
+        newVitals.bloodPressure = `${vitals.systolic}/${vitals.diastolic}`;
+      }
+      if (vitals.pulse) newVitals.pulse = vitals.pulse;
+      if (vitals.spo2) newVitals.spo2 = vitals.spo2;
+      if (vitals.weight) newVitals.weight = vitals.weight;
+      if (vitals.height) newVitals.height = vitals.height;
+      if (vitals.temperature) newVitals.temperature = vitals.temperature;
+      if (vitals.weight && vitals.height) {
+        newVitals.bmi = calculateBMI(vitals.weight, vitals.height);
+      }
+      return { ...prev, vitals: newVitals };
+    });
     showToastMessage('Vitals applied');
   };
 
@@ -1088,6 +1094,7 @@ export default function ConsultationPage() {
                         setTestRequests((prev) => [...new Set([...prev, ...data.testsPrescribed])]);
                       }
                     }}
+                    diagnoses={consultation.diagnoses.map(d => d.name)}
                   />
                   <div className="mt-2">
                     <TemplateSelector

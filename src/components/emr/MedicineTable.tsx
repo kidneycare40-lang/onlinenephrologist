@@ -45,6 +45,7 @@ interface MedicineTableProps {
   prescriptions: PrescriptionItem[];
   onChange: (prescriptions: PrescriptionItem[]) => void;
   onLoadTemplate?: (data: { medications: PrescriptionItem[]; advice: string; testsPrescribed: string[] }) => void;
+  diagnoses?: string[];
 }
 
 function generateId() {
@@ -185,7 +186,7 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
   );
 }
 
-export default function MedicineTable({ prescriptions, onChange, onLoadTemplate }: MedicineTableProps) {
+export default function MedicineTable({ prescriptions, onChange, onLoadTemplate, diagnoses = [] }: MedicineTableProps) {
   const [showLoadPrev, setShowLoadPrev] = useState(false);
   const [showSaveAs, setShowSaveAs] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -197,6 +198,9 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
   const templateDropdownRef = useRef<HTMLDivElement>(null);
   const templatePanelRef = useRef<HTMLDivElement>(null);
   const [masterList, setMasterList] = useState<MasterMedicine[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [diagnosisBasedSuggestions, setDiagnosisBasedSuggestions] = useState<any[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -209,6 +213,20 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
     setCustomTemplates(medTemplateStorage.getAll());
     setMasterList(loadMasterList());
   }, []);
+
+  // Fetch diagnosis-based suggestions when diagnoses change
+  useEffect(() => {
+    if (diagnoses.length === 0) {
+      setDiagnosisBasedSuggestions([]);
+      return;
+    }
+    const existing = prescriptions.filter(p => p.name).map(p => p.name).join(',');
+    const diagnosesStr = diagnoses.join(',');
+    fetch(`/api/ai/medicines?diagnoses=${encodeURIComponent(diagnosesStr)}&existing=${encodeURIComponent(existing)}`)
+      .then(r => r.json())
+      .then(data => setDiagnosisBasedSuggestions(data.suggestions || []))
+      .catch(() => setDiagnosisBasedSuggestions([]));
+  }, [diagnoses, prescriptions]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent | TouchEvent) {
@@ -268,6 +286,26 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
       (m) => m.name.toLowerCase().includes(q) || m.genericName.toLowerCase().includes(q)
     ).slice(0, 15);
   }, [editValue, masterList]);
+
+  // Fetch AI suggestions when typing (debounced)
+  useEffect(() => {
+    if (!editValue || editValue.length < 1) {
+      setAiSuggestions([]);
+      return;
+    }
+    const existing = prescriptions.filter(p => p.name).map(p => p.name).join(',');
+    const diagnosesStr = diagnoses.join(',');
+    const controller = new AbortController();
+    setAiLoading(true);
+    const timer = setTimeout(() => {
+      fetch(`/api/ai/medicines?q=${encodeURIComponent(editValue)}&diagnoses=${encodeURIComponent(diagnosesStr)}&existing=${encodeURIComponent(existing)}`, { signal: controller.signal })
+        .then(r => r.json())
+        .then(data => setAiSuggestions(data.suggestions || []))
+        .catch(() => {})
+        .finally(() => setAiLoading(false));
+    }, 200);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [editValue, diagnoses, prescriptions]);
 
   const addMedicineFromList = (med: MasterMedicine) => {
     const key = med.name.toLowerCase().trim();
@@ -462,13 +500,31 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
 
   const renderMedicineDropdown = () => {
     if (editingId === null) return null;
+
+    // Merge AI suggestions with local filtered, removing duplicates
+    const allSuggestions = [...aiSuggestions];
+    const aiKeys = new Set(aiSuggestions.map((s: any) => `${s.name}|${s.dosage}`));
+    for (const m of filtered) {
+      if (!aiKeys.has(`${m.name}|${m.dosage}`)) {
+        allSuggestions.push({ ...m, _local: true });
+      }
+    }
+    const displayItems = allSuggestions.slice(0, 15);
+
     return createPortal(
       <div ref={dropdownRef} className="fixed z-[250] bg-white border border-slate-200 rounded-lg shadow-xl max-h-72 overflow-y-auto" style={{ top: dropdownPos.top, left: dropdownPos.left, width: Math.max(dropdownPos.width, 320) }}>
-        {filtered.map((m, i) => {
+        {aiLoading && editValue && (
+          <div className="px-3 py-2 text-[11px] text-[#0A75BB] bg-[#0A75BB]/5 border-b border-slate-100 flex items-center gap-2">
+            <div className="w-3 h-3 border-2 border-[#0A75BB] border-t-transparent rounded-full animate-spin" />
+            AI suggestions loading...
+          </div>
+        )}
+        {displayItems.map((m: any, i: number) => {
           const isDuplicate = existingMedicineKeys.has(m.name.toLowerCase().trim());
+          const isAi = !m._local;
           return (
             <button
-              key={i}
+              key={`${m.name}-${m.dosage}-${i}`}
               onMouseDown={(e) => { e.preventDefault(); addMedicineFromList(m); }}
               className={cn(
                 'w-full text-left px-3 py-2 flex items-center gap-3 transition-colors border-b border-slate-50 last:border-0',
@@ -476,17 +532,30 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
                 isDuplicate && 'opacity-50'
               )}
             >
-              <div className="w-7 h-7 rounded-full bg-[#0A75BB]/10 flex items-center justify-center shrink-0">
-                <span className="text-[10px] font-bold text-[#0A75BB]">{m.name.charAt(0)}</span>
+              <div className={cn(
+                'w-7 h-7 rounded-full flex items-center justify-center shrink-0',
+                isAi ? 'bg-gradient-to-br from-violet-500 to-purple-600' : 'bg-[#0A75BB]/10'
+              )}>
+                {isAi ? (
+                  <span className="text-[10px] font-bold text-white">AI</span>
+                ) : (
+                  <span className="text-[10px] font-bold text-[#0A75BB]">{m.name.charAt(0)}</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-[13px] font-semibold text-slate-800 uppercase leading-tight">{m.name}</span>
+                  {isAi && (
+                    <span className="px-1.5 py-0.5 text-[8px] font-bold text-violet-700 bg-violet-100 rounded-full">AI</span>
+                  )}
                   {isDuplicate && (
                     <span className="px-1.5 py-0.5 text-[8px] font-bold text-amber-700 bg-amber-100 rounded-full">ADDED</span>
                   )}
                 </div>
-                <div className="text-[11px] text-slate-400 truncate">{m.genericName} {m.dosage ? `| ${m.dosage}` : ''} {m.frequency ? `| ${m.frequency}` : ''}</div>
+                <div className="text-[11px] text-slate-400 truncate">
+                  {m.genericName} {m.dosage ? `| ${m.dosage}` : ''} {m.frequency ? `| ${m.frequency}` : ''}
+                  {m.reason ? ` · ${m.reason}` : ''}
+                </div>
               </div>
               {!isDuplicate && <Plus className="h-4 w-4 text-slate-300 shrink-0" />}
             </button>
@@ -506,7 +575,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
             </div>
           </button>
         )}
-        {filtered.length === 0 && !editValue.trim() && (
+        {displayItems.length === 0 && !aiLoading && !editValue.trim() && (
           <div className="px-4 py-6 text-center text-xs text-slate-400">Type to search medicines...</div>
         )}
       </div>,
