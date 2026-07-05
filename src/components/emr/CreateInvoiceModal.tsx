@@ -244,6 +244,9 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   const handleSave = () => {
     if (!selectedPatient || items.length === 0) return;
 
+    const finalPaidAmount = status === 'PAID' ? grandTotal : paidAmount;
+    const finalStatus = finalPaidAmount >= grandTotal ? 'PAID' : finalPaidAmount > 0 ? 'PARTIAL' : status;
+
     const invoice: EMRInvoice = {
       id: existingInvoice?.id || `INV-${Date.now()}`,
       invoiceNumber: existingInvoice?.invoiceNumber || `KCC-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
@@ -265,13 +268,13 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
       gstAmount: totalGst,
       totalTax: totalGst,
       grandTotal: grandTotal,
-      paidAmount: paidAmount,
-      balance: grandTotal - paidAmount,
-      status: paidAmount >= grandTotal ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : status,
-      payments: paidAmount > 0 ? [{
+      paidAmount: finalPaidAmount,
+      balance: grandTotal - finalPaidAmount,
+      status: finalStatus,
+      payments: finalPaidAmount > 0 ? [{
         id: `pay-${Date.now()}`,
         date: invoiceDate,
-        amount: paidAmount,
+        amount: finalPaidAmount,
         method: paymentMethod,
         reference: `${paymentMethod}-${Date.now()}`,
       }] : [],
@@ -567,7 +570,12 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Status</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['PENDING', 'PARTIAL', 'PAID'] as InvoiceStatus[]).map((s) => (
-                  <button key={s} onClick={() => setStatus(s)}
+                  <button key={s} onClick={() => {
+                      setStatus(s);
+                      if (s === 'PAID') setPaidAmount(grandTotal);
+                      else if (s === 'PARTIAL' && paidAmount === 0) setPaidAmount(Math.round(grandTotal / 2));
+                      else if (s === 'PENDING') setPaidAmount(0);
+                    }}
                     className={cn('py-2.5 rounded-lg text-xs font-semibold border transition-colors',
                       status === s
                         ? s === 'PAID' ? 'bg-green-600 text-white border-green-600' : s === 'PARTIAL' ? 'bg-amber-600 text-white border-amber-600' : 'bg-[#0A75BB] text-white border-[#0A75BB]'
