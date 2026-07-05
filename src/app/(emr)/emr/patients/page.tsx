@@ -65,7 +65,37 @@ export default function PatientListPage() {
       if (toDate) params.dateTo = toDate;
 
       const result = await patientsApi.list(params);
-      setAllPatients(result.data || []);
+      let apiPatients = result.data || [];
+
+      // Also load localStorage patients and merge (avoid duplicates by phone)
+      try {
+        const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        if (Array.isArray(added)) {
+          const filtered = clinicFilter && clinicFilter !== 'all'
+            ? added.filter((p: any) => !p.clinicId || p.clinicId === clinicFilter)
+            : added;
+          const apiPhones = new Set(apiPatients.map((p: any) => (p.phone || '').replace(/\s/g, '')));
+          for (const p of filtered) {
+            const phone = (p.phone || '').replace(/\s/g, '');
+            if (phone && !apiPhones.has(phone) && !apiPatients.some((ap: any) => ap.id === p.id)) {
+              apiPatients.push(p);
+            }
+          }
+        }
+        const consultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+        if (Array.isArray(consultations)) {
+          const allPats = [...apiPatients];
+          for (const c of consultations) {
+            if (clinicFilter && clinicFilter !== 'all' && c.clinicId && c.clinicId !== clinicFilter) continue;
+            if (c.patient && c.patient.id && !allPats.some((p: any) => p.id === c.patient.id)) {
+              apiPatients.push(c.patient);
+              allPats.push(c.patient);
+            }
+          }
+        }
+      } catch { /* ignore */ }
+
+      setAllPatients(apiPatients);
     } catch (err: any) {
       setError(err.message);
       // Fallback: try loading from localStorage

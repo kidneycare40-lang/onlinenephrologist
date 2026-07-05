@@ -525,10 +525,8 @@ export default function ConsultationPage() {
   const handleSave = async () => {
     if (!consultation || !patient) return;
     setIsSaving(true);
-    const completedConsult = { ...consultation, status: 'COMPLETED' as const };
-    setConsultation(completedConsult);
-    await saveConsultationToApi(completedConsult, patient.id, clinicId || '').catch(() => {});
-    saveConsultationToStorage(completedConsult);
+    await saveConsultationToApi(consultation, patient.id, clinicId || '').catch(() => {});
+    saveConsultationToStorage(consultation);
     await new Promise((r) => setTimeout(r, 500));
     setIsSaving(false);
     showToastMessage('Consultation saved successfully');

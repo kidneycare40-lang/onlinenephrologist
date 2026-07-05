@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
+import { patientsApi } from '@/lib/api-client';
 
 interface FamilyMemberForm {
   id: string;
@@ -236,6 +237,31 @@ export default function AddPatientPage() {
     const existing = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
     existing.push(newPatient);
     localStorage.setItem('emr_added_patients', JSON.stringify(existing));
+
+    // Also save to API for cross-browser persistence
+    patientsApi.create({
+      first_name: formData.firstName.trim(),
+      last_name: formData.lastName.trim(),
+      phone: formData.phone.trim(),
+      email: formData.email.trim() || undefined,
+      date_of_birth: dob || undefined,
+      gender: formData.gender as 'male' | 'female' | 'other',
+      blood_group: formData.bloodGroup || undefined,
+      uhid: formData.uhid,
+      clinic_id: clinicId || 'kcc-faridabad',
+      abha_number: formData.abhaNumber || undefined,
+      address: formData.address || undefined,
+      city: formData.city || undefined,
+      state: formData.state || undefined,
+      pincode: formData.pincode || undefined,
+      emergency_contact_name: formData.emergencyContactName || undefined,
+      emergency_contact_phone: formData.emergencyContactPhone || undefined,
+      emergency_contact_relation: formData.emergencyContactRelation || undefined,
+      allergies: formData.allergies,
+      medical_history: formData.medicalHistory || undefined,
+      insurance_provider: formData.insuranceProvider || undefined,
+      insurance_number: formData.insuranceNumber || undefined,
+    }).catch(() => {});
 
     await new Promise((r) => setTimeout(r, 800));
     setIsSubmitting(false);

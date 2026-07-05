@@ -647,7 +647,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
                       ) : (
                         <button
                           onClick={() => startEditingMedicine(rx.id, '')}
-                          className="text-[13px] text-slate-400 hover:text-[#0A75BB] transition-colors"
+                          className="text-[13px] text-slate-400 hover:text-[#0A75BB] transition-colors min-h-[44px] py-2 w-full text-left"
                         >
                           Add Medicine
                         </button>
@@ -744,12 +744,12 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate 
                     placeholder="Type medicine name..."
                   />
                 ) : (
-                  <span
+                  <button
                     onClick={() => startEditingMedicine('__new__', '')}
-                    className="text-[13px] font-medium text-slate-400 hover:text-[#0A75BB] transition-colors"
+                    className="w-full text-left px-2 py-3 min-h-[44px] text-[13px] font-medium text-slate-400 hover:text-[#0A75BB] transition-colors rounded"
                   >
-                    Add Medicine
-                  </span>
+                    + Add Medicine
+                  </button>
                 )}
               </td>
             </tr>

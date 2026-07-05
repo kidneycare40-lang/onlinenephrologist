@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
+import { patientsApi } from '@/lib/api-client';
 
 const clinicOptions = [
   { id: 'kcc-faridabad', name: 'Kidney Care Centre - Faridabad', parent: 'Kidney Care Centre', address: 'Sector 15, Faridabad' },
@@ -262,6 +263,25 @@ export default function TopNav() {
     const existing = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
     existing.push(newPatient);
     localStorage.setItem('emr_added_patients', JSON.stringify(existing));
+
+    // Also save to API for cross-browser persistence
+    patientsApi.create({
+      first_name: firstName,
+      last_name: lastName,
+      phone: patientPhone.trim(),
+      email: patientEmail.trim() || undefined,
+      date_of_birth: dob || undefined,
+      gender: patientGender === 'FEMALE' ? 'female' : patientGender === 'OTHER' ? 'other' : 'male',
+      blood_group: patientBloodGroup || undefined,
+      uhid,
+      clinic_id: clinicId || 'kcc-faridabad',
+      abha_number: patientAbha || undefined,
+      address: patientAddress || undefined,
+      city: patientCity || undefined,
+      pincode: patientPin || undefined,
+      allergies: patientAllergies ? patientAllergies.split(',').map((a: string) => a.trim()).filter(Boolean) : [],
+      medical_history: patientHistory || undefined,
+    }).catch(() => {});
 
     setTimeout(() => {
       setAddingPatient(false);
