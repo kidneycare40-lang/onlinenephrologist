@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Printer, Mail } from 'lucide-react';
+import { X, Printer, Download } from 'lucide-react';
 import PrescriptionPrint from './PrescriptionPrint';
 import type { EMRConsultation, EMRPatient } from '@/types/emr';
 
@@ -15,7 +15,7 @@ interface PrintPreviewModalProps {
   testRequestByWhen?: string;
   labResults?: { testName: string; value: string; unit: string; date: string; isAbnormal: boolean }[];
   onWhatsApp: () => void;
-  onEmail: () => void;
+  onDownloadPDF: () => void;
   clinicId?: string;
 }
 
@@ -29,7 +29,7 @@ export default function PrintPreviewModal({
   testRequestByWhen,
   labResults = [],
   onWhatsApp,
-  onEmail,
+  onDownloadPDF,
   clinicId,
 }: PrintPreviewModalProps) {
   const prescriptionRef = useRef<HTMLDivElement>(null);
@@ -166,11 +166,11 @@ export default function PrintPreviewModal({
               WhatsApp
             </button>
             <button
-              onClick={onEmail}
+              onClick={onDownloadPDF}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
             >
-              <Mail className="h-3.5 w-3.5" />
-              Email
+              <Download className="h-3.5 w-3.5" />
+              Download PDF
             </button>
             <button
               onClick={onClose}

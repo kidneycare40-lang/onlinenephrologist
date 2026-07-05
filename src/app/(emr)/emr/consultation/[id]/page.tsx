@@ -522,12 +522,28 @@ export default function ConsultationPage() {
     } catch { /* ignore */ }
   }, [patient, clinicId]);
 
-  // Auto-save: save to localStorage whenever consultation changes
+  // Auto-save: debounced API save when consultation changes
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveVersion = useRef(0);
+
   useEffect(() => {
-    if (consultation && (consultation.prescriptions.length > 0 || consultation.diagnoses.length > 0 || consultation.advice || consultation.chiefComplaint)) {
-      saveConsultationToStorage(consultation);
-    }
-  }, [consultation, saveConsultationToStorage]);
+    if (!consultation || !patient) return;
+    if (!(consultation.prescriptions.length > 0 || consultation.diagnoses.length > 0 || consultation.advice || consultation.chiefComplaint)) return;
+
+    // Save to localStorage immediately
+    saveConsultationToStorage(consultation);
+
+    // Debounce API save by 3 seconds
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    const version = ++autoSaveVersion.current;
+    autoSaveTimer.current = setTimeout(() => {
+      if (version === autoSaveVersion.current) {
+        saveConsultationToApi(consultation, patient.id, clinicId || '').catch(() => {});
+      }
+    }, 3000);
+
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
+  }, [consultation, patient, clinicId, saveConsultationToStorage]);
 
   const handleSave = async () => {
     if (!consultation || !patient) return;
@@ -640,6 +656,32 @@ export default function ConsultationPage() {
     const url = `mailto:${patient.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
     showToastMessage('Opening email client...');
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!consultation || !patient) return;
+    showToastMessage('Generating PDF...', 'success');
+    try {
+      const { generatePrescriptionPDF } = await import('@/lib/prescription-pdf');
+      const pdfBlob = await generatePrescriptionPDF(
+        patient,
+        consultation,
+        testRequests,
+        testRequestByWhen,
+        patientLabResults,
+        clinicId ?? undefined,
+      );
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Prescription_${patient.firstName}_${patient.lastName}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToastMessage('PDF downloaded');
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      showToastMessage('PDF generation failed', 'error');
+    }
   };
 
   const showToastMessage = (message: string, type: 'success' | 'error' = 'success') => {
@@ -1519,7 +1561,7 @@ export default function ConsultationPage() {
             onSave={handleSave}
             onEndConsultation={handleEndConsultation}
             onPrint={() => setShowPrintPreview(true)}
-            onEmail={handleEmailPrescription}
+            onDownloadPDF={handleDownloadPDF}
             onWhatsApp={handleWhatsAppPrescription}
             isSaving={isSaving}
           />
@@ -1535,7 +1577,7 @@ export default function ConsultationPage() {
           testRequestByWhen={testRequestByWhen}
           labResults={patientLabResults}
           onWhatsApp={handleWhatsAppPrescription}
-          onEmail={handleEmailPrescription}
+          onDownloadPDF={handleDownloadPDF}
           clinicId={clinicId ?? undefined}
         />
 

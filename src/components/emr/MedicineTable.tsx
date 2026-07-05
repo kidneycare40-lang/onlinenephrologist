@@ -209,6 +209,27 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
   const editInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const dosagePatternRe = /^\d-\d-\d$|^SOS$/;
+
+  useEffect(() => {
+    let changed = false;
+    const fixed = prescriptions.map((rx) => {
+      const freqIsDosage = rx.frequency && dosagePatternRe.test(rx.frequency) && !rx.dosage;
+      const doseIsFreq = rx.dosage && !dosagePatternRe.test(rx.dosage) && frequencyOptions.includes(rx.dosage);
+      if (freqIsDosage) {
+        changed = true;
+        return { ...rx, dosage: rx.frequency, frequency: '' };
+      }
+      if (doseIsFreq) {
+        changed = true;
+        return { ...rx, frequency: rx.dosage, dosage: '' };
+      }
+      return rx;
+    });
+    if (changed) onChange(fixed);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prescriptions]);
+
   useEffect(() => {
     setCustomTemplates(medTemplateStorage.getAll());
     setMasterList(loadMasterList());
