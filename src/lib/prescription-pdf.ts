@@ -7,6 +7,7 @@ interface PrescriptionPDFPatient {
   gender: string;
   dateOfBirth: string;
   uhid: string;
+  source?: 'website' | 'emr' | 'whatsapp' | 'referral' | 'other';
 }
 
 interface PrescriptionPDFMedicine {
@@ -51,6 +52,14 @@ interface PrescriptionPDFLabResult {
   unit: string;
   date: string;
   isAbnormal: boolean;
+}
+
+function getSourceLabel(clinicId?: string, patientSource?: string): string {
+  if (clinicId === 'psri-delhi') return 'PSRI Walk-In';
+  if (clinicId === 'online-intl') return 'International Consultation';
+  if (clinicId === 'online') return 'Online Consultation';
+  if (patientSource === 'website') return 'KCC - Website Booking';
+  return 'KCC Walk-In';
 }
 
 function dosagePattern(freq: string, route: string): string {
@@ -139,7 +148,14 @@ export async function generatePrescriptionPDF(
 
   const logoData = await loadImg(isPsri ? '/PSRI.jpeg' : '/images/kidney_logo.png');
   if (logoData) {
-    putImg(logoData, ML, y, isPsri ? 30 : 20, isPsri ? 22 : 20);
+    if (isPsri) {
+      putImg(logoData, ML, y, 30, 22);
+    } else {
+      // Logo is 1497x410 (landscape) — render proportional within header height
+      const logoMaxH = 10;
+      const logoW = (1497 / 410) * logoMaxH;
+      putImg(logoData, ML, y, logoW, logoMaxH);
+    }
   }
 
   if (isPsri) {
@@ -188,12 +204,21 @@ export async function generatePrescriptionPDF(
   const infoBarBg: [number, number, number] = isOnline ? [236, 253, 245] : isPsri ? [254, 242, 242] : [240, 244, 248];
   doc.setFillColor(...infoBarBg);
   doc.rect(ML, y - 3.5, CW, 7, 'F');
+  const sourceLabel = getSourceLabel(clinicId, patient.source);
   doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLACK);
   doc.text(`${patient.uhid}: MR. ${patient.firstName.toUpperCase()} ${patient.lastName.toUpperCase()} (${age}y, ${patient.gender}) - ${patient.phone}`, ML + 2, y - 0.5);
   doc.setFont('helvetica', 'normal');
   doc.text(`${dateStr} ${timeStr}`, PW - MR - 2, y - 0.5, { align: 'right' });
   drawHLine(y + 3.5, COL_GRAY, 0.4);
   y += 9;
+
+  // Source label line
+  ensureSpace(6);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...accentColor);
+  doc.text(`Source: ${sourceLabel}`, ML, y);
+  y += 5;
 
   // Vitals bar
   if (consultation.vitals) {
