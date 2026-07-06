@@ -48,6 +48,7 @@ function apiInvoiceToEMR(apiInv: any): EMRInvoice {
     dueDate: apiInv.due_date || apiInv.invoice_date || '',
     grandTotal: totalAmount,
     paidAmount: paidAmount,
+    paymentMethod: apiInv.payment_method || apiInv.paymentMethod || payments[0]?.method || undefined,
     balance: totalAmount - paidAmount,
     status: apiInv.status || 'PENDING',
     subtotal: apiInv.subtotal || totalAmount,
@@ -566,8 +567,8 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Invoice Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Invoice List — Desktop Table */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -577,7 +578,8 @@ export default function BillingPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Clinic</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Date</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Paid</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Paid</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Payment</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -607,9 +609,14 @@ export default function BillingPage() {
                     <td className="px-4 py-3.5 text-right">
                       <span className="text-sm font-semibold text-gray-900">{formatCurrency(inv.grandTotal)}</span>
                     </td>
-                    <td className="px-4 py-3.5 text-right hidden md:table-cell">
+                    <td className="px-4 py-3.5 text-right hidden lg:table-cell">
                       <span className={cn('text-sm', inv.paidAmount >= inv.grandTotal ? 'text-green-600 font-medium' : 'text-gray-600')}>
                         {formatCurrency(inv.paidAmount)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 hidden xl:table-cell">
+                      <span className="text-xs text-gray-600">
+                        {inv.paidAmount > 0 ? (inv.paymentMethod === 'CASH' ? 'Cash' : inv.paymentMethod === 'UPI' ? 'UPI' : inv.paymentMethod === 'CARD' ? 'Card' : inv.paymentMethod === 'BANK_TRANSFER' ? 'Bank Transfer' : inv.paymentMethod === 'CHEQUE' ? 'Cheque' : inv.paymentMethod === 'ONLINE' ? 'Online' : inv.payments?.[0]?.method || '—') : '—'}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-center">
@@ -620,7 +627,7 @@ export default function BillingPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => setSelectedInvoice(inv)} className="p-2.5 rounded-lg hover:bg-[#0A75BB]/10 text-[#0A75BB] transition-colors" title="View">
+                        <button onClick={() => setSelectedInvoice(inv)} className="p-2.5 rounded-lg hover:bg-[#0A75BB]/10 text-[#0A75BB] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="View">
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
@@ -628,18 +635,18 @@ export default function BillingPage() {
                             setEditingInvoice(inv);
                             setShowCreateModal(true);
                           }}
-                          className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                          className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                           title="Edit"
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handlePrint(inv)} className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Print">
+                        <button onClick={() => handlePrint(inv)} className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Print">
                           <Printer className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleWhatsApp(inv)} className="p-2.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors" title="WhatsApp">
+                        <button onClick={() => handleWhatsApp(inv)} className="p-2.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="WhatsApp">
                           <MessageCircle className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                        <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Delete">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -650,13 +657,73 @@ export default function BillingPage() {
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <div className="py-12 text-center text-gray-500">
-            <Receipt className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm font-medium">{loading ? 'Loading invoices...' : 'No invoices found'}</p>
-          </div>
-        )}
       </div>
+
+      {/* Invoice List — Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {filtered.map((inv) => {
+          const sc = statusConfig[inv.status];
+          const paymentLabel = inv.paidAmount > 0
+            ? (inv.paymentMethod === 'CASH' ? 'Cash' : inv.paymentMethod === 'UPI' ? 'UPI' : inv.paymentMethod === 'CARD' ? 'Card' : inv.paymentMethod === 'BANK_TRANSFER' ? 'Bank Transfer' : inv.paymentMethod === 'CHEQUE' ? 'Cheque' : inv.paymentMethod === 'ONLINE' ? 'Online' : inv.payments?.[0]?.method || '—')
+            : '—';
+          return (
+            <div key={inv.id} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <span className="text-sm font-mono font-medium text-[#0A75BB]">{inv.invoiceNumber}</span>
+                  <p className="text-sm font-medium text-gray-900 mt-0.5">{inv.patientName}</p>
+                  {inv.patientPhone && <p className="text-xs text-gray-500">{inv.patientPhone}</p>}
+                </div>
+                <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0', sc.bg, sc.color)}>
+                  {sc.icon} {sc.label}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs mt-3 pt-3 border-t border-gray-100">
+                <div>
+                  <span className="text-gray-500">Date</span>
+                  <p className="text-gray-900 font-medium">{formatDate(inv.date)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Clinic</span>
+                  <p className="text-gray-900 font-medium">{clinicLabels[inv.clinicId] || inv.clinicId}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Amount</span>
+                  <p className="text-gray-900 font-semibold">{formatCurrency(inv.grandTotal)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Paid</span>
+                  <p className={cn('font-medium', inv.paidAmount >= inv.grandTotal ? 'text-green-600' : 'text-gray-900')}>{formatCurrency(inv.paidAmount)}</p>
+                </div>
+                {paymentLabel !== '—' && (
+                  <div>
+                    <span className="text-gray-500">Payment</span>
+                    <p className="text-gray-900 font-medium">{paymentLabel}</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                <button onClick={() => setSelectedInvoice(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#0A75BB]/10 text-[#0A75BB] text-sm font-medium min-h-[44px]">
+                  <Eye className="h-4 w-4" /> View
+                </button>
+                <button onClick={() => handlePrint(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium min-h-[44px]">
+                  <Printer className="h-4 w-4" /> Print
+                </button>
+                <button onClick={() => handleWhatsApp(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium min-h-[44px]">
+                  <MessageCircle className="h-4 w-4" /> WhatsApp
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-500">
+          <Receipt className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm font-medium">{loading ? 'Loading invoices...' : 'No invoices found'}</p>
+        </div>
+      )}
 
       {/* Invoice Detail Modal */}
       {selectedInvoice && (

@@ -99,7 +99,7 @@ export default function PatientDashboardPage() {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">Welcome, {patient.name}</h1>
-                  <p className="text-sm text-gray-500">+91 {patient.phone} {patient.isInternational && `· ${patient.country}`}</p>
+                  <p className="text-sm text-gray-500">{patient.email} {patient.isInternational && `· ${patient.country}`}</p>
                 </div>
               </div>
               <div className="flex gap-2">

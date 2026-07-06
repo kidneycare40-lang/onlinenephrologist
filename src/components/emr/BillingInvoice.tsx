@@ -221,10 +221,24 @@ const BillingInvoice = forwardRef<HTMLDivElement, BillingInvoiceProps>(
               <span style={{ color: '#6b7280' }}>Amount Paid:</span>
               <span style={{ color: '#16a34a', fontWeight: '500' }}>{formatCurrency(invoice.paidAmount)}</span>
             </div>
-            {balance > 0 && (
+            {invoice.paidAmount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                <span style={{ color: '#6b7280' }}>Payment Mode:</span>
+                <span style={{ color: '#111827', fontWeight: '600' }}>
+                  {invoice.paymentMethod === 'CASH' ? '💵 Cash' : invoice.paymentMethod === 'UPI' ? '📱 UPI' : invoice.paymentMethod === 'CARD' ? '💳 Card' : invoice.paymentMethod === 'BANK_TRANSFER' ? '🏦 Bank Transfer' : invoice.paymentMethod === 'CHEQUE' ? '📄 Cheque' : invoice.paymentMethod === 'ONLINE' ? '🌐 Online' : invoice.payments?.[0]?.method || '—'}
+                </span>
+              </div>
+            )}
+            {invoice.status !== 'PAID' && balance > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', marginTop: '4px' }}>
                 <span style={{ color: '#111827' }}>Balance Due:</span>
                 <span style={{ color: '#dc2626' }}>{formatCurrency(balance)}</span>
+              </div>
+            )}
+            {invoice.status === 'PAID' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', marginTop: '4px' }}>
+                <span style={{ color: '#111827' }}>Status:</span>
+                <span style={{ color: '#16a34a' }}>Paid in Full</span>
               </div>
             )}
           </div>

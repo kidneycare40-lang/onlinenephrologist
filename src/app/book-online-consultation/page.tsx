@@ -33,7 +33,7 @@ export default function BookOnlineConsultationPage() {
       email: formData.email,
       age: '',
       gender: '',
-      consultationType: 'online',
+      consultationType: 'online_intl',
       clinicId: 'online-intl',
       date: formData.date,
       time: formData.time,

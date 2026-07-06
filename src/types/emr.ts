@@ -1,6 +1,6 @@
 export type AppointmentStatus = 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
-export type AppointmentType = 'WALK_IN' | 'ONLINE' | 'FOLLOW_UP';
+export type AppointmentType = 'WALK_IN' | 'ONLINE' | 'FOLLOW_UP' | 'HOSPITAL';
 
 export interface EMRAppointment {
   id: string;
@@ -306,6 +306,7 @@ export interface EMRInvoice {
   totalTax: number;
   grandTotal: number;
   paidAmount: number;
+  paymentMethod?: PaymentMethod;
   balance: number;
   status: InvoiceStatus;
   payments: Payment[];

@@ -821,7 +821,7 @@ function BookingForm() {
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {clinics.filter(c => c.id !== 'online' && c.id !== 'psri-delhi').map((clinic) => {
+                  {clinics.filter(c => c.id !== 'online' && c.id !== 'psri-delhi' && c.id !== 'online-intl').map((clinic) => {
                     const colors = COLOR_MAP[clinic.color];
                     const isSelected = formData.clinicId === clinic.id;
                     const Icon = clinic.icon;

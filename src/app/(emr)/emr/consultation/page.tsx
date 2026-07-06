@@ -332,8 +332,11 @@ export default function ConsultationListPage() {
                           <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded">
                             {b.consultationType === 'online_intl' ? 'Web-Online Intl' :
                              b.consultationType === 'online' ? 'Web-Online' :
+                             b.consultationType === 'hospital' ? 'Hospital Visit' :
+                             b.consultationType === 'offline' ? 'In-Clinic' :
                              b.clinicId === 'online' || b.clinicId === 'online-intl' ? 'Web-Online' :
-                             'Web'}
+                             b.clinicId === 'psri' || b.clinicId === 'psri-delhi' ? 'Hospital Visit' :
+                             'In-Clinic'}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'}</p>

@@ -193,14 +193,16 @@ export default function EMRDashboardPage() {
         : '—',
     }));
 
-    const onlineMapped = clinicOnlineBookings.map(b => ({
+    const onlineMapped = clinicOnlineBookings.map(b => {
+      const typeMap: Record<string, AppointmentType> = { 'offline': 'WALK_IN', 'hospital': 'HOSPITAL', 'online': 'ONLINE', 'online_intl': 'ONLINE' };
+      return {
       id: b.bookingId,
       tokenId: b.bookingId.slice(-6).toUpperCase(),
       patientName: `${b.firstName} ${b.lastName}`,
       patientPhone: b.phone,
       patientId: '',
       time: b.time,
-      type: 'ONLINE' as AppointmentType,
+      type: (typeMap[b.consultationType] || 'ONLINE') as AppointmentType,
       status: (b.status === 'pending' ? 'WAITING' : b.status === 'confirmed' ? 'COMPLETED' : b.status === 'cancelled' ? 'CANCELLED' : 'WAITING') as AppointmentStatus,
       payment: b.paymentStatus === 'paid' ? 'PAID' as const : 'UNPAID' as const,
       amount: b.consultationFee,
@@ -208,7 +210,8 @@ export default function EMRDashboardPage() {
       isOnline: true as const,
       date: b.date,
       ageGender: b.age ? `${b.age} / ${b.gender?.[0] || '?'}` : '—',
-    }));
+      consultationType: b.consultationType,
+    }});
 
     return [...apiMapped, ...onlineMapped];
   }, [apiAppointments, onlineBookings, clinicId]);

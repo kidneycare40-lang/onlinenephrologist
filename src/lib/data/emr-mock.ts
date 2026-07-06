@@ -935,6 +935,11 @@ export const builtInTestPanelTemplates: TestPanelTemplate[] = [
   { id: 'tp6', name: 'Mineral Metabolism', tests: ['Serum Calcium', 'Serum Phosphorus', 'Intact PTH', 'Vitamin D (25-OH)', 'Serum Magnesium'] },
   { id: 'tp7', name: 'Lipid Profile', tests: ['Total Cholesterol', 'HDL Cholesterol', 'LDL Cholesterol', 'Triglycerides'] },
   { id: 'tp8', name: 'Full Body Checkup', tests: ['CBC', 'HbA1c', 'Lipid Profile', 'Liver Function Tests', 'Serum Creatinine', 'eGFR', 'TSH', 'Routine Urinalysis', 'ULTRA SOUND WHOLE ABDOMEN PREVOID/POSTVOID WITH FULL BLADDER'] },
+  { id: 'tp9', name: 'Essential CKD Monitoring Panel', tests: ['CBC', 'Haemoglobin', 'Serum Creatinine', 'Blood Urea', 'Blood Urea Nitrogen (BUN)', 'eGFR', 'Serum Uric Acid', 'Sodium', 'Potassium', 'Chloride', 'Bicarbonate', 'Serum Calcium', 'Serum Phosphorus', 'Serum Magnesium', 'Intact PTH', 'Vitamin D (25-OH)', 'Alkaline Phosphatase', 'Serum Albumin', 'Total Protein', 'Urine Routine', 'Urine Albumin/Creatinine Ratio (ACR)', 'Fasting Blood Sugar', 'HbA1c'] },
+  { id: 'tp10', name: 'CKD Anemia Panel', tests: ['CBC', 'Haemoglobin', 'Serum Iron', 'Ferritin', 'TIBC', 'Transferrin Saturation', 'Reticulocyte Count', 'Vitamin B12', 'Folate'] },
+  { id: 'tp11', name: 'Dialysis Adequacy Panel', tests: ['Pre-Dialysis Urea', 'Post-Dialysis Urea', 'Kt/V', 'Urea Reduction Ratio (URR)', 'CBC', 'Serum Creatinine', 'Blood Urea', 'Electrolytes (Na, K, Cl)', 'Serum Calcium', 'Serum Phosphorus', 'Intact PTH', 'Serum Albumin', 'Iron Studies', 'Ferritin'] },
+  { id: 'tp12', name: 'Dialysis Screening Panel', tests: ['HbsAg', 'Anti-HCV', 'Anti-HIV 1&2', 'Hepatitis B Antibody (Anti-HBs)', 'VDRL', 'Viral Markers'] },
+  { id: 'tp13', name: 'CKD Heart Risk Panel', tests: ['Lipid Profile', 'Total Cholesterol', 'HDL Cholesterol', 'LDL Cholesterol', 'Triglycerides', 'Liver Function Tests', 'SGOT (AST)', 'SGPT (ALT)', 'HbA1c', 'Fasting Blood Sugar'] },
 ];
 
 export const labTestGroups = [
@@ -944,7 +949,7 @@ export const labTestGroups = [
   { name: 'Lipid Profile', tests: ['Total Cholesterol', 'HDL Cholesterol', 'LDL Cholesterol', 'VLDL', 'Triglycerides', 'TC/HDL Ratio', 'Non-HDL Cholesterol'] },
   { name: 'Diabetes Panel', tests: ['Fasting Blood Sugar', 'Postprandial Blood Sugar', 'Random Blood Sugar', 'HbA1c', 'Fasting Insulin', 'C-Peptide', 'Fructosamine'] },
   { name: 'Mineral Metabolism', tests: ['Serum Calcium', 'Serum Phosphorus', 'Intact PTH', 'Vitamin D (25-OH)', 'Serum Magnesium', 'Serum Potassium'] },
-  { name: 'Iron Studies', tests: ['Serum Iron', 'TIBC', 'Serum Ferritin', 'Transferrin Saturation', 'Unsaturated Iron Binding Capacity (UIBC)'] },
+  { name: 'Iron Studies', tests: ['Serum Iron', 'TIBC', 'Serum Ferritin', 'Transferrin Saturation', 'Unsaturated Iron Binding Capacity (UIBC)', 'Reticulocyte Count'] },
   { name: 'Thyroid', tests: ['TSH', 'Free T3', 'Free T4', 'Total T3', 'Total T4', 'Anti-TPO'] },
   { name: 'Urinalysis', tests: ['Urine Routine', 'Urine Pus Cells', 'Urine RBC', 'Urine Protein', 'Urine Albumin', 'Urine Creatinine', 'Urine Culture & Sensitivity', 'Urine Albumin/Creatinine Ratio (ACR)', 'Urine Protein/Creatinine Ratio (UPCR)', '24-hour Urine Protein', '24-hour Urine Creatinine Clearance', 'Urine Microalbumin'] },
   { name: 'Hepatitis', tests: ['HbsAg', 'Anti-HCV', 'Anti-HIV 1&2', 'Anti-HBs Antibody', 'HBV DNA', 'HCV RNA', 'HIV Viral Load', 'Hepatitis A IgM', 'Hepatitis E IgM'] },
@@ -960,6 +965,7 @@ export const labTestGroups = [
   { name: 'Imaging', tests: ['ULTRA SOUND WHOLE ABDOMEN PREVOID/POSTVOID WITH FULL BLADDER', 'Right Kidney Size', 'Left Kidney Size', 'Pre-Void Volume', 'Post-Void Residual Volume', 'Prostate Size', 'Urinary Bladder Assessment', 'CHEST XRAY PA VIEW', 'Doppler Study (Renal)', 'CT Abdomen', 'MRI Brain', 'DEXA Scan'] },
   { name: 'Vasculitis', tests: ['P-ANCA (MPO)', 'C-ANCA (PR3)', 'ANCA Profile', 'ANA', 'Anti-dsDNA', 'Complement C3', 'Complement C4'] },
   { name: 'Metabolic', tests: ['Homocysteine', 'Lactate', 'Pyruvate', 'Ammonia', 'Blood Gas (ABG)'] },
+  { name: 'Dialysis Monitoring', tests: ['Pre-Dialysis Urea', 'Post-Dialysis Urea', 'Kt/V', 'Urea Reduction Ratio (URR)', 'CBC', 'Serum Creatinine', 'Blood Urea', 'Electrolytes (Na, K, Cl)', 'Serum Calcium', 'Serum Phosphorus', 'Intact PTH', 'Serum Albumin', 'Iron Studies', 'Ferritin', 'HbsAg', 'Anti-HCV', 'Anti-HIV 1&2'] },
 ];
 
 export const icdDiagnoses = [

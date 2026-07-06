@@ -26,6 +26,9 @@ CREATE TRIGGER emr_store_updated_at
 -- Enable Row Level Security (open access for now, tighten later)
 ALTER TABLE emr_store ENABLE ROW LEVEL SECURITY;
 
+-- Add payment_method to invoices table
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_method payment_method;
+
 -- Allow all access (service role bypasses RLS, but anon key needs access for client-side)
 CREATE POLICY "Allow all access" ON emr_store
   FOR ALL

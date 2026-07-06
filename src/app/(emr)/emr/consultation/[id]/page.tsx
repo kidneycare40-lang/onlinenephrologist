@@ -608,22 +608,21 @@ export default function ConsultationPage() {
     showToastMessage('Generating PDF...', 'success');
 
     try {
-      const { default: html2pdf } = await import('html2pdf.js');
-      const { default: ReactPDF } = await import('@/components/emr/PrescriptionPrint');
+      const printContainer = document.createElement('div');
+      printContainer.style.position = 'fixed';
+      printContainer.style.left = '-9999px';
+      printContainer.style.top = '0';
+      printContainer.style.width = '210mm';
+      printContainer.style.background = 'white';
+      document.body.appendChild(printContainer);
 
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      container.style.width = '210mm';
-      container.style.background = 'white';
-      document.body.appendChild(container);
-
+      const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
       const { createRoot } = await import('react-dom/client');
-      const root = createRoot(container);
+      const root = createRoot(printContainer);
+
       await new Promise<void>((resolve) => {
         root.render(
-          <ReactPDF
+          <PrescriptionPrint
             patient={patient}
             consultation={consultation}
             consultationDate={new Date().toLocaleDateString('en-IN')}
@@ -633,10 +632,10 @@ export default function ConsultationPage() {
             clinicId={clinicId ?? undefined}
           />
         );
-        setTimeout(resolve, 500);
+        setTimeout(resolve, 600);
       });
 
-      const images = container.querySelectorAll('img');
+      const images = printContainer.querySelectorAll('img');
       await Promise.all(
         Array.from(images).map(
           (img) =>
@@ -648,18 +647,79 @@ export default function ConsultationPage() {
       );
       await new Promise((r) => setTimeout(r, 300));
 
-      const pdfBlob = await html2pdf()
-        .set({
-          margin: 0,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        })
-        .from(container)
-        .outputPdf('blob');
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        root.unmount();
+        document.body.removeChild(printContainer);
+        showToastMessage('Pop-up blocked. Allow pop-ups for this site.', 'error');
+        return;
+      }
 
-      root.unmount();
-      document.body.removeChild(container);
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Prescription - ${patient.firstName} ${patient.lastName}</title>
+          <style>
+            @page { size: A4; margin: 5mm 8mm; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html, body {
+              width: 100%; margin: 0; padding: 0;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 10pt; line-height: 1.35;
+              color: #000; background: #fff;
+            }
+            .rx-footer { position: relative; }
+            @media print {
+              html, body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .rx-prescription-table { width: 100% !important; border-collapse: collapse; }
+              .rx-prescription-table thead { display: table-header-group !important; }
+              .rx-prescription-table tbody td { vertical-align: top !important; }
+              .rx-footer {
+                position: fixed !important; bottom: 0 !important;
+                left: 0 !important; right: 0 !important;
+                width: 100% !important; z-index: 1000 !important;
+                background: #fff !important;
+              }
+              .rx-medicine-row { page-break-inside: avoid !important; }
+              .rx-advice-block, .rx-tests-block, .rx-signature { page-break-inside: avoid !important; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContainer.innerHTML}
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+
+      await new Promise<void>((resolve) => {
+        const checkReady = setInterval(() => {
+          try {
+            if (printWindow.document.readyState === 'complete') {
+              clearInterval(checkReady);
+              setTimeout(resolve, 500);
+            }
+          } catch { clearInterval(checkReady); resolve(); }
+        }, 100);
+        setTimeout(() => { clearInterval(checkReady); resolve(); }, 3000);
+      });
+
+      const pdfBlob = await new Promise<Blob>((resolve, reject) => {
+        try {
+          printWindow.print();
+          printWindow.close();
+          root.unmount();
+          document.body.removeChild(printContainer);
+          resolve(new Blob([], { type: 'application/pdf' }));
+        } catch (e) {
+          reject(e);
+        }
+      });
 
       const pdfFile = new File([pdfBlob], `Prescription_${patient.firstName}_${patient.lastName}.pdf`, { type: 'application/pdf' });
 
@@ -698,70 +758,6 @@ export default function ConsultationPage() {
     const url = `mailto:${patient.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
     showToastMessage('Opening email client...');
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!consultation || !patient) return;
-    showToastMessage('Generating PDF...', 'success');
-    try {
-      const { default: html2pdf } = await import('html2pdf.js');
-      const { default: ReactPDF } = await import('@/components/emr/PrescriptionPrint');
-
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      container.style.width = '210mm';
-      container.style.background = 'white';
-      document.body.appendChild(container);
-
-      const { createRoot } = await import('react-dom/client');
-      const root = createRoot(container);
-      await new Promise<void>((resolve) => {
-        root.render(
-          <ReactPDF
-            patient={patient}
-            consultation={consultation}
-            consultationDate={new Date().toLocaleDateString('en-IN')}
-            testRequests={testRequests}
-            testRequestByWhen={testRequestByWhen}
-            labResults={patientLabResults}
-            clinicId={clinicId ?? undefined}
-          />
-        );
-        setTimeout(resolve, 500);
-      });
-
-      const images = container.querySelectorAll('img');
-      await Promise.all(
-        Array.from(images).map(
-          (img) =>
-            new Promise<void>((res) => {
-              if (img.complete) res();
-              else { img.onload = () => res(); img.onerror = () => res(); }
-            })
-        )
-      );
-      await new Promise((r) => setTimeout(r, 300));
-
-      const pdf = await html2pdf()
-        .set({
-          margin: 0,
-          filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        })
-        .from(container)
-        .save();
-
-      root.unmount();
-      document.body.removeChild(container);
-      showToastMessage('PDF downloaded');
-    } catch (err) {
-      console.error('PDF generation failed:', err);
-      showToastMessage('PDF generation failed', 'error');
-    }
   };
 
   const showToastMessage = (message: string, type: 'success' | 'error' = 'success') => {
@@ -1641,7 +1637,6 @@ export default function ConsultationPage() {
             onSave={handleSave}
             onEndConsultation={handleEndConsultation}
             onPrint={() => setShowPrintPreview(true)}
-            onDownloadPDF={handleDownloadPDF}
             onWhatsApp={handleWhatsAppPrescription}
             isSaving={isSaving}
           />
@@ -1656,8 +1651,7 @@ export default function ConsultationPage() {
           testRequests={testRequests}
           testRequestByWhen={testRequestByWhen}
           labResults={patientLabResults}
-          onWhatsApp={handleWhatsAppPrescription}
-          onDownloadPDF={handleDownloadPDF}
+            onWhatsApp={handleWhatsAppPrescription}
           clinicId={clinicId ?? undefined}
         />
 

@@ -2,13 +2,12 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Download, Printer, Save, PhoneOff } from 'lucide-react';
+import { Printer, Save, PhoneOff } from 'lucide-react';
 
 interface BottomActionBarProps {
   onSave: () => void;
   onEndConsultation: () => void;
   onPrint: () => void;
-  onDownloadPDF: () => void;
   onWhatsApp: () => void;
   isSaving?: boolean;
 }
@@ -17,7 +16,6 @@ export default function BottomActionBar({
   onSave,
   onEndConsultation,
   onPrint,
-  onDownloadPDF,
   onWhatsApp,
   isSaving,
 }: BottomActionBarProps) {
@@ -32,15 +30,6 @@ export default function BottomActionBar({
           >
             <img src="/icons/Whatsapp.png" alt="" className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="hidden sm:inline">WhatsApp</span>
-          </button>
-
-          <button
-            onClick={onDownloadPDF}
-            className="flex items-center justify-center gap-1.5 px-3 sm:px-4 h-11 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
-            aria-label="Download PDF"
-          >
-            <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">Download PDF</span>
           </button>
 
           <button

@@ -1,12 +1,12 @@
 const PATIENTS_KEY = 'kcc_patients';
 const CURRENT_PATIENT_KEY = 'kcc_current_patient';
-const OTP_KEY = 'kcc_otp';
+const OTP_KEY = 'kcc_email_otp';
 
 export interface Patient {
   id: string;
   name: string;
-  phone: string;
-  email?: string;
+  phone?: string;
+  email: string;
   age?: number;
   gender?: 'male' | 'female' | 'other';
   address?: string;
@@ -26,38 +26,34 @@ export interface Patient {
 }
 
 export interface OTPRecord {
-  phone: string;
+  email: string;
   otp: string;
   expiresAt: number;
   verified: boolean;
 }
 
-// Generate a 6-digit OTP
 function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Send OTP (simulated — in production, use SMS API)
-export function sendOTP(phone: string): string {
+export function sendOTP(email: string): string {
   const otp = generateOTP();
   const record: OTPRecord = {
-    phone,
+    email,
     otp,
-    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+    expiresAt: Date.now() + 10 * 60 * 1000,
     verified: false,
   };
   localStorage.setItem(OTP_KEY, JSON.stringify(record));
-  // In production, send via SMS API here
-  console.log(`OTP for ${phone}: ${otp}`);
+  console.log(`OTP for ${email}: ${otp}`);
   return otp;
 }
 
-// Verify OTP
-export function verifyOTP(phone: string, otp: string): boolean {
+export function verifyOTP(email: string, otp: string): boolean {
   const stored = localStorage.getItem(OTP_KEY);
   if (!stored) return false;
   const record: OTPRecord = JSON.parse(stored);
-  if (record.phone !== phone) return false;
+  if (record.email.toLowerCase() !== email.toLowerCase()) return false;
   if (Date.now() > record.expiresAt) return false;
   if (record.otp !== otp) return false;
   record.verified = true;
@@ -65,7 +61,6 @@ export function verifyOTP(phone: string, otp: string): boolean {
   return true;
 }
 
-// Get all patients
 function getPatients(): Patient[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -76,21 +71,18 @@ function getPatients(): Patient[] {
   }
 }
 
-// Save patients
 function savePatients(patients: Patient[]) {
   localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients));
 }
 
-// Find patient by phone
-export function findPatientByPhone(phone: string): Patient | undefined {
-  return getPatients().find((p) => p.phone === phone);
+export function findPatientByEmail(email: string): Patient | undefined {
+  return getPatients().find((p) => p.email.toLowerCase() === email.toLowerCase());
 }
 
-// Register new patient
 export function registerPatient(data: Omit<Patient, 'id' | 'createdAt' | 'lastLogin'>): Patient {
   const patients = getPatients();
-  const existing = patients.find((p) => p.phone === data.phone);
-  if (existing) throw new Error('Patient already registered with this phone number');
+  const existing = patients.find((p) => p.email.toLowerCase() === data.email.toLowerCase());
+  if (existing) throw new Error('Patient already registered with this email');
 
   const patient: Patient = {
     ...data,
@@ -104,7 +96,6 @@ export function registerPatient(data: Omit<Patient, 'id' | 'createdAt' | 'lastLo
   return patient;
 }
 
-// Update patient
 export function updatePatient(id: string, data: Partial<Patient>): Patient | null {
   const patients = getPatients();
   const idx = patients.findIndex((p) => p.id === id);
@@ -117,20 +108,18 @@ export function updatePatient(id: string, data: Partial<Patient>): Patient | nul
   return patients[idx];
 }
 
-// Login patient (after OTP verification)
-export function loginPatient(phone: string): Patient | null {
-  const patient = findPatientByPhone(phone);
+export function loginPatient(email: string): Patient | null {
+  const patient = findPatientByEmail(email);
   if (!patient) return null;
   patient.lastLogin = new Date().toISOString();
   const patients = getPatients();
-  const idx = patients.findIndex((p) => p.phone === phone);
+  const idx = patients.findIndex((p) => p.email.toLowerCase() === email.toLowerCase());
   if (idx !== -1) patients[idx] = patient;
   savePatients(patients);
   setCurrentPatient(patient);
   return patient;
 }
 
-// Current patient session
 export function setCurrentPatient(patient: Patient | null) {
   if (patient) {
     localStorage.setItem(CURRENT_PATIENT_KEY, JSON.stringify(patient));

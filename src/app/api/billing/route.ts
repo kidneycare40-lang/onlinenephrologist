@@ -79,15 +79,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(payment, { status: 201 });
     }
 
-    // Create invoice
-    if (!body.patient_id || !body.doctor_id || !body.clinic_id || !body.items?.length) {
+    // Create invoice — accept both camelCase (from client) and snake_case (from DB)
+    const patientId = body.patient_id || body.patientId;
+    const doctorId = body.doctor_id || body.doctorId || 'doctor-default';
+    const clinicId = body.clinic_id || body.clinicId || 'kcc-faridabad';
+
+    if (!patientId || !body.items?.length) {
       return NextResponse.json(
-        { error: 'Patient, doctor, clinic, and items are required' },
+        { error: 'Patient and items are required' },
         { status: 400 }
       );
     }
 
-    const invoice = await billingService.createInvoice(body);
+    const invoice = await billingService.createInvoice({
+      ...body,
+      patient_id: patientId,
+      doctor_id: doctorId,
+      clinic_id: clinicId,
+      paid_amount: body.paidAmount || body.paid_amount || 0,
+      payment_method: body.paymentMethod || body.payment_method || null,
+      initial_status: body.status || 'PENDING',
+      items: body.items.map((item: any, i: number) => ({
+        description: item.description || item.name || '',
+        unit_price: item.rate || item.unit_price || 0,
+        quantity: item.qty || item.quantity || 1,
+        gst_rate: item.gstRate || item.gst_rate || 0,
+        total_price: item.amount || item.total || 0,
+        sort_order: i,
+      })),
+    });
     if (!invoice) {
       return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 });
     }
@@ -99,6 +119,35 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('POST /api/billing error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, ...updateData } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Invoice ID is required' }, { status: 400 });
+    }
+
+    const billingService = getBillingService();
+
+    const success = await billingService.updateInvoice(id, {
+      status: updateData.status,
+      paid_amount: updateData.paidAmount,
+      payment_method: updateData.paymentMethod,
+      notes: updateData.notes,
+    });
+
+    if (!success) {
+      return NextResponse.json({ error: 'Failed to update invoice' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('PUT /api/billing error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

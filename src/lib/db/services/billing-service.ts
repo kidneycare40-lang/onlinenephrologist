@@ -181,6 +181,9 @@ export class BillingService {
     discount?: number;
     notes?: string;
     createdBy?: string;
+    paid_amount?: number;
+    initial_status?: string;
+    payment_method?: string;
   }): Promise<InvoiceWithRelations | null> {
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => {
@@ -205,8 +208,9 @@ export class BillingService {
       tax_amount: taxAmount,
       discount: data.discount || 0,
       total_amount: totalAmount,
-      paid_amount: 0,
-      status: 'PENDING',
+      paid_amount: data.paid_amount || 0,
+      payment_method: data.payment_method || null,
+      status: (data.paid_amount || 0) >= totalAmount ? 'PAID' : (data.paid_amount || 0) > 0 ? 'PARTIAL' : (data.initial_status || 'PENDING'),
       notes: data.notes || null,
       created_by: data.createdBy,
     } as Partial<Invoice>);
@@ -314,6 +318,21 @@ export class BillingService {
       paid_amount: totalPaid,
       status,
     } as Partial<Invoice>);
+  }
+
+  async updateInvoice(id: string, data: { status?: string; paid_amount?: number; payment_method?: string; notes?: string }): Promise<boolean> {
+    const updatePayload: Record<string, any> = {};
+    if (data.status) updatePayload.status = data.status;
+    if (data.paid_amount !== undefined) updatePayload.paid_amount = data.paid_amount;
+    if (data.payment_method !== undefined) updatePayload.payment_method = data.payment_method;
+    if (data.notes !== undefined) updatePayload.notes = data.notes;
+
+    const { error } = await getDb()
+      .from('invoices')
+      .update(updatePayload)
+      .eq('id', id);
+
+    return !error;
   }
 
   private async generateInvoiceNumber(): Promise<string> {

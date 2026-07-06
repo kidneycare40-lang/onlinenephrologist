@@ -125,39 +125,13 @@ export async function generatePrescriptionPDF(
     doc.line(ML, yy, PW - MR, yy);
   };
 
-  const loadImg = async (url: string): Promise<string | null> => {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const blob = await res.blob();
-      return new Promise<string | null>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(blob);
-      });
-    } catch { return null; }
-  };
+  // Header - text only (no images to avoid jsPDF corruption)
 
-  const putImg = (dataUrl: string, x: number, yy: number, w: number, h: number) => {
-    try {
-      const ext = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(dataUrl, ext, x, yy, w, h);
-    } catch { /* skip */ }
-  };
-
-  const logoData = await loadImg(isPsri ? '/PSRI.jpeg' : '/images/kidney_logo.png');
-  if (logoData) {
-    if (isPsri) {
-      putImg(logoData, ML, y, 30, 22);
-    } else {
-      // Logo is 1497x410 (landscape) — render proportional within header height
-      const logoMaxH = 10;
-      const logoW = (1497 / 410) * logoMaxH;
-      putImg(logoData, ML, y, logoW, logoMaxH);
-    }
-  }
-
+  // Clinic name on left side
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(...accentColor);
+  doc.text(isPsri ? 'PSRI INSTITUTE OF' : 'KIDNEY CARE', ML, y + 6);
+  doc.setFontSize(12);
+  doc.text(isPsri ? 'RENAL SCIENCES' : 'CENTRE', ML, y + 10);
   if (isPsri) {
     let ty = y + 6;
     doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_RED);
@@ -407,7 +381,6 @@ export async function generatePrescriptionPDF(
   doc.text('Sr. Nephrologist', PW - MR, y, { align: 'right' });
 
   const lastPage = doc.getNumberOfPages();
-  const dietChartImg = await loadImg('/diet-chart.png');
 
   for (let p = 1; p <= lastPage; p++) {
     doc.setPage(p);
@@ -415,15 +388,12 @@ export async function generatePrescriptionPDF(
 
     const col1X = ML + 2;
     const col3X = PW - MR - 2;
-    const centerColX = PW / 2;
     const leftW = 70;
     const rightW = 70;
-    const centerW = 25;
 
     if (isPsri) {
       doc.setFillColor(248, 250, 252);
       doc.rect(ML, FOOTER_Y, leftW, 16, 'F');
-      doc.rect(centerColX - centerW / 2, FOOTER_Y, centerW, 16, 'F');
       doc.rect(PW - MR - rightW, FOOTER_Y, rightW, 16, 'F');
 
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...COL_RED);
@@ -432,14 +402,6 @@ export async function generatePrescriptionPDF(
       doc.text('Pushpawati Singhania Hospital & Research Institute', col1X, FOOTER_Y + 6);
       doc.text('Press Enclave Marg, Saket, New Delhi - 110017', col1X, FOOTER_Y + 9);
       doc.text('Mon to Sat - 1:00 PM - 7:00 PM', col1X, FOOTER_Y + 12);
-
-      if (dietChartImg) {
-        doc.setFillColor(192, 57, 43);
-        doc.roundedRect(centerColX - centerW / 2, FOOTER_Y + 1, centerW, 14, 1, 1, 'F');
-        putImg(dietChartImg, centerColX - 9, FOOTER_Y + 2, 18, 10);
-        doc.setFontSize(5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-        doc.text('Scan for Diet', centerColX, FOOTER_Y + 14, { align: 'center' });
-      }
 
       doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_RED); doc.setFontSize(7);
       doc.text('Dr. Rajesh Goel', col3X, FOOTER_Y + 3, { align: 'right' });
@@ -453,16 +415,7 @@ export async function generatePrescriptionPDF(
     } else {
       doc.setFillColor(248, 250, 252);
       doc.rect(ML, FOOTER_Y, leftW, 16, 'F');
-      doc.rect(centerColX - centerW / 2, FOOTER_Y, centerW, 16, 'F');
       doc.rect(PW - MR - rightW, FOOTER_Y, rightW, 16, 'F');
-
-      if (dietChartImg) {
-        doc.setFillColor(9, 81, 135);
-        doc.roundedRect(centerColX - centerW / 2, FOOTER_Y + 1, centerW, 14, 1, 1, 'F');
-        putImg(dietChartImg, centerColX - 9, FOOTER_Y + 2, 18, 10);
-        doc.setFontSize(5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-        doc.text('Diet Chart', centerColX, FOOTER_Y + 14, { align: 'center' });
-      }
 
       doc.setFont('helvetica', 'bold'); doc.setTextColor(...COL_BLUE); doc.setFontSize(7.5);
       doc.text('KIDNEY CARE CENTRE', col3X, FOOTER_Y + 3, { align: 'right' });

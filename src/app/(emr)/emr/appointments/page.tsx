@@ -15,11 +15,13 @@ import {
   X,
   AlertTriangle,
   RefreshCw,
+  Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { appointmentsApi, patientsApi, ApiError } from '@/lib/api-client';
 import { CreditCard } from 'lucide-react';
+import type { AppointmentType } from '@/lib/db/types';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
   'online': 'online',
@@ -267,7 +269,9 @@ export default function AppointmentsPage() {
     }));
 
     // Map online bookings
-    const onlineMapped = clinicOnlineBookings.map((b) => ({
+    const onlineMapped = clinicOnlineBookings.map((b) => {
+      const typeMap: Record<string, string> = { 'offline': 'WALK_IN', 'hospital': 'HOSPITAL', 'online': 'ONLINE', 'online_intl': 'ONLINE' };
+      return {
       id: b.bookingId,
       tokenId: b.bookingId.slice(-6).toUpperCase(),
       patientId: '',
@@ -277,13 +281,14 @@ export default function AppointmentsPage() {
       doctorName: b.doctorName || 'Dr. Rajesh Goel',
       date: b.date,
       time: to24Hour(b.time),
-      type: 'ONLINE',
+      type: (typeMap[b.consultationType] || 'ONLINE') as AppointmentType,
       status: b.status === 'confirmed' ? 'COMPLETED' : 'WAITING',
       reason: b.reason,
       payment: b.paymentStatus === 'paid' ? 'PAID' : 'UNPAID',
       amount: b.consultationFee,
       clinicId: BOOKING_CLINIC_MAP[b.clinicId] || '',
-    }));
+      consultationType: b.consultationType,
+    }});
 
     return [...apiMapped, ...onlineMapped];
   }, [apiAppointments, clinicOnlineBookings]);
@@ -398,8 +403,9 @@ export default function AppointmentsPage() {
                             {apt.type === 'ONLINE' && <Video className="h-3 w-3 text-cyan-500" />}
                             {apt.type === 'WALK_IN' && <MapPin className="h-3 w-3 text-purple-500" />}
                             {apt.type === 'FOLLOW_UP' && <Phone className="h-3 w-3 text-orange-500" />}
+                            {apt.type === 'HOSPITAL' && <Building2 className="h-3 w-3 text-red-500" />}
                             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-white/80 text-gray-600">
-                              {apt.type === 'ONLINE' ? 'Online' : apt.type === 'FOLLOW_UP' ? 'Follow-up' : 'Walk-in'}
+                              {apt.type === 'ONLINE' ? (apt.consultationType === 'online_intl' ? 'Online Intl' : 'Online') : apt.type === 'FOLLOW_UP' ? 'Follow-up' : apt.type === 'HOSPITAL' ? 'Hospital' : 'Walk-in'}
                             </span>
                             {apt.payment === 'PAID' && (
                               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
