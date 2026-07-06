@@ -62,6 +62,8 @@ export default function ConsultationPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const rawBookingId = id.startsWith('consult-obp-') ? id.replace('consult-obp-', '') : id;
+  const patientId = id.startsWith('consult-emr-') ? id.replace('consult-emr-', '') : id;
   const { clinicId } = useClinic();
 
   const [activeSection, setActiveSection] = useState('documents');
@@ -238,9 +240,9 @@ export default function ConsultationPage() {
 
       // Check online bookings - auto-create patient + consultation
       // First check if patient already exists in emr_added_patients
-      const existingPat = storedPatients.find((p) => p.id === id);
-      const booking = onlineBookings.find((b) => b.bookingId === id);
-      if (existingPat && !storedConsultations.find((c) => c.patientId === id)) {
+      const existingPat = storedPatients.find((p) => p.id === id || p.id === `obp-${rawBookingId}`);
+      const booking = onlineBookings.find((b) => b.bookingId === rawBookingId);
+      if (existingPat && !storedConsultations.find((c) => c.patientId === existingPat.id)) {
         // Patient exists but no consultation yet — create one
         const patClinicId = existingPat.clinicId || 'online';
         const newConsult: EMRConsultation = {
@@ -338,7 +340,7 @@ export default function ConsultationPage() {
       }
 
       // Check direct patient ID in localStorage/mock
-      const pat = allStored.find((p) => p.id === id);
+      const pat = allStored.find((p) => p.id === patientId);
       if (pat) {
         const newConsult: EMRConsultation = {
           id: `consult-${pat.id}`,

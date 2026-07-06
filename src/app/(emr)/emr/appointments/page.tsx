@@ -246,7 +246,7 @@ export default function AppointmentsPage() {
 
   const clinicOnlineBookings = clinicId
     ? onlineBookings.filter((b) => BOOKING_CLINIC_MAP[b.clinicId] === clinicId && b.date === dateStr)
-    : [];
+    : onlineBookings.filter((b) => b.date === dateStr);
 
   const mergedAppointments = useMemo(() => {
     // Map API appointments to display format
@@ -268,7 +268,7 @@ export default function AppointmentsPage() {
       clinicId: apt.clinic_id,
     }));
 
-    // Map online bookings
+    // Map online bookings — all are website bookings
     const onlineMapped = clinicOnlineBookings.map((b) => {
       const typeMap: Record<string, string> = { 'offline': 'WALK_IN', 'hospital': 'HOSPITAL', 'online': 'ONLINE', 'online_intl': 'ONLINE' };
       return {
@@ -288,6 +288,8 @@ export default function AppointmentsPage() {
       amount: b.consultationFee,
       clinicId: BOOKING_CLINIC_MAP[b.clinicId] || '',
       consultationType: b.consultationType,
+      isWebBooking: true,
+      bookingId: b.bookingId,
     }});
 
     return [...apiMapped, ...onlineMapped];
@@ -388,7 +390,7 @@ export default function AppointmentsPage() {
                       <div
                         key={apt.id}
                         className={cn(
-                          'p-2.5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer',
+                          'p-2.5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all',
                           STATUS_COLORS[apt.status] || 'bg-gray-50 text-gray-700 border-l-4 border-gray-300'
                         )}
                       >
@@ -404,15 +406,34 @@ export default function AppointmentsPage() {
                             {apt.type === 'WALK_IN' && <MapPin className="h-3 w-3 text-purple-500" />}
                             {apt.type === 'FOLLOW_UP' && <Phone className="h-3 w-3 text-orange-500" />}
                             {apt.type === 'HOSPITAL' && <Building2 className="h-3 w-3 text-red-500" />}
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-white/80 text-gray-600">
-                              {apt.type === 'ONLINE' ? (apt.consultationType === 'online_intl' ? 'Online Intl' : 'Online') : apt.type === 'FOLLOW_UP' ? 'Follow-up' : apt.type === 'HOSPITAL' ? 'Hospital' : 'Walk-in'}
-                            </span>
+                            {apt.isWebBooking ? (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                                {apt.consultationType === 'online_intl' ? 'Web-Intl' : apt.consultationType === 'online' ? 'Web-Online' : 'Web'}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-white/80 text-gray-600">
+                                {apt.type === 'ONLINE' ? 'Online' : apt.type === 'FOLLOW_UP' ? 'Follow-up' : apt.type === 'HOSPITAL' ? 'Hospital' : 'Walk-in'}
+                              </span>
+                            )}
                             {apt.payment === 'PAID' && (
                               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
                                 ₹{apt.amount || 'Paid'}
                               </span>
                             )}
                           </div>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <a
+                            href={apt.isWebBooking ? `/emr/consultation/consult-obp-${apt.bookingId || apt.id}` : `/emr/consultation/consult-emr-${apt.patientId || apt.patientName?.toLowerCase().replace(/\s+/g, '-') || 'unknown'}`}
+                            className="flex-1 text-center text-[10px] font-semibold py-1.5 rounded-md bg-[#0A75BB] text-white hover:bg-[#085a94] transition-colors"
+                          >
+                            Start Rx
+                          </a>
+                          {apt.reason && (
+                            <span className="text-[10px] text-gray-400 truncate max-w-[120px]" title={apt.reason}>
+                              {apt.reason}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
