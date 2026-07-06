@@ -5,7 +5,7 @@ import {
   Receipt, Search, X, Download, Printer, MessageCircle,
   CheckCircle2, Clock, AlertTriangle, Eye, Plus, CreditCard,
   FileText, Trash2, Edit2, TrendingUp, Calendar, Building2, BarChart3,
-  RefreshCw,
+  RefreshCw, Users,
 } from 'lucide-react';
 import { cn, formatDate, formatCurrency } from '@/lib/utils';
 import BillingInvoice from '@/components/emr/BillingInvoice';
@@ -111,6 +111,7 @@ export default function BillingPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<EMRInvoice | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<EMRInvoice | null>(null);
+  const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const refreshData = useCallback(async () => {
@@ -346,127 +347,172 @@ export default function BillingPage() {
     window.open(whatsappUrl, '_blank');
   };
 
+  type SourceType = 'walkin' | 'online' | 'web-online' | 'web-intl';
+
+  const sourceStats = useMemo(() => {
+    const sources: Record<SourceType, { count: number; collected: number; pending: number; label: string; bg: string; text: string; border: string; dot: string }> = {
+      walkin:      { count: 0, collected: 0, pending: 0, label: 'Walk-In (EMR)',     bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  dot: 'bg-green-500' },
+      online:      { count: 0, collected: 0, pending: 0, label: 'Online (EMR)',      bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+      'web-online':{ count: 0, collected: 0, pending: 0, label: 'Web-Online',        bg: 'bg-emerald-50',text: 'text-emerald-700',border: 'border-emerald-200',dot: 'bg-emerald-500' },
+      'web-intl':  { count: 0, collected: 0, pending: 0, label: 'Web-Online Intl',   bg: 'bg-teal-50',   text: 'text-teal-700',   border: 'border-teal-200',   dot: 'bg-teal-500' },
+    };
+    invoices.forEach((inv) => {
+      let source: SourceType = 'walkin';
+      if (inv.clinicId === 'online-intl') source = 'web-intl';
+      else if (inv.clinicId === 'online') source = 'online';
+      sources[source].count++;
+      sources[source].collected += inv.paidAmount;
+      sources[source].pending += inv.balance;
+    });
+    return sources;
+  }, [invoices]);
+
+  const totalBilled = useMemo(() => invoices.reduce((s, i) => s + i.grandTotal, 0), [invoices]);
+
+  const todayStats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayInvoices = invoices.filter((inv) => inv.date === today);
+    const todayPaid = todayInvoices.filter((inv) => inv.status === 'PAID' || inv.paidAmount > 0);
+    const newCount = todayInvoices.filter((inv) => inv.visitType !== 'FOLLOW_UP').length;
+    const followUpCount = todayInvoices.filter((inv) => inv.visitType === 'FOLLOW_UP').length;
+    const avgFee = invoices.length > 0 ? Math.round(invoices.reduce((s, i) => s + i.grandTotal, 0) / invoices.length) : 0;
+    return {
+      collection: todayPaid.reduce((s, i) => s + i.paidAmount, 0),
+      billCount: todayInvoices.length,
+      newCount,
+      followUpCount,
+      pendingAmount: invoices.filter((inv) => inv.status !== 'PAID').reduce((s, i) => s + i.balance, 0),
+      pendingCount: invoices.filter((inv) => inv.status !== 'PAID').length,
+      avgFee,
+    };
+  }, [invoices]);
+
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      {/* Top Stats — 4 cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#0A75BB]/10 rounded-lg flex items-center justify-center">
-              <FileText className="h-5 w-5 text-[#0A75BB]" />
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <span className="text-green-600 font-bold text-sm">₹</span>
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Total Invoices</p>
-              <p className="text-xl font-bold text-gray-900">{stats.totalInvoices}</p>
-            </div>
+            <p className="text-xs font-medium text-gray-500">Today&apos;s Collection</p>
           </div>
+          <p className="text-2xl font-bold text-green-700">{formatCurrency(todayStats.collection)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">From {todayStats.billCount} bills</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Users className="h-4 w-4 text-blue-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Paid Invoices</p>
-              <p className="text-xl font-bold text-green-600">{stats.paidCount}</p>
-            </div>
+            <p className="text-xs font-medium text-gray-500">Today&apos;s Patients</p>
           </div>
+          <p className="text-2xl font-bold text-gray-900">{todayStats.billCount}</p>
+          <p className="text-xs text-gray-400 mt-0.5">New: {todayStats.newCount} · Follow-up: {todayStats.followUpCount}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-lg font-bold text-green-600">₹</span>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+              <Clock className="h-4 w-4 text-amber-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Total Revenue</p>
-              <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
-            </div>
+            <p className="text-xs font-medium text-gray-500">Pending Payments</p>
           </div>
+          <p className="text-2xl font-bold text-amber-700">{formatCurrency(todayStats.pendingAmount)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{todayStats.pendingCount} bills</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              <Clock className="h-5 w-5 text-amber-600" />
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-purple-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-500">Pending Amount</p>
-              <p className="text-xl font-bold text-amber-600">{formatCurrency(stats.pendingAmount)}</p>
-            </div>
+            <p className="text-xs font-medium text-gray-500">Avg Consultation Fee</p>
           </div>
+          <p className="text-2xl font-bold text-purple-700">{formatCurrency(todayStats.avgFee)}</p>
+          <p className="text-xs text-gray-400 mt-0.5">This Month</p>
         </div>
       </div>
 
-      {/* Clinic-wise + Monthly Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Clinic Breakdown */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Building2 className="h-4 w-4 text-[#0A75BB]" />
-            <h3 className="text-sm font-semibold text-gray-900">Clinic-wise Revenue</h3>
-          </div>
-          <div className="space-y-3">
-            {Object.entries(clinicStats).map(([clinicId, data]) => (
-              <div key={clinicId}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">{clinicLabels[clinicId] || clinicId}</span>
-                  <span className="font-medium text-gray-900">{formatCurrency(data.revenue)}</span>
+      {/* Source-wise Earnings */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Earnings by Source</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {Object.entries(sourceStats).map(([key, s]) => {
+            if (s.count === 0) return null;
+            return (
+              <div key={key} className={cn('rounded-xl border p-4', s.bg, s.border)}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={cn('w-2.5 h-2.5 rounded-full', s.dot)} />
+                  <span className={cn('text-sm font-semibold', s.text)}>{s.label}</span>
                 </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#0A75BB] rounded-full" style={{ width: `${stats.totalRevenue ? (data.revenue / stats.totalRevenue * 100) : 0}%` }} />
-                </div>
-                <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                  <span>{data.count} invoice(s)</span>
-                  <span>{formatCurrency(data.pending)} pending</span>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Invoices</span>
+                    <span className="font-medium text-gray-700">{s.count}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Collected</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(s.collected)}</span>
+                  </div>
+                  {s.pending > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Pending</span>
+                      <span className="font-medium text-amber-600">{formatCurrency(s.pending)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
-            {Object.keys(clinicStats).length === 0 && !loading && (
-              <p className="text-sm text-gray-400 text-center py-4">No data yet</p>
-            )}
-          </div>
+            );
+          })}
+          {Object.values(sourceStats).every(s => s.count === 0) && !loading && (
+            <p className="text-sm text-gray-400 text-center py-4 col-span-full">No invoices yet</p>
+          )}
         </div>
+      </div>
 
-        {/* Monthly / Yearly */}
+      {/* Period Summary + Trend */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="h-4 w-4 text-[#0A75BB]" />
-            <h3 className="text-sm font-semibold text-gray-900">Period Summary</h3>
+            <h3 className="text-sm font-semibold text-gray-900">This Period</h3>
           </div>
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs font-medium text-blue-700 mb-1">This Month</p>
+              <p className="text-xs font-medium text-blue-600 mb-1">This Month</p>
               <p className="text-lg font-bold text-blue-900">{formatCurrency(monthlyStats.revenue)}</p>
-              <p className="text-xs text-blue-600">{monthlyStats.count} invoices &middot; {formatCurrency(monthlyStats.pending)} pending</p>
+              <p className="text-xs text-blue-500">{monthlyStats.count} invoices</p>
+              {monthlyStats.pending > 0 && <p className="text-xs text-amber-500">{formatCurrency(monthlyStats.pending)} pending</p>}
             </div>
             <div className="p-3 bg-purple-50 rounded-lg">
-              <p className="text-xs font-medium text-purple-700 mb-1">This Year ({currentYear})</p>
+              <p className="text-xs font-medium text-purple-600 mb-1">This Year ({currentYear})</p>
               <p className="text-lg font-bold text-purple-900">{formatCurrency(yearlyStats.revenue)}</p>
-              <p className="text-xs text-purple-600">{yearlyStats.count} invoices &middot; {formatCurrency(yearlyStats.pending)} pending</p>
+              <p className="text-xs text-purple-500">{yearlyStats.count} invoices</p>
+              {yearlyStats.pending > 0 && <p className="text-xs text-amber-500">{formatCurrency(yearlyStats.pending)} pending</p>}
             </div>
           </div>
         </div>
 
-        {/* Monthly Trend (Mini Bar Chart) */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="h-4 w-4 text-[#0A75BB]" />
-            <h3 className="text-sm font-semibold text-gray-900">6-Month Trend</h3>
+            <h3 className="text-sm font-semibold text-gray-900">6-Month Collection</h3>
           </div>
-          <div className="flex items-end gap-2 h-32">
+          <div className="flex items-end gap-1.5 h-28">
             {monthlyTrend.map((m, i) => {
               const maxRevenue = Math.max(...monthlyTrend.map((x) => x.revenue), 1);
               const height = (m.revenue / maxRevenue) * 100;
               return (
                 <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs text-gray-500">{formatCurrency(m.revenue).replace('₹', '')}</span>
+                  {m.revenue > 0 && <span className="text-[10px] text-gray-500">{formatCurrency(m.revenue).replace('₹', '')}</span>}
                   <div className="w-full flex justify-center">
                     <div
-                      className="w-6 rounded-t bg-[#0A75BB] hover:bg-[#085a94] transition-colors cursor-pointer"
-                      style={{ height: `${Math.max(height, 4)}%` }}
+                      className={cn('w-full max-w-[24px] rounded-t transition-colors cursor-pointer', m.revenue > 0 ? 'bg-[#0A75BB] hover:bg-[#085a94]' : 'bg-gray-100')}
+                      style={{ height: `${Math.max(height, m.revenue > 0 ? 8 : 3)}%` }}
                       title={`${m.label}: ${formatCurrency(m.revenue)} (${m.count} invoices)`}
                     />
                   </div>
-                  <span className="text-xs text-gray-400">{m.label}</span>
+                  <span className="text-[10px] text-gray-400">{m.label}</span>
                 </div>
               );
             })}
@@ -474,7 +520,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Smart Suggestions */}
+      {/* Smart Insights */}
       {suggestions.length > 0 && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -491,33 +537,37 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header + Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {filtered.length} invoice{filtered.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+        <button
+          onClick={() => setShowInvoiceHistory(!showInvoiceHistory)}
+          className="flex items-center gap-3 group text-left"
+        >
+          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center transition-colors', showInvoiceHistory ? 'bg-[#0A75BB]/10' : 'bg-gray-100 group-hover:bg-gray-200')}>
+            <Receipt className={cn('h-4 w-4 transition-colors', showInvoiceHistory ? 'text-[#0A75BB]' : 'text-gray-500')} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              Invoices
+              <span className="text-sm font-normal text-gray-400">({filtered.length})</span>
+              <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', showInvoiceHistory ? 'bg-[#0A75BB]/10 text-[#0A75BB]' : 'bg-gray-100 text-gray-500')}>
+                {showInvoiceHistory ? 'Hide' : 'Show'}
+              </span>
+            </h1>
+          </div>
+        </button>
         <div className="flex items-center gap-2">
           <button onClick={refreshData}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Refresh">
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          </button>
-          <button
-            onClick={downloadCSV}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            <Download className="h-4 w-4" />
-            Download Report
           </button>
           <button
             onClick={() => {
               setEditingInvoice(null);
               setShowCreateModal(true);
             }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#0A75BB] hover:bg-[#085a94] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#0A75BB] hover:bg-[#085a94] transition-colors min-h-[44px]"
           >
             <Plus className="h-4 w-4" />
             New Invoice
@@ -525,160 +575,171 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={invoiceSearch}
-              onChange={(e) => setInvoiceSearch(e.target.value)}
-              placeholder="Search by patient or invoice number..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={dateRange.from}
-              onChange={(e) => setDateRange((r) => ({ ...r, from: e.target.value }))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20"
-            />
-            <span className="text-gray-400 text-sm">to</span>
-            <input
-              type="date"
-              value={dateRange.to}
-              onChange={(e) => setDateRange((r) => ({ ...r, to: e.target.value }))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20"
-            />
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'ALL')}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20"
-          >
-            <option value="ALL">All Status</option>
-            <option value="PAID">Paid</option>
-            <option value="PENDING">Pending</option>
-            <option value="PARTIAL">Partial</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Invoice List — Desktop Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hidden md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice #</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Clinic</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Date</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Paid</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Payment</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map((inv) => {
-                const sc = statusConfig[inv.status];
-                return (
-                  <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm font-mono font-medium text-[#0A75BB]">{inv.invoiceNumber}</span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="text-sm font-medium text-gray-900">{inv.patientName}</span>
-                      {inv.patientPhone && (
-                        <p className="text-xs text-gray-500">{inv.patientPhone}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 hidden lg:table-cell">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                        {clinicLabels[inv.clinicId] || inv.clinicId}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 hidden md:table-cell">
-                      <span className="text-sm text-gray-600">{formatDate(inv.date)}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <span className="text-sm font-semibold text-gray-900">{formatCurrency(inv.grandTotal)}</span>
-                    </td>
-                    <td className="px-4 py-3.5 text-right hidden lg:table-cell">
-                      <span className={cn('text-sm', inv.paidAmount >= inv.grandTotal ? 'text-green-600 font-medium' : 'text-gray-600')}>
-                        {formatCurrency(inv.paidAmount)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 hidden xl:table-cell">
-                      <span className="text-xs text-gray-600">
-                        {inv.paidAmount > 0 ? (inv.paymentMethod === 'CASH' ? 'Cash' : inv.paymentMethod === 'UPI' ? 'UPI' : inv.paymentMethod === 'CARD' ? 'Card' : inv.paymentMethod === 'BANK_TRANSFER' ? 'Bank Transfer' : inv.paymentMethod === 'CHEQUE' ? 'Cheque' : inv.paymentMethod === 'ONLINE' ? 'Online' : inv.payments?.[0]?.method || '—') : '—'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border', sc.bg, sc.color)}>
-                        {sc.icon}
-                        {sc.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => setSelectedInvoice(inv)} className="p-2.5 rounded-lg hover:bg-[#0A75BB]/10 text-[#0A75BB] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="View">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingInvoice(inv);
-                            setShowCreateModal(true);
-                          }}
-                          className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                          title="Edit"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => handlePrint(inv)} className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Print">
-                          <Printer className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => handleWhatsApp(inv)} className="p-2.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="WhatsApp">
-                          <MessageCircle className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Delete">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Invoice List — Mobile Cards */}
-      <div className="md:hidden space-y-3">
-        {filtered.map((inv) => {
-          const sc = statusConfig[inv.status];
-          const paymentLabel = inv.paidAmount > 0
-            ? (inv.paymentMethod === 'CASH' ? 'Cash' : inv.paymentMethod === 'UPI' ? 'UPI' : inv.paymentMethod === 'CARD' ? 'Card' : inv.paymentMethod === 'BANK_TRANSFER' ? 'Bank Transfer' : inv.paymentMethod === 'CHEQUE' ? 'Cheque' : inv.paymentMethod === 'ONLINE' ? 'Online' : inv.payments?.[0]?.method || '—')
-            : '—';
-          return (
-            <div key={inv.id} className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <span className="text-sm font-mono font-medium text-[#0A75BB]">{inv.invoiceNumber}</span>
-                  <p className="text-sm font-medium text-gray-900 mt-0.5">{inv.patientName}</p>
-                  {inv.patientPhone && <p className="text-xs text-gray-500">{inv.patientPhone}</p>}
-                </div>
-                <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0', sc.bg, sc.color)}>
-                  {sc.icon} {sc.label}
-                </span>
+      {/* Invoice History — collapsible */}
+      {showInvoiceHistory && (
+        <>
+          {/* Filters */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={invoiceSearch}
+                  onChange={(e) => setInvoiceSearch(e.target.value)}
+                  placeholder="Search by patient or invoice number..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs mt-3 pt-3 border-t border-gray-100">
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateRange.from}
+                  onChange={(e) => setDateRange((r) => ({ ...r, from: e.target.value }))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]"
+                />
+                <span className="text-gray-400 text-sm">to</span>
+                <input
+                  type="date"
+                  value={dateRange.to}
+                  onChange={(e) => setDateRange((r) => ({ ...r, to: e.target.value }))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as InvoiceStatus | 'ALL')}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]"
+              >
+                <option value="ALL">All Status</option>
+                <option value="PAID">Paid</option>
+                <option value="PENDING">Pending</option>
+                <option value="PARTIAL">Partial</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Invoice List — Desktop Table */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Invoice #</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Clinic</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Date</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Visit</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Paid</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Payment</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((inv) => {
+                    const sc = statusConfig[inv.status];
+                    return (
+                      <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-3.5">
+                          <span className="text-sm font-mono font-medium text-[#0A75BB]">{inv.invoiceNumber}</span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className="text-sm font-medium text-gray-900">{inv.patientName}</span>
+                          {inv.patientPhone && (
+                            <p className="text-xs text-gray-500">{inv.patientPhone}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            {clinicLabels[inv.clinicId] || inv.clinicId}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 hidden md:table-cell">
+                          <span className="text-sm text-gray-600">{formatDate(inv.date)}</span>
+                        </td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                          {inv.visitType === 'FOLLOW_UP' ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Follow-up</span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">New</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <span className="text-sm font-semibold text-gray-900">{formatCurrency(inv.grandTotal)}</span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right hidden lg:table-cell">
+                          <span className={cn('text-sm', inv.paidAmount >= inv.grandTotal ? 'text-green-600 font-medium' : 'text-gray-600')}>
+                            {formatCurrency(inv.paidAmount)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 hidden xl:table-cell">
+                          <span className="text-xs text-gray-600">
+                            {inv.paidAmount > 0 ? (inv.paymentMethod === 'CASH' ? 'Cash' : inv.paymentMethod === 'UPI' ? 'UPI' : inv.paymentMethod === 'CARD' ? 'Card' : inv.paymentMethod === 'BANK_TRANSFER' ? 'Bank Transfer' : inv.paymentMethod === 'CHEQUE' ? 'Cheque' : inv.paymentMethod === 'ONLINE' ? 'Online' : inv.payments?.[0]?.method || '—') : '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border', sc.bg, sc.color)}>
+                            {sc.icon}
+                            {sc.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => setSelectedInvoice(inv)} className="p-2.5 rounded-lg hover:bg-[#0A75BB]/10 text-[#0A75BB] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="View">
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingInvoice(inv);
+                                setShowCreateModal(true);
+                              }}
+                              className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                              title="Edit"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handlePrint(inv)} className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Print">
+                              <Printer className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleWhatsApp(inv)} className="p-2.5 rounded-lg hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="WhatsApp">
+                              <MessageCircle className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleDeleteInvoice(inv.id)} className="p-2.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" title="Delete">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Invoice List — Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filtered.map((inv) => {
+              const sc = statusConfig[inv.status];
+              const paymentLabel = inv.paidAmount > 0
+                ? (inv.paymentMethod === 'CASH' ? 'Cash' : inv.paymentMethod === 'UPI' ? 'UPI' : inv.paymentMethod === 'CARD' ? 'Card' : inv.paymentMethod === 'BANK_TRANSFER' ? 'Bank Transfer' : inv.paymentMethod === 'CHEQUE' ? 'Cheque' : inv.paymentMethod === 'ONLINE' ? 'Online' : inv.payments?.[0]?.method || '—')
+                : '—';
+              return (
+                <div key={inv.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <span className="text-sm font-mono font-medium text-[#0A75BB]">{inv.invoiceNumber}</span>
+                      <p className="text-sm font-medium text-gray-900 mt-0.5">{inv.patientName}</p>
+                      {inv.patientPhone && <p className="text-xs text-gray-500">{inv.patientPhone}</p>}
+                    </div>
+                    <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0', sc.bg, sc.color)}>
+                      {sc.icon} {sc.label}
+                    </span>
+                  </div>
+                <div className="grid grid-cols-2 gap-2 text-xs mt-3 pt-3 border-t border-gray-100">
                 <div>
                   <span className="text-gray-500">Date</span>
                   <p className="text-gray-900 font-medium">{formatDate(inv.date)}</p>
@@ -688,41 +749,51 @@ export default function BillingPage() {
                   <p className="text-gray-900 font-medium">{clinicLabels[inv.clinicId] || inv.clinicId}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Amount</span>
-                  <p className="text-gray-900 font-semibold">{formatCurrency(inv.grandTotal)}</p>
+                  <span className="text-gray-500">Visit</span>
+                  <p className="font-medium">{inv.visitType === 'FOLLOW_UP' ? (
+                    <span className="text-blue-700">Follow-up</span>
+                  ) : (
+                    <span className="text-green-700">New</span>
+                  )}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Paid</span>
-                  <p className={cn('font-medium', inv.paidAmount >= inv.grandTotal ? 'text-green-600' : 'text-gray-900')}>{formatCurrency(inv.paidAmount)}</p>
-                </div>
-                {paymentLabel !== '—' && (
-                  <div>
-                    <span className="text-gray-500">Payment</span>
-                    <p className="text-gray-900 font-medium">{paymentLabel}</p>
+                  <span className="text-gray-500">Amount</span>
+                      <p className="text-gray-900 font-semibold">{formatCurrency(inv.grandTotal)}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Paid</span>
+                      <p className={cn('font-medium', inv.paidAmount >= inv.grandTotal ? 'text-green-600' : 'text-gray-900')}>{formatCurrency(inv.paidAmount)}</p>
+                    </div>
+                    {paymentLabel !== '—' && (
+                      <div>
+                        <span className="text-gray-500">Payment</span>
+                        <p className="text-gray-900 font-medium">{paymentLabel}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                <button onClick={() => setSelectedInvoice(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#0A75BB]/10 text-[#0A75BB] text-sm font-medium min-h-[44px]">
-                  <Eye className="h-4 w-4" /> View
-                </button>
-                <button onClick={() => handlePrint(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium min-h-[44px]">
-                  <Printer className="h-4 w-4" /> Print
-                </button>
-                <button onClick={() => handleWhatsApp(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium min-h-[44px]">
-                  <MessageCircle className="h-4 w-4" /> WhatsApp
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                    <button onClick={() => setSelectedInvoice(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-[#0A75BB]/10 text-[#0A75BB] text-sm font-medium min-h-[44px]">
+                      <Eye className="h-4 w-4" /> View
+                    </button>
+                    <button onClick={() => { setEditingInvoice(inv); setShowCreateModal(true); }} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium min-h-[44px]">
+                      <Edit2 className="h-4 w-4" /> Edit
+                    </button>
+                    <button onClick={() => handleWhatsApp(inv)} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium min-h-[44px]">
+                      <MessageCircle className="h-4 w-4" /> WhatsApp
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-      {filtered.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-500">
-          <Receipt className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-          <p className="text-sm font-medium">{loading ? 'Loading invoices...' : 'No invoices found'}</p>
-        </div>
+          {filtered.length === 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-500">
+              <Receipt className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-medium">{loading ? 'Loading invoices...' : 'No invoices found'}</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Invoice Detail Modal */}

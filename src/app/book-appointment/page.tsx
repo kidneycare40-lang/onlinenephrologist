@@ -205,8 +205,9 @@ function BookingForm() {
         'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
       };
       const mappedClinic = BOOKING_CLINIC_MAP[formData.clinicId] || formData.clinicId || '';
+      const uhidPrefix = mappedClinic === 'psri-delhi' ? 'PSRI' : 'KCC';
       const patientRecord = {
-        id: `pt-${id}`,
+        id: bookingId,
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone,
@@ -218,7 +219,7 @@ function BookingForm() {
         consultationType: formData.consultationType,
         isActive: true,
         isChronic: false,
-        uhid: '',
+        uhid: `${uhidPrefix}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`,
         lastVisit: formData.date || new Date().toISOString().split('T')[0],
         totalVisits: 1,
         createdAt: new Date().toISOString(),

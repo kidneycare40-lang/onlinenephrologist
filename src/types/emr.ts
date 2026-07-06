@@ -263,6 +263,8 @@ export type InvoiceStatus = 'PAID' | 'PENDING' | 'PARTIAL' | 'CANCELLED';
 
 export type PaymentMethod = 'CASH' | 'UPI' | 'CARD' | 'BANK_TRANSFER' | 'CHEQUE' | 'ONLINE';
 
+export type VisitType = 'NEW' | 'FOLLOW_UP';
+
 export interface InvoiceItem {
   id: string;
   description: string;
@@ -295,6 +297,7 @@ export interface EMRInvoice {
   patientAddress?: string;
   doctorName: string;
   clinicId: string;
+  visitType?: VisitType;
   date: string;
   dueDate: string;
   items: InvoiceItem[];

@@ -55,7 +55,7 @@ export default function BookOnlineConsultationPage() {
     // Also add patient to emr_added_patients so they appear in EMR Patients list
     try {
       const patientRecord = {
-        id: `pt-${bookingId}`,
+        id: bookingId,
         firstName: formData.name.split(' ')[0] || formData.name,
         lastName: formData.name.split(' ').slice(1).join(' ') || '',
         phone: formData.phone || '',
@@ -67,7 +67,7 @@ export default function BookOnlineConsultationPage() {
         consultationType: 'online_intl' as const,
         isActive: true,
         isChronic: false,
-        uhid: '',
+        uhid: `KCC-INT-${String(Math.floor(Math.random() * 900) + 100)}`,
         lastVisit: formData.date || new Date().toISOString().split('T')[0],
         totalVisits: 1,
         createdAt: new Date().toISOString(),

@@ -236,7 +236,38 @@ export default function ConsultationPage() {
       }
 
       // Check online bookings - auto-create patient + consultation
+      // First check if patient already exists in emr_added_patients
+      const existingPat = storedPatients.find((p) => p.id === id);
       const booking = onlineBookings.find((b) => b.bookingId === id);
+      if (existingPat && !storedConsultations.find((c) => c.patientId === id)) {
+        // Patient exists but no consultation yet — create one
+        const patClinicId = existingPat.clinicId || 'online';
+        const newConsult: EMRConsultation = {
+          id: `consult-${existingPat.id}`,
+          patientId: existingPat.id,
+          clinicId: patClinicId,
+          date: booking?.date || new Date().toISOString().split('T')[0],
+          doctorName: 'Dr. Rajesh Goel',
+          status: 'IN_PROGRESS',
+          tokenId: `#${existingPat.id.slice(-6).toUpperCase()}`,
+          chiefComplaint: booking?.reason || '',
+          hpi: '',
+          examination: '',
+          vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
+          diagnoses: [],
+          prescriptions: [],
+          investigations: [],
+          advice: '',
+          notes: '',
+          followUpDate: '',
+        };
+        storedConsultations.push(newConsult);
+        localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
+        setConsultation(newConsult);
+        setPatient(existingPat);
+        setIsLoadingData(false);
+        return;
+      }
       if (booking) {
         const bookingClinicId = booking.clinicId === 'online' ? 'online' : booking.clinicId;
         const patientId = `obp-${booking.bookingId}`;
