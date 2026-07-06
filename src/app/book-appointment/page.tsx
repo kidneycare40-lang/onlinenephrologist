@@ -468,7 +468,7 @@ function BookingForm() {
             "@type": "Physician",
             "name": "Dr. Rajesh Goel",
             "medicalSpecialty": "Nephrology",
-            "description": "Senior Nephrologist & Kidney Transplant Physician with 15+ years experience",
+            "description": "Senior Nephrologist & Kidney Transplant Physician with 18+ years experience",
             "availableService": [
               { "@type": "MedicalProcedure", "name": "Online Video Consultation" },
               { "@type": "MedicalProcedure", "name": "International Video Consultation" },
