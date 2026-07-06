@@ -389,6 +389,28 @@ export default function BillingPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={refreshData}
+            className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            title="Refresh">
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          </button>
+          <button
+            onClick={() => {
+              setEditingInvoice(null);
+              setShowCreateModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#0A75BB] hover:bg-[#085a94] transition-colors min-h-[44px]"
+          >
+            <Plus className="h-4 w-4" />
+            New Invoice
+          </button>
+        </div>
+      </div>
+
       {/* Top Stats — 4 cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -537,45 +559,15 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Header + Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <button
-          onClick={() => setShowInvoiceHistory(!showInvoiceHistory)}
-          className="flex items-center gap-3 group text-left"
-        >
-          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center transition-colors', showInvoiceHistory ? 'bg-[#0A75BB]/10' : 'bg-gray-100 group-hover:bg-gray-200')}>
-            <Receipt className={cn('h-4 w-4 transition-colors', showInvoiceHistory ? 'text-[#0A75BB]' : 'text-gray-500')} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              Invoices
-              <span className="text-sm font-normal text-gray-400">({filtered.length})</span>
-              <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', showInvoiceHistory ? 'bg-[#0A75BB]/10 text-[#0A75BB]' : 'bg-gray-100 text-gray-500')}>
-                {showInvoiceHistory ? 'Hide' : 'Show'}
-              </span>
-            </h1>
-          </div>
-        </button>
-        <div className="flex items-center gap-2">
-          <button onClick={refreshData}
-            className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-            title="Refresh">
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          </button>
-          <button
-            onClick={() => {
-              setEditingInvoice(null);
-              setShowCreateModal(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#0A75BB] hover:bg-[#085a94] transition-colors min-h-[44px]"
-          >
-            <Plus className="h-4 w-4" />
-            New Invoice
-          </button>
-        </div>
-      </div>
-
       {/* Invoice History — collapsible */}
+      <button onClick={() => setShowInvoiceHistory(!showInvoiceHistory)}
+        className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+        <Receipt className="h-4 w-4" />
+        Invoices ({filtered.length})
+        <span className={cn('text-xs px-2 py-0.5 rounded-full', showInvoiceHistory ? 'bg-[#0A75BB]/10 text-[#0A75BB]' : 'bg-gray-100 text-gray-500')}>
+          {showInvoiceHistory ? 'Hide' : 'Show'}
+        </span>
+      </button>
       {showInvoiceHistory && (
         <>
           {/* Filters */}

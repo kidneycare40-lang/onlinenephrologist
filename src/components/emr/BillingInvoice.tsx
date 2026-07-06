@@ -225,7 +225,7 @@ const BillingInvoice = forwardRef<HTMLDivElement, BillingInvoiceProps>(
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                 <span style={{ color: '#6b7280' }}>Payment Mode:</span>
                 <span style={{ color: '#111827', fontWeight: '600' }}>
-                  {invoice.paymentMethod === 'CASH' ? '💵 Cash' : invoice.paymentMethod === 'UPI' ? '📱 UPI' : invoice.paymentMethod === 'CARD' ? '💳 Card' : invoice.paymentMethod === 'BANK_TRANSFER' ? '🏦 Bank Transfer' : invoice.paymentMethod === 'CHEQUE' ? '📄 Cheque' : invoice.paymentMethod === 'ONLINE' ? '🌐 Online' : invoice.payments?.[0]?.method || '—'}
+                  {invoice.paymentMethod === 'CASH' ? '💵 Cash' : invoice.paymentMethod === 'UPI' ? '📱 UPI' : invoice.paymentMethod === 'BANK_TRANSFER' ? '🏦 Bank Transfer' : invoice.paymentMethod === 'PAYPAL' ? '🅿️ PayPal' : invoice.paymentMethod === 'CHEQUE' ? '📄 Cheque' : invoice.paymentMethod === 'ONLINE' ? '🌐 Online' : invoice.payments?.[0]?.method || '—'}
                 </span>
               </div>
             )}
