@@ -128,10 +128,20 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
       const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
       const consultationList = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
       const appointments = JSON.parse(localStorage.getItem('emr_appointments') || '[]');
-      const bookingPatients = bookings.map((b: any) => ({
-        id: b.patientId || `obp-${b.bookingId}`, firstName: b.firstName || '', lastName: b.lastName || '',
-        phone: b.phone || '', uhid: '', gender: b.gender || 'Male', clinicId: b.clinicId || 'online',
-      }));
+      const BOOKING_CLINIC_MAP: Record<string, string> = {
+        'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
+        'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi',
+        'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
+      };
+      const bookingPatients = bookings.map((b: any) => {
+        const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || 'online';
+        return {
+          id: b.bookingId, firstName: b.firstName || '', lastName: b.lastName || '',
+          phone: b.phone || '', email: b.email || '',
+          uhid: `${mappedClinic === 'psri-delhi' ? 'PSRI' : 'KCC'}-${new Date().getFullYear()}-${b.bookingId.slice(-3).toUpperCase()}` || '',
+          gender: b.gender || 'Male', clinicId: mappedClinic, source: 'website',
+        };
+      });
       const addedIds = new Set(added.map((p: any) => p.id));
       const bookingIds = new Set(bookingPatients.map((p: any) => p.id));
       const apptIds = new Set();
@@ -141,24 +151,37 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
           apptIds.add(c.patientId);
           const nameParts = (c.patientName || '').split(' ').filter(Boolean);
           return { id: c.patientId, firstName: nameParts[0] || c.patientName || '', lastName: nameParts.slice(1).join(' ') || '',
-            phone: c.patientPhone || '', uhid: c.patientUHID || '', gender: c.patientGender || 'Male', clinicId: c.clinicId || 'kcc-faridabad' };
+            phone: c.patientPhone || '', email: '', uhid: c.patientUHID || '', gender: c.patientGender || 'Male', clinicId: c.clinicId || 'kcc-faridabad' };
         });
       const apptOnlyPatients = appointments
         .filter((a: any) => a.patientId && !addedIds.has(a.patientId) && !bookingIds.has(a.patientId) && !apptIds.has(a.patientId))
         .map((a: any) => {
           const nameParts = (a.patientName || '').split(' ').filter(Boolean);
           return { id: a.patientId, firstName: nameParts[0] || a.patientName || '', lastName: nameParts.slice(1).join(' ') || '',
-            phone: a.patientPhone || '', uhid: '', gender: 'Male' as const, clinicId: a.clinicId || 'kcc-faridabad' };
+            phone: a.patientPhone || '', email: '', uhid: '', gender: 'Male' as const, clinicId: a.clinicId || 'kcc-faridabad' };
         });
-      const combined = [...mockPatients, ...added, ...bookingPatients, ...consultOnlyPatients, ...apptOnlyPatients];
-      setAllPatients(combined.filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === p.id) === i));
+      const combined: any[] = [...mockPatients];
+      for (const p of added) {
+        if (!combined.some((x: any) => x.id === p.id)) {
+          combined.push({ id: p.id, firstName: p.firstName || '', lastName: p.lastName || '',
+            phone: p.phone || '', email: p.email || '', uhid: p.uhid || '', gender: p.gender || 'Male',
+            clinicId: p.clinicId || 'kcc-faridabad', source: p.source || '' });
+        }
+      }
+      for (const p of bookingPatients) {
+        if (!combined.some((x: any) => x.id === p.id)) combined.push(p);
+      }
+      for (const p of consultOnlyPatients) { if (!combined.some((x: any) => x.id === p.id)) combined.push(p); }
+      for (const p of apptOnlyPatients) { if (!combined.some((x: any) => x.id === p.id)) combined.push(p); }
+      setAllPatients(combined);
     } catch {}
   };
 
   const filteredPatients = allPatients.filter(
     (p) => (p.firstName || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
       (p.lastName || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
-      (p.phone || '').includes(patientSearch) || (p.uhid || '').toLowerCase().includes(patientSearch.toLowerCase())
+      (p.phone || '').includes(patientSearch) || (p.email || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
+      (p.uhid || '').toLowerCase().includes(patientSearch.toLowerCase())
   );
 
   const selectPatient = (patient: any) => {

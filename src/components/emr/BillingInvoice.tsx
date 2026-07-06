@@ -157,8 +157,8 @@ const BillingInvoice = forwardRef<HTMLDivElement, BillingInvoiceProps>(
             </div>
             <div style={{ marginBottom: '8px' }}>
               <span style={{ color: '#6b7280' }}>Consultation: </span>
-              <span style={{ display: 'inline-block', background: clinicId === 'online' ? '#ecfdf5' : '#eff6ff', color: clinicId === 'online' ? '#065f46' : '#1e40af', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
-                {clinicId === 'online' ? 'Online Video Consultation' : clinicId === 'kcc-saket' ? 'Kidney Care Centre - Saket' : clinicId === 'psri-delhi' ? 'PSRI Hospital - Delhi' : 'Kidney Care Centre - Faridabad'}
+              <span style={{ display: 'inline-block', background: invoice.clinicId === 'online' || invoice.clinicId === 'online-intl' ? '#ecfdf5' : '#eff6ff', color: invoice.clinicId === 'online' || invoice.clinicId === 'online-intl' ? '#065f46' : '#1e40af', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
+                {invoice.clinicId === 'online' ? 'Online Consultation' : invoice.clinicId === 'online-intl' ? 'International Consultation' : invoice.clinicId === 'kcc-saket' ? 'Kidney Care Centre — Saket' : invoice.clinicId === 'psri-delhi' ? 'PSRI Hospital — Delhi' : 'Kidney Care Centre — Faridabad'}
               </span>
             </div>
             <div style={{ marginBottom: '12px' }}>
