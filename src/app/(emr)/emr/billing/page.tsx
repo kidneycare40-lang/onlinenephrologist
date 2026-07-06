@@ -19,6 +19,7 @@ const clinicLabels: Record<string, string> = {
   'kcc-saket': 'KCC Saket',
   'psri-delhi': 'PSRI Delhi',
   'online': 'Online',
+  'online-intl': 'Online Intl',
 };
 
 const statusConfig: Record<InvoiceStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {

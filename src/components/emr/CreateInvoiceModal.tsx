@@ -161,11 +161,25 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
             phone: a.patientPhone || '', email: '', uhid: '', gender: 'Male' as const, clinicId: a.clinicId || 'kcc-faridabad' };
         });
       const combined: any[] = [...mockPatients];
+      // Build a lookup from bookings for correct clinicId
+      const bookingClinicLookup: Record<string, string> = {};
+      for (const b of bookings) {
+        const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || 'online';
+        const phone = (b.phone || '').replace(/\s/g, '');
+        const email = (b.email || '').toLowerCase();
+        if (phone) bookingClinicLookup[`phone:${phone}`] = mappedClinic;
+        if (email) bookingClinicLookup[`email:${email}`] = mappedClinic;
+        bookingClinicLookup[`id:${b.bookingId}`] = mappedClinic;
+      }
       for (const p of added) {
         if (!combined.some((x: any) => x.id === p.id)) {
+          // Cross-reference with bookings to get correct clinicId
+          const phone = (p.phone || '').replace(/\s/g, '');
+          const email = (p.email || '').toLowerCase();
+          const bookingClinic = bookingClinicLookup[`id:${p.id}`] || bookingClinicLookup[`phone:${phone}`] || bookingClinicLookup[`email:${email}`] || null;
           combined.push({ id: p.id, firstName: p.firstName || '', lastName: p.lastName || '',
             phone: p.phone || '', email: p.email || '', uhid: p.uhid || '', gender: p.gender || 'Male',
-            clinicId: p.clinicId || 'kcc-faridabad', source: p.source || '' });
+            clinicId: bookingClinic || p.clinicId || 'kcc-faridabad', source: p.source || '' });
         }
       }
       for (const p of bookingPatients) {
