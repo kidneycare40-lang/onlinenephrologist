@@ -56,7 +56,7 @@ const doctorFaqs = [
   },
   {
     question: 'What is the consultation fee for Dr Rajesh Goel?',
-    answer: 'The consultation fee is ₹1000 for both online and in-clinic visits. This covers a comprehensive evaluation, personalized treatment plan, and follow-up guidance.',
+    answer: 'The consultation fee starts from ₹500 for KCC Faridabad, ₹1200 for KCC Saket, ₹1000 for PSRI Hospital, and ₹500 for online consultation within India. International patients can consult for $20 USD. This covers a comprehensive evaluation, personalized treatment plan, and follow-up guidance.',
   },
   {
     question: 'What kidney conditions does Dr Rajesh Goel treat?',

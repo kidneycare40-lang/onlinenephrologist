@@ -26,8 +26,9 @@ interface CreateInvoiceModalProps {
 const clinicFeeMap: Record<string, { description: string; rate: number }> = {
   'kcc-faridabad': { description: 'Consultation fee', rate: 500 },
   'kcc-saket': { description: 'Consultation fee', rate: 1200 },
-  'psri-delhi': { description: 'Consultation fee', rate: 500 },
+  'psri-delhi': { description: 'Consultation fee', rate: 1000 },
   'online': { description: 'Online Consultation fee', rate: 500 },
+  'online-intl': { description: 'International Consultation fee', rate: 1500 },
 };
 
 const serviceTemplates = [

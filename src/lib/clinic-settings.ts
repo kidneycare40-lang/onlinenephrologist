@@ -111,7 +111,7 @@ const defaultClinics: ClinicDetail[] = [
     website: 'www.kidneycarecentre.in',
     gstNumber: '07AABCU9603R1ZM',
     panNumber: 'AABCU9603R',
-    fee: 1200,
+    fee: 1000,
     type: 'offline',
     color: 'purple',
     features: ['Multi-specialty hospital', 'Advanced diagnostics', 'Pay at hospital'],

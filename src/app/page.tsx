@@ -13,7 +13,7 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Online Nephrologist Consultation India | Dr Rajesh Goel',
   description:
-    'Consult Dr Rajesh Goel online. Best nephrologist in Delhi (18+ yrs). Video consultation for CKD, kidney failure, dialysis, transplant. Book now from ₹1000.',
+    'Consult Dr Rajesh Goel online. Best nephrologist in Delhi (18+ yrs). Video consultation for CKD, kidney failure, dialysis, transplant. Book now from ₹500.',
   keywords: [
     'online nephrologist consultation',
     'consult nephrologist online',
@@ -90,11 +90,11 @@ const faqs = [
   { question: 'Is online kidney consultation effective?', answer: 'Yes, online kidney consultation is highly effective for most non-emergency situations. Dr Rajesh Goel can review your blood reports, urine tests, ultrasound reports, and medication history through video call. He provides the same quality diagnosis, treatment planning, and prescription as an in-person visit. For procedures like dialysis or physical examination, an in-clinic visit may be recommended.' },
   { question: 'What reports should I upload before an online consultation?', answer: 'Before your online consultation, please have these ready: Recent kidney function tests (creatinine, eGFR, BUN, electrolytes), complete blood count (CBC), urine routine and microscopy, ultrasound abdomen (if done), any previous biopsy reports, current medication list, and blood pressure records if available. Upload these through our booking portal or share via WhatsApp before your appointment.' },
   { question: 'Can I get kidney treatment without visiting the clinic?', answer: 'Yes, for many kidney conditions, Dr Rajesh Goel can prescribe medications and treatment plans through online consultation. This includes management of CKD stages 1-4, blood pressure control, diabetes-related kidney issues, dietary guidance, and medication adjustments. For dialysis, transplant evaluation, or emergency situations, an in-person visit is necessary.' },
-  { question: 'Can international patients consult online?', answer: 'Absolutely. Dr Rajesh Goel regularly consults with international patients from the USA, UK, UAE, Singapore, and other countries. The consultation fee for international patients is $20 USD (₹1500). We can coordinate across time zones and provide treatment plans that can be followed locally with your referring physician.' },
+  { question: 'Can international patients consult online?', answer: 'Absolutely. Dr Rajesh Goel regularly consults with international patients from the USA, UK, UAE, Singapore, and other countries. The consultation fee for international patients is $20 USD. We can coordinate across time zones and provide treatment plans that can be followed locally with your referring physician.' },
   { question: 'Can I get a second opinion from Dr Rajesh Goel?', answer: 'Yes, Dr Rajesh Goel frequently provides second opinions for kidney disease patients. If you have been diagnosed with CKD, kidney failure, or need a transplant evaluation, a second opinion from an experienced nephrologist can help you understand your options better. Simply book an online consultation and share your existing reports.' },
   { question: 'Can medicines be prescribed online in India?', answer: 'Yes, under Indian medical regulations, registered doctors can prescribe medicines through online consultation. Dr Rajesh Goel will provide a detailed prescription after your video consultation. You can purchase the prescribed medicines from any pharmacy. For certain controlled substances, an in-person consultation may be required.' },
   { question: 'What diseases does a nephrologist treat?', answer: 'A nephrologist treats all kidney-related conditions including Chronic Kidney Disease (CKD), Acute Kidney Injury (AKI), kidney stones, diabetic kidney disease, hypertensive kidney disease, nephrotic syndrome, glomerulonephritis, polycystic kidney disease, electrolyte disorders, kidney infections, proteinuria, hematuria, and prepares patients for dialysis or kidney transplant.' },
-  { question: 'What is the consultation fee?', answer: 'The consultation fee for domestic patients is ₹1000 and for international patients it is $20 USD (₹1500). This covers a comprehensive evaluation, review of all reports, personalized treatment plan, prescription, and follow-up guidance. There are no hidden charges.' },
+  { question: 'What is the consultation fee?', answer: 'The consultation fee starts from ₹500 for in-clinic visits at KCC Faridabad, ₹1000 at PSRI Hospital, ₹1200 at KCC Saket, and ₹500 for online consultation within India. International patients can consult for $20 USD. This covers a comprehensive evaluation, review of all reports, personalized treatment plan, prescription, and follow-up guidance. There are no hidden charges.' },
   { question: 'How long is the online consultation?', answer: 'Online consultations with Dr Rajesh Goel typically last 15-30 minutes, depending on the complexity of your case. This is sufficient time to review your reports, discuss symptoms, explain the diagnosis, and create a treatment plan. Follow-up consultations may be shorter.' },
   { question: 'What is Chronic Kidney Disease (CKD)?', answer: 'Chronic Kidney Disease (CKD) is a condition where the kidneys gradually lose their ability to filter waste from the blood. It is classified into 5 stages based on eGFR (estimated Glomerular Filtration Rate). Early stages (1-2) may have no symptoms, while advanced stages (4-5) can cause fatigue, swelling, nausea, and eventually require dialysis or transplant. Common causes include diabetes, high blood pressure, and glomerulonephritis.' },
   { question: 'When should I see a nephrologist for high creatinine?', answer: 'You should consult a nephrologist if your serum creatinine is consistently above 1.2 mg/dL (men) or 1.0 mg/dL (women), or if there is a sudden rise in creatinine levels. A rising creatinine indicates declining kidney function. Dr Rajesh Goel can evaluate the cause, stage the kidney disease, and start appropriate treatment to slow progression.' },
@@ -150,7 +150,7 @@ export default function HomePage() {
                 Consult <strong className="text-white">Dr Rajesh Goel</strong>, one of the best nephrologists in Delhi, online from anywhere in India or abroad. <strong className="text-white">18+ years of experience</strong> treating CKD, kidney failure, dialysis, transplant, and all kidney conditions.
               </p>
               <p className="text-sm text-blue-200 mb-8 leading-relaxed">
-                Expert kidney specialist online consultation via video call. Get diagnosis, treatment plan, and prescription without leaving your home. Starting at just ₹1000.
+                Expert kidney specialist online consultation via video call. Get diagnosis, treatment plan, and prescription without leaving your home. Starting at just ₹500.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
                 <Link href="/book-appointment" className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-base sm:text-lg">
@@ -233,7 +233,7 @@ export default function HomePage() {
               { icon: '🩺', title: '18+ Years Experience', desc: 'DNB Nephrology from PSRI Hospital. Kidney Transplant Fellowship from Medanta Hospital. Expert in all kidney diseases.' },
               { icon: '🏥', title: '3 Clinic Locations', desc: 'PSRI Hospital Saket, Kidney Care Centre Faridabad, and Kidney Care Centre Saket. Plus online consultation from anywhere.' },
               { icon: '📹', title: 'Video Consultation', desc: 'Consult from home via video call. Same quality care — report review, diagnosis, prescription, and follow-up guidance.' },
-              { icon: '🌍', title: 'International Patients', desc: 'Patients from USA, UK, UAE, Singapore consult regularly. ₹1500 ($20) for international patients. Time zone flexible.' },
+              { icon: '🌍', title: 'International Patients', desc: 'Patients from USA, UK, UAE, Singapore consult regularly. $20 USD for international patients. Time zone flexible.' },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-all">
                 <div className="text-3xl mb-3">{item.icon}</div>
@@ -537,7 +537,7 @@ export default function HomePage() {
       <section className="py-8 sm:py-16 bg-gradient-to-br from-[#0A75BB] to-[#063d5c] text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Book Your Online Nephrologist Consultation Today</h2>
-          <p className="text-blue-100 mb-4 text-lg">Don&apos;t wait — get expert kidney care from Dr Rajesh Goel. Consultation starting at ₹1000.</p>
+          <p className="text-blue-100 mb-4 text-lg">Don&apos;t wait — get expert kidney care from Dr Rajesh Goel. Consultation starting at ₹500.</p>
           <p className="text-blue-200 mb-8 text-sm">WhatsApp us at +91 9818235613 or book directly through our website.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/book-appointment" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-lg">

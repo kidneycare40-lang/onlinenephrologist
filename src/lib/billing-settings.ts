@@ -44,7 +44,7 @@ const defaultSettings: BillingSettings = {
   clinicFees: {
     'kcc-faridabad': 500,
     'kcc-saket': 1200,
-    'psri-delhi': 500,
+    'psri-delhi': 1000,
     'online': 500,
   },
   services: [

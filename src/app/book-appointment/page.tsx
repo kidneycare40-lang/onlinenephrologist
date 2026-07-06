@@ -245,7 +245,7 @@ function BookingForm() {
   const today = new Date().toISOString().split('T')[0];
   const selectedClinic = clinics.find(c => c.id === formData.clinicId);
   const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
-  const consultFee = formData.consultationType === 'online_intl' ? 1500 : (selectedClinic?.fee || 1000);
+  const consultFee = formData.consultationType === 'online_intl' ? (selectedClinic?.fee || 20) : (selectedClinic?.fee || 500);
 
   const isToday = formData.date === today;
   const now = new Date();
@@ -777,7 +777,7 @@ function BookingForm() {
                           {formData.consultationType === 'online_intl' ? 'Mon-Sun 7AM-11PM IST' : (clinics.find(c => c.id === 'online')?.timing || '')}
                         </span>
                         <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">
-                          {formData.consultationType === 'online_intl' ? '$20 USD / ₹1500' : '₹500 - ₹1000'}
+                          {formData.consultationType === 'online_intl' ? `$20 USD` : `₹${selectedClinic?.fee || 500}`}
                         </span>
                       </div>
                       <ul className="mt-3 space-y-1.5">

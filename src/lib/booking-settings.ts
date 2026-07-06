@@ -78,11 +78,11 @@ export interface BookingSettings {
 }
 
 export const defaultClinicSchedules: ClinicSchedule[] = [
-  { clinicId: 'kcc-faridabad', clinicName: 'Kidney Care Centre - Faridabad', consultationType: 'in-clinic', enabled: true, workingDays: [1,2,3,4,5,6], startTime: '09:00', endTime: '10:30', slotInterval: 5, breakStart: '', breakEnd: '', maxPatientsPerDay: 20, fee: 1000, currency: 'INR', description: 'In-person consultation at Old Faridabad clinic' },
-  { clinicId: 'kcc-saket', clinicName: 'Kidney Care Centre - Saket', consultationType: 'in-clinic', enabled: true, workingDays: [1,2,3,4,5,6,0], startTime: '21:00', endTime: '23:00', slotInterval: 10, breakStart: '', breakEnd: '', maxPatientsPerDay: 12, fee: 1000, currency: 'INR', description: 'In-person consultation at Saket, New Delhi' },
-  { clinicId: 'psri-delhi', clinicName: 'PSRI Hospital Delhi', consultationType: 'hospital', enabled: true, workingDays: [1,2,3,4,5,6], startTime: '13:00', endTime: '18:30', slotInterval: 10, breakStart: '15:00', breakEnd: '15:30', maxPatientsPerDay: 30, fee: 1200, currency: 'INR', description: 'In-person consultation at PSRI Hospital' },
-  { clinicId: 'online', clinicName: 'Online Consultation (India)', consultationType: 'online', enabled: true, workingDays: [1,2,3,4,5,6,0], startTime: '07:00', endTime: '23:00', slotInterval: 15, breakStart: '', breakEnd: '', maxPatientsPerDay: 50, fee: 1000, currency: 'INR', description: 'Video consultation for patients in India' },
-  { clinicId: 'online-intl', clinicName: 'International Video Consultation', consultationType: 'online-intl', enabled: true, workingDays: [1,2,3,4,5,6,0], startTime: '07:00', endTime: '23:00', slotInterval: 15, breakStart: '', breakEnd: '', maxPatientsPerDay: 20, fee: 1500, currency: 'USD', description: 'Video consultation for international patients ($20 USD)' },
+  { clinicId: 'kcc-faridabad', clinicName: 'Kidney Care Centre - Faridabad', consultationType: 'in-clinic', enabled: true, workingDays: [1,2,3,4,5,6], startTime: '09:00', endTime: '10:30', slotInterval: 5, breakStart: '', breakEnd: '', maxPatientsPerDay: 20, fee: 500, currency: 'INR', description: 'In-person consultation at Old Faridabad clinic' },
+  { clinicId: 'kcc-saket', clinicName: 'Kidney Care Centre - Saket', consultationType: 'in-clinic', enabled: true, workingDays: [1,2,3,4,5,6,0], startTime: '21:00', endTime: '23:00', slotInterval: 10, breakStart: '', breakEnd: '', maxPatientsPerDay: 12, fee: 1200, currency: 'INR', description: 'In-person consultation at Saket, New Delhi' },
+  { clinicId: 'psri-delhi', clinicName: 'PSRI Hospital Delhi', consultationType: 'hospital', enabled: true, workingDays: [1,2,3,4,5,6], startTime: '13:00', endTime: '18:30', slotInterval: 10, breakStart: '15:00', breakEnd: '15:30', maxPatientsPerDay: 30, fee: 1000, currency: 'INR', description: 'In-person consultation at PSRI Hospital' },
+  { clinicId: 'online', clinicName: 'Online Consultation (India)', consultationType: 'online', enabled: true, workingDays: [1,2,3,4,5,6,0], startTime: '07:00', endTime: '23:00', slotInterval: 15, breakStart: '', breakEnd: '', maxPatientsPerDay: 50, fee: 500, currency: 'INR', description: 'Video consultation for patients in India' },
+  { clinicId: 'online-intl', clinicName: 'International Video Consultation', consultationType: 'online-intl', enabled: true, workingDays: [1,2,3,4,5,6,0], startTime: '07:00', endTime: '23:00', slotInterval: 15, breakStart: '', breakEnd: '', maxPatientsPerDay: 20, fee: 20, currency: 'USD', description: 'Video consultation for international patients ($20 USD)' },
 ];
 
 export const defaultSettings: BookingSettings = {
@@ -138,7 +138,7 @@ export const defaultSettings: BookingSettings = {
       'Kidney Transplant', 'Kidney Stones', 'High Creatinine',
       'Diabetic Kidney Disease', 'Hypertension', 'Second Opinion', 'Other',
     ],
-    fee: 25,
+    fee: 20,
     currency: 'USD',
     requireCountry: true,
     requireTimezone: true,

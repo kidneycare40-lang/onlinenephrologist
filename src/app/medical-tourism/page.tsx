@@ -49,7 +49,7 @@ const tourismFaqs = [
   },
   {
     question: 'How much does nephrologist consultation cost in India?',
-    answer: 'The consultation fee with Dr Rajesh Goel is ₹1500 (approximately $20 USD) for online consultations. This includes a comprehensive evaluation and personalized treatment plan.',
+    answer: 'The consultation fee with Dr Rajesh Goel is $20 USD for international patients. For patients in India, it starts from ₹500. This includes a comprehensive evaluation and personalized treatment plan.',
   },
   {
     question: 'What kidney treatments are available in India?',
@@ -112,7 +112,7 @@ export default function MedicalTourismPage() {
               { '@type': 'MedicalProcedure', name: 'CKD Management' },
               { '@type': 'MedicalTherapy', name: 'Dialysis Management' },
             ],
-            priceRange: '₹1500',
+            priceRange: '$20 USD',
             openingHoursSpecification: [
               {
                 '@type': 'OpeningHoursSpecification',
@@ -145,7 +145,7 @@ export default function MedicalTourismPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/book-online-consultation" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-lg">
-                  Book Online Consultation - ₹1500
+                  Book Online Consultation - $20 USD
                 </Link>
                 <a href={`https://wa.me/${SITE_CONFIG.whatsapp}?text=Hi%2C%20I%20am%20an%20international%20patient%20seeking%20kidney%20consultation`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all text-lg">
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -171,7 +171,7 @@ export default function MedicalTourismPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: '💰', title: 'Affordable Costs', desc: 'Kidney treatment costs 60-80% less than US, UK, or Australia. Consultation fee starts at just ₹1500 ($20).' },
+              { icon: '💰', title: 'Affordable Costs', desc: 'Kidney treatment costs 60-80% less than US, UK, or Australia. Consultation fee is just $20 USD for international patients.' },
               { icon: '🏆', title: 'World-Class Doctors', desc: 'Indian nephrologists are globally trained with international certifications and decades of experience.' },
               { icon: '🏥', title: 'Modern Infrastructure', desc: 'Hospitals with latest technology, NABH/JCI accredited facilities, and international patient services.' },
               { icon: '🗣️', title: 'English Speaking', desc: 'No language barrier. All consultations and treatment plans provided in English and Hindi.' },
@@ -197,12 +197,12 @@ export default function MedicalTourismPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-8">
             {[
-              { title: 'Online Video Consultation', desc: 'Get expert advice from Dr Rajesh Goel from the comfort of your home. Comprehensive evaluation, treatment plans, and follow-up guidance.', price: '₹1500 ($20)' },
+              { title: 'Online Video Consultation', desc: 'Get expert advice from Dr Rajesh Goel from the comfort of your home. Comprehensive evaluation, treatment plans, and follow-up guidance.', price: '$20 USD' },
               { title: 'Chronic Kidney Disease (CKD) Management', desc: 'Staging, lifestyle modification, medication management, and planning for dialysis or transplant when needed.', price: 'Customized' },
               { title: 'Kidney Transplant Evaluation', desc: 'Pre-transplant evaluation, donor matching guidance, post-transplant care, and immunosuppressive medication management.', price: 'Customized' },
               { title: 'Dialysis Management', desc: 'Hemodialysis and peritoneal dialysis guidance, access planning, and coordination with dialysis centers.', price: 'Customized' },
               { title: 'Kidney Biopsy', desc: 'Minimally invasive diagnostic procedure to determine the cause of kidney disease and guide treatment.', price: 'Customized' },
-              { title: 'Second Opinion Services', desc: 'Get a second opinion from an experienced nephrologist for complex kidney cases or treatment decisions.', price: '₹1500 ($20)' },
+              { title: 'Second Opinion Services', desc: 'Get a second opinion from an experienced nephrologist for complex kidney cases or treatment decisions.', price: '$20 USD' },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-3">
@@ -225,7 +225,7 @@ export default function MedicalTourismPage() {
           </div>
           <div className="grid md:grid-cols-4 gap-8">
             {[
-              { step: '1', title: 'Book Online', desc: 'Choose your preferred date and time. Pay consultation fee of ₹1500 ($20).' },
+              { step: '1', title: 'Book Online', desc: 'Choose your preferred date and time. Pay consultation fee of $20 USD.' },
               { step: '2', title: 'Submit Reports', desc: 'Upload your medical reports, blood tests, and imaging studies.' },
               { step: '3', title: 'Video Consultation', desc: 'Meet Dr Rajesh Goel via secure video call from anywhere in the world.' },
               { step: '4', title: 'Get Treatment Plan', desc: 'Receive personalized treatment plan, prescriptions, and follow-up schedule.' },
@@ -260,7 +260,7 @@ export default function MedicalTourismPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {[
-                    { treatment: 'Online Consultation', india: '₹1500 ($20)', us: '$200-500', savings: '90-97%' },
+                    { treatment: 'Online Consultation', india: '$20 USD', us: '$200-500', savings: '90-97%' },
                     { treatment: 'Kidney Transplant', india: '₹15-25 Lakh ($18K-30K)', us: '$300,000-500,000', savings: '90-94%' },
                     { treatment: 'Hemodialysis (per session)', india: '₹2000-3000 ($25-35)', us: '$500-1000', savings: '95-97%' },
                     { treatment: 'Kidney Biopsy', india: '₹30,000-50,000 ($360-600)', us: '$5,000-10,000', savings: '90-94%' },
