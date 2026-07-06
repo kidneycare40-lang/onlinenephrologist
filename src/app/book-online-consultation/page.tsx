@@ -67,7 +67,7 @@ export default function BookOnlineConsultationPage() {
         consultationType: 'online_intl' as const,
         isActive: true,
         isChronic: false,
-        uhid: `KCC-INT-${String(Math.floor(Math.random() * 900) + 100)}`,
+        uhid: `ONLINE-${new Date().getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}`,
         lastVisit: formData.date || new Date().toISOString().split('T')[0],
         totalVisits: 1,
         createdAt: new Date().toISOString(),

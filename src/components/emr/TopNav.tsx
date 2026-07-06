@@ -74,6 +74,9 @@ export default function TopNav() {
   // Auto UHID preview
   const autoUhid = useMemo(() => {
     const now = new Date();
+    if (clinicId === 'online' || clinicId === 'online-intl') {
+      return `ONLINE-${now.getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    }
     const prefix = clinicId === 'psri-delhi' ? 'PSRI' : 'KCC';
     return `${prefix}-${now.getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
   }, [clinicId, showAddPatient]);
@@ -227,7 +230,9 @@ export default function TopNav() {
     const now = new Date();
     const uhid = clinicId === 'psri-delhi'
       ? (patientUhid.trim() || `PSRI-${now.getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`)
-      : (patientUhid.trim() || `${clinicId === 'kcc-saket' ? 'KCC' : 'KCC'}-${now.getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`);
+      : (clinicId === 'online' || clinicId === 'online-intl')
+        ? (patientUhid.trim() || `ONLINE-${now.getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}`)
+        : (patientUhid.trim() || `KCC-${now.getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`);
     const dob = patientDob || (patientAge ? `${now.getFullYear() - parseInt(patientAge || '0')}-01-01` : '');
 
     const nameParts = patientName.trim().split(/\s+/);

@@ -72,9 +72,14 @@ const indianStates = [
 
 function generateUhid(clinicId?: string | null): string {
   const year = new Date().getFullYear();
-  const num = String(Math.floor(Math.random() * 900) + 100);
-  const prefix = clinicId === 'psri-delhi' ? 'PSRI' : 'KCC';
-  return `${prefix}-${year}-${num}`;
+  const num = String(Math.floor(Math.random() * 9000) + 1000);
+  if (clinicId === 'online' || clinicId === 'online-intl') {
+    return `ONLINE-${year}/${num}`;
+  }
+  if (clinicId === 'psri-delhi') {
+    return `PSRI-${year}-${num.slice(0, 3)}`;
+  }
+  return `KCC-${year}-${num.slice(0, 3)}`;
 }
 
 const initialFormData: FormData = {
