@@ -272,7 +272,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   const patientClinicLabel = selectedPatient?.clinicId ? clinicLabels[selectedPatient.clinicId] || selectedPatient.clinicId : '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-2 sm:p-4">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-2 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-[960px] bg-white sm:rounded-2xl shadow-2xl flex flex-col h-[100dvh] sm:h-auto sm:max-h-[95vh]">
 
@@ -517,7 +517,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-3 px-3 sm:px-5 py-3 border-t border-gray-100 shrink-0 bg-gray-50 sm:rounded-b-2xl">
+        <div className="flex items-center gap-3 px-3 sm:px-5 py-3 pb-4 sm:pb-3 border-t border-gray-100 shrink-0 bg-gray-50 sm:rounded-b-2xl">
           <button onClick={onClose}
             className="px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 min-h-[44px]">Cancel</button>
           <button onClick={handleSave} disabled={!selectedPatient || items.length === 0}
