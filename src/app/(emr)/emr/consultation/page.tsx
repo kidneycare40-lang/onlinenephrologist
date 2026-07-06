@@ -117,7 +117,7 @@ export default function ConsultationListPage() {
   const filteredOnline = onlineBookings.filter((b) => {
     // Clinic filter for online bookings
     if (clinicId) {
-      const BOOKING_CLINIC_MAP: Record<string, string> = { 'online': 'online', 'online-intl': 'online', 'faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'saket': 'kcc-saket' };
+      const BOOKING_CLINIC_MAP: Record<string, string> = { 'online': 'online', 'online-intl': 'online', 'faridabad': 'kcc-faridabad', 'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi', 'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket' };
       const mappedId = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId;
       if (mappedId !== clinicId) return false;
     }

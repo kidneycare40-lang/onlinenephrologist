@@ -27,11 +27,14 @@ import { deleteOnlineBooking } from '@/lib/emr-delete';
 import type { AppointmentStatus, AppointmentType } from '@/types/emr';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
-  'online': '',
-  'online-intl': '',
+  'online': 'online',
+  'online-intl': 'online',
   'faridabad': 'kcc-faridabad',
+  'kcc-faridabad': 'kcc-faridabad',
   'psri': 'psri-delhi',
+  'psri-delhi': 'psri-delhi',
   'saket': 'kcc-saket',
+  'kcc-saket': 'kcc-saket',
 };
 
 interface OnlineBooking {

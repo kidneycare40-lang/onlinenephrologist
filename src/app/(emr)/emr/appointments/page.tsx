@@ -22,10 +22,14 @@ import { appointmentsApi, patientsApi, ApiError } from '@/lib/api-client';
 import { CreditCard } from 'lucide-react';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
-  'online': '',
+  'online': 'online',
+  'online-intl': 'online',
   'faridabad': 'kcc-faridabad',
+  'kcc-faridabad': 'kcc-faridabad',
   'psri': 'psri-delhi',
+  'psri-delhi': 'psri-delhi',
   'saket': 'kcc-saket',
+  'kcc-saket': 'kcc-saket',
 };
 
 function formatTimeDisplay(time24: string): string {
