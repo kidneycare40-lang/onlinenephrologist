@@ -131,7 +131,36 @@ export default function EMRDashboardPage() {
       } else {
         try {
           const patientsResult = await patientsApi.list(clinicId ? { clinicId } : undefined);
-          const sorted = (patientsResult.data || [])
+          let sorted = (patientsResult.data || []);
+          // Also merge in booking patients from localStorage
+          try {
+            const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+            if (Array.isArray(bookings)) {
+              const BOOKING_CLINIC_MAP: Record<string, string> = {
+                'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
+                'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi',
+                'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
+              };
+              for (const b of bookings) {
+                const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || '';
+                if (clinicId && mappedClinic !== clinicId) continue;
+                const phone = (b.phone || '').replace(/\s/g, '');
+                if (sorted.some((p: any) => (p.phone || '').replace(/\s/g, '') === phone && phone)) continue;
+                sorted.push({
+                  id: b.bookingId,
+                  first_name: b.firstName,
+                  last_name: b.lastName,
+                  phone: b.phone,
+                  email: b.email,
+                  uhid: '',
+                  last_visit_date: b.date || b.createdAt || '',
+                  source: 'website',
+                  clinicId: mappedClinic,
+                });
+              }
+            }
+          } catch { /* ignore */ }
+          sorted = sorted
             .sort((a: any, b: any) => new Date(b.last_visit_date || '0').getTime() - new Date(a.last_visit_date || '0').getTime())
             .slice(0, 5);
           setRecentPatients(sorted);

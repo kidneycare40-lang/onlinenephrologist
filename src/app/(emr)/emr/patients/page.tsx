@@ -102,6 +102,45 @@ export default function PatientListPage() {
             }
           }
         }
+        // Also load booking patients from emr_bookings
+        const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        if (Array.isArray(bookings)) {
+          const allPats = [...apiPatients];
+          const BOOKING_CLINIC_MAP: Record<string, string> = {
+            'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
+            'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi',
+            'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
+          };
+          for (const b of bookings) {
+            const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || '';
+            if (clinicFilter && clinicFilter !== 'all' && mappedClinic !== clinicFilter) continue;
+            const phone = (b.phone || '').replace(/\s/g, '');
+            const email = (b.email || '').toLowerCase();
+            if (allPats.some((p: any) => (p.phone || '').replace(/\s/g, '') === phone && phone) ||
+                (email && allPats.some((p: any) => (p.email || '').toLowerCase() === email))) continue;
+            const existingBooking = allPats.find((p: any) => p.id === b.bookingId);
+            if (existingBooking) continue;
+            apiPatients.push({
+              id: b.bookingId,
+              firstName: b.firstName || '',
+              lastName: b.lastName || '',
+              phone: b.phone || '',
+              email: b.email || '',
+              dateOfBirth: b.age ? `${new Date().getFullYear() - parseInt(b.age)}-01-01` : '',
+              gender: b.gender || '',
+              clinicId: mappedClinic,
+              source: 'website',
+              consultationType: b.consultationType,
+              isActive: true,
+              isChronic: false,
+              uhid: '',
+              lastVisit: b.date || b.createdAt || '',
+              totalVisits: 1,
+              createdAt: b.createdAt || new Date().toISOString(),
+            });
+            allPats.push(apiPatients[apiPatients.length - 1]);
+          }
+        }
       } catch { /* ignore */ }
 
       setAllPatients(apiPatients);
@@ -131,6 +170,38 @@ export default function PatientListPage() {
             if (c.patient && c.patient.id && !dynamicPatients.some((p: any) => p.id === c.patient.id)) {
               dynamicPatients.push(c.patient);
             }
+          }
+        }
+        // Also load booking patients
+        const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        if (Array.isArray(bookings)) {
+          const BOOKING_CLINIC_MAP: Record<string, string> = {
+            'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
+            'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi',
+            'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
+          };
+          for (const b of bookings) {
+            const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || '';
+            if (clinicFilter && clinicFilter !== 'all' && mappedClinic !== clinicFilter) continue;
+            if (dynamicPatients.some((p: any) => p.id === b.bookingId)) continue;
+            dynamicPatients.push({
+              id: b.bookingId,
+              firstName: b.firstName || '',
+              lastName: b.lastName || '',
+              phone: b.phone || '',
+              email: b.email || '',
+              dateOfBirth: b.age ? `${new Date().getFullYear() - parseInt(b.age)}-01-01` : '',
+              gender: b.gender || '',
+              clinicId: mappedClinic,
+              source: 'website',
+              consultationType: b.consultationType,
+              isActive: true,
+              isChronic: false,
+              uhid: '',
+              lastVisit: b.date || b.createdAt || '',
+              totalVisits: 1,
+              createdAt: b.createdAt || new Date().toISOString(),
+            });
           }
         }
         setAllPatients(dynamicPatients);

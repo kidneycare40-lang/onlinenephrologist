@@ -51,6 +51,37 @@ export default function BookOnlineConsultationPage() {
       existing.push(booking);
       localStorage.setItem('emr_bookings', JSON.stringify(existing));
     } catch { /* ignore */ }
+
+    // Also add patient to emr_added_patients so they appear in EMR Patients list
+    try {
+      const patientRecord = {
+        id: `pt-${bookingId}`,
+        firstName: formData.name.split(' ')[0] || formData.name,
+        lastName: formData.name.split(' ').slice(1).join(' ') || '',
+        phone: formData.phone || '',
+        email: formData.email,
+        dateOfBirth: '',
+        gender: '',
+        clinicId: 'online-intl',
+        source: 'website' as const,
+        consultationType: 'online_intl' as const,
+        isActive: true,
+        isChronic: false,
+        uhid: '',
+        lastVisit: formData.date || new Date().toISOString().split('T')[0],
+        totalVisits: 1,
+        createdAt: new Date().toISOString(),
+      };
+      const addedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+      const exists = addedPatients.some((p: any) =>
+        (p.email && p.email.toLowerCase() === formData.email.toLowerCase()) ||
+        (p.phone && p.phone === formData.phone)
+      );
+      if (!exists) {
+        addedPatients.push(patientRecord);
+        localStorage.setItem('emr_added_patients', JSON.stringify(addedPatients));
+      }
+    } catch { /* ignore */ }
     const whatsappMessage = `Hi, I want to book an online consultation.%0A%0AName: ${formData.name}%0AEmail: ${formData.email}%0APhone: ${formData.phone}%0ACountry: ${formData.country}%0ATimezone: ${formData.timezone}%0ADate: ${formData.date}%0ATime: ${formData.time}%0ACondition: ${formData.condition}%0AMessage: ${formData.message}`;
     window.open(`https://wa.me/${SITE_CONFIG.whatsapp}?text=${whatsappMessage}`, '_blank');
     setSubmitted(true);

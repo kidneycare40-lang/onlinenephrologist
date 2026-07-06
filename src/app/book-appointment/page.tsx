@@ -197,6 +197,42 @@ function BookingForm() {
       localStorage.setItem('emr_bookings', JSON.stringify(existing));
     } catch {}
 
+    // Also add patient to emr_added_patients so they appear in EMR Patients list
+    try {
+      const BOOKING_CLINIC_MAP: Record<string, string> = {
+        'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
+        'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi',
+        'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
+      };
+      const mappedClinic = BOOKING_CLINIC_MAP[formData.clinicId] || formData.clinicId || '';
+      const patientRecord = {
+        id: `pt-${id}`,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        email: formData.email,
+        dateOfBirth: formData.age ? `${new Date().getFullYear() - parseInt(formData.age)}-01-01` : '',
+        gender: formData.gender,
+        clinicId: mappedClinic,
+        source: 'website' as const,
+        consultationType: formData.consultationType,
+        isActive: true,
+        isChronic: false,
+        uhid: '',
+        lastVisit: formData.date || new Date().toISOString().split('T')[0],
+        totalVisits: 1,
+        createdAt: new Date().toISOString(),
+      };
+      const addedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+      const exists = addedPatients.some((p: any) =>
+        (p.phone && p.phone === formData.phone) || (p.email && p.email === formData.email)
+      );
+      if (!exists) {
+        addedPatients.push(patientRecord);
+        localStorage.setItem('emr_added_patients', JSON.stringify(addedPatients));
+      }
+    } catch {}
+
     if (formData.consultationType === 'online' || formData.consultationType === 'online_intl') {
       const reportNames = reportFiles.map(f => f.name).join(', ') || 'None';
       const usName = ultrasoundFile?.name || 'None';
