@@ -681,7 +681,7 @@ function BookingForm() {
               <div className="grid sm:grid-cols-2 gap-4">
                 {[
                   { value: 'online', icon: Video, title: 'Online Video (India)', desc: 'Consult from home via video call — for patients in India', badge: 'Starting ₹500', color: 'emerald' },
-                  { value: 'offline', icon: Building2, title: 'In-Clinic Visit', desc: 'Visit doctor at clinic in person — 3 locations in Delhi', badge: '3 Locations', color: 'blue' },
+                  { value: 'offline', icon: Building2, title: 'In-Clinic Visit', desc: 'Visit doctor at clinic in person — 2 locations in Delhi', badge: '2 Locations', color: 'blue' },
                   { value: 'online_intl', icon: Globe, title: 'International Video', desc: 'Video consultation for patients outside India', badge: '$20 USD', color: 'purple' },
                   { value: 'hospital', icon: Hospital, title: 'Hospital Visit', desc: 'In-person visit at PSRI Hospital', badge: 'Pay at Hospital', color: 'amber' },
                 ].map((opt) => (
@@ -821,7 +821,7 @@ function BookingForm() {
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {clinics.filter(c => c.id !== 'online').map((clinic) => {
+                  {clinics.filter(c => c.id !== 'online' && c.id !== 'psri-delhi').map((clinic) => {
                     const colors = COLOR_MAP[clinic.color];
                     const isSelected = formData.clinicId === clinic.id;
                     const Icon = clinic.icon;
