@@ -115,9 +115,11 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
           firstName: p.first_name,
           lastName: p.last_name,
           phone: p.phone || '',
+          email: p.email || '',
           uhid: p.uhid || '',
           gender: p.gender === 'female' ? 'Female' : p.gender === 'other' ? 'Other' : 'Male',
           clinicId: p.clinic_id || 'kcc-faridabad',
+          source: p.source || '',
         })));
         return;
       }
@@ -125,16 +127,47 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     try {
       const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
       const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-      const combined = [...mockPatients, ...added, ...bookings.map((b: any) => ({
-        id: b.patientId || `obp-${b.bookingId}`,
-        firstName: b.firstName || '',
-        lastName: b.lastName || '',
-        phone: b.phone || '',
-        uhid: '',
-        gender: b.gender || 'Male',
-        clinicId: b.clinicId || 'online',
-      }))];
-      setAllPatients(combined.filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === p.id) === i));
+      const BOOKING_CLINIC_MAP: Record<string, string> = {
+        'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
+        'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi',
+        'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
+      };
+      const combined: any[] = [...mockPatients];
+      // Add patients from emr_added_patients
+      for (const p of added) {
+        if (!combined.some((x: any) => x.id === p.id)) {
+          combined.push({
+            id: p.id,
+            firstName: p.firstName || '',
+            lastName: p.lastName || '',
+            phone: p.phone || '',
+            email: p.email || '',
+            uhid: p.uhid || '',
+            gender: p.gender || 'Male',
+            clinicId: p.clinicId || 'kcc-faridabad',
+            source: p.source || '',
+          });
+        }
+      }
+      // Add booking patients not already in emr_added_patients
+      for (const b of bookings) {
+        const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || 'online';
+        const bid = b.bookingId;
+        if (!combined.some((x: any) => x.id === bid)) {
+          combined.push({
+            id: bid,
+            firstName: b.firstName || '',
+            lastName: b.lastName || '',
+            phone: b.phone || '',
+            email: b.email || '',
+            uhid: `${mappedClinic === 'psri-delhi' ? 'PSRI' : 'KCC'}-${new Date().getFullYear()}-${bid.slice(-3).toUpperCase()}` || '',
+            gender: b.gender || 'Male',
+            clinicId: mappedClinic,
+            source: 'website',
+          });
+        }
+      }
+      setAllPatients(combined);
     } catch {}
   };
 
@@ -142,7 +175,9 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     (p) =>
       (p.firstName || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
       (p.lastName || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
-      (p.phone || '').includes(patientSearch)
+      (p.phone || '').includes(patientSearch) ||
+      (p.email || '').toLowerCase().includes(patientSearch.toLowerCase()) ||
+      (p.uhid || '').toLowerCase().includes(patientSearch.toLowerCase())
   );
 
   const selectPatient = (patient: any) => {
@@ -226,9 +261,9 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="relative w-full max-w-lg max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0 bg-white">
           <div className="flex items-center gap-2">
@@ -278,7 +313,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
                       setDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
                     }
                   }}
-                  placeholder="Search name or mobile..."
+                  placeholder="Search name, phone, email or UHID..."
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]"
                 />
                 {patientSearch && filteredPatients.length > 0 && dropdownPos && typeof document !== 'undefined' && createPortal(
@@ -288,7 +323,11 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
                       <button key={patient.id} onClick={() => selectPatient(patient)}
                         className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0 min-h-[48px]">
                         <p className="font-medium text-gray-900 text-sm">{patient.firstName} {patient.lastName}</p>
-                        <p className="text-xs text-gray-500">{patient.phone}</p>
+                        <p className="text-xs text-gray-500">
+                          {patient.phone && patient.phone}
+                          {patient.uhid && ` · ${patient.uhid}`}
+                          {patient.email && ` · ${patient.email}`}
+                        </p>
                       </button>
                     ))}
                     {adminBypassUnlocked && (
@@ -332,7 +371,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
             <label className="text-sm font-medium text-gray-700 mb-1.5 block">Clinic *</label>
             <select value={clinic} onChange={(e) => setClinic(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px] bg-white">
-              {Object.entries(clinicLabels).filter(([k]) => k !== 'online-intl').map(([key, label]) => (
+              {Object.entries(clinicLabels).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
