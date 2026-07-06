@@ -71,6 +71,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   const [status, setStatus] = useState<InvoiceStatus>(existingInvoice?.status || 'PENDING');
   const [paidAmount, setPaidAmount] = useState(existingInvoice?.paidAmount || 0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(existingInvoice?.payments?.[0]?.method || 'UPI');
+  const [itemsInitialized, setItemsInitialized] = useState(!!existingInvoice);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -152,6 +153,25 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     };
     load();
   }, [isOpen]);
+
+  // Auto-add consultation fee for current clinic on new invoices
+  useEffect(() => {
+    if (!isOpen || itemsInitialized || existingInvoice) return;
+    const fee = currentClinicId ? clinicFeeMap[currentClinicId] : null;
+    if (fee) {
+      setItems([{
+        id: `item-${Date.now()}`,
+        description: fee.description,
+        qty: 1,
+        rate: fee.rate,
+        amount: fee.rate,
+        gstRate: 0,
+        gstAmount: 0,
+        total: 0,
+      }]);
+    }
+    setItemsInitialized(true);
+  }, [isOpen, itemsInitialized, existingInvoice, currentClinicId]);
 
   const filteredPatients = allPatients.filter(
     (p) =>
@@ -244,8 +264,8 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   const handleSave = () => {
     if (!selectedPatient || items.length === 0) return;
 
-    const finalPaidAmount = status === 'PAID' ? grandTotal : paidAmount;
-    const finalStatus = finalPaidAmount >= grandTotal ? 'PAID' : finalPaidAmount > 0 ? 'PARTIAL' : status;
+    const finalPaidAmount = status === 'PAID' || paidAmount >= grandTotal ? grandTotal : paidAmount;
+    const finalStatus = finalPaidAmount >= grandTotal ? 'PAID' : 'PENDING';
 
     const invoice: EMRInvoice = {
       id: existingInvoice?.id || `INV-${Date.now()}`,
@@ -269,6 +289,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
       totalTax: totalGst,
       grandTotal: grandTotal,
       paidAmount: finalPaidAmount,
+      paymentMethod: paymentMethod,
       balance: grandTotal - finalPaidAmount,
       status: finalStatus,
       payments: finalPaidAmount > 0 ? [{
@@ -451,35 +472,33 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</h3>
-              <div className="flex items-center gap-2">
-                <select onChange={(e) => {
-                    if (e.target.value) {
-                      const selected = serviceTemplates.find(t => t.description === e.target.value);
-                      if (selected) addItem({ description: selected.description, rate: selected.rate, gstRate: 0 });
-                      e.target.value = '';
-                    }
-                  }}
-                  className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20">
-                  <option value="">Quick Add</option>
-                  {serviceTemplates.map((t) => (
-                    <option key={t.description} value={t.description}>{t.description} - {formatCurrency(t.rate)}</option>
-                  ))}
-                </select>
-                <button onClick={() => addItem()}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#0A75BB] bg-[#0A75BB]/10 rounded-lg">
-                  <Plus className="h-3.5 w-3.5" /> Add
-                </button>
-              </div>
             </div>
+            {/* Quick Add buttons — prominent, touch-friendly */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {serviceTemplates.map((t) => (
+                <button key={t.description} onClick={() => addItem({ description: t.description, rate: t.rate, gstRate: 0 })}
+                  className="flex items-center justify-between px-3 py-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#0A75BB] hover:bg-[#0A75BB]/5 text-left transition-colors min-h-[48px]">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">{t.description}</p>
+                    <p className="text-xs text-gray-400">{formatCurrency(t.rate)}</p>
+                  </div>
+                  <Plus className="h-4 w-4 text-gray-400 shrink-0" />
+                </button>
+              ))}
+            </div>
+            {/* Custom item */}
+            <button onClick={() => addItem()} className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-[#0A75BB] bg-[#0A75BB]/10 rounded-xl hover:bg-[#0A75BB]/15 transition-colors mb-3 min-h-[44px]">
+              <Plus className="h-4 w-4" /> Add Custom Item
+            </button>
             <div className="space-y-2">
               {items.map((item, index) => (
                 <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-3 space-y-2.5">
                   <div className="flex items-start gap-2">
                     <input type="text" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)}
                       placeholder="Item description"
-                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
+                      className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
                     <button onClick={() => removeItem(index)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0">
+                      className="p-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -488,103 +507,131 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
                       <label className="text-[10px] text-gray-400 uppercase">Qty</label>
                       <input type="number" value={item.qty} min="1"
                         onChange={(e) => updateItem(index, 'qty', parseInt(e.target.value) || 0)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
+                        className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]" />
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-400 uppercase">Rate ₹</label>
                       <input type="number" value={item.rate} min="0"
                         onChange={(e) => updateItem(index, 'rate', parseFloat(e.target.value) || 0)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
+                        className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]" />
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-400 uppercase">GST %</label>
                       <input type="number" value={item.gstRate} min="0" max="100"
                         onChange={(e) => updateItem(index, 'gstRate', parseFloat(e.target.value) || 0)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
+                        className="w-full border border-gray-200 rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]" />
                     </div>
                   </div>
                   <div className="text-right text-sm font-semibold text-gray-900">{formatCurrency(item.total)}</div>
                 </div>
               ))}
               {items.length === 0 && (
-                <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
-                  <p className="text-sm">Tap "Add" or use "Quick Add"</p>
+                <div className="text-center py-6 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+                  <p className="text-sm">Select a service above to get started</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Discount */}
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Discount</label>
-            <div className="flex gap-2">
-              <input type="number" value={discount} min="0" placeholder="0"
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
-              <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENTAGE' | 'FIXED')}
-                className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20">
-                <option value="FIXED">₹ Fixed</option>
-                <option value="PERCENTAGE">% Percent</option>
-              </select>
-            </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700 shrink-0">Discount</label>
+            <input type="number" value={discount} min="0" placeholder="0"
+              onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]" />
+            <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENTAGE' | 'FIXED')}
+              className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20 min-h-[44px]">
+              <option value="FIXED">₹ Fixed</option>
+              <option value="PERCENTAGE">% Percent</option>
+            </select>
           </div>
 
           {/* Summary */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span className="font-medium">{formatCurrency(subtotal)}</span></div>
-            {totalGst > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">GST</span><span className="font-medium">{formatCurrency(totalGst)}</span></div>}
-            {discountAmount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount</span><span className="font-medium text-red-600">-{formatCurrency(discountAmount)}</span></div>}
-            <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
-              <span>Total</span><span className="text-[#0A75BB]">{formatCurrency(grandTotal)}</span>
+          <div className="bg-blue-50 rounded-xl p-4 space-y-2">
+            <div className="flex justify-between text-sm"><span className="text-blue-600">Subtotal</span><span className="font-medium text-blue-900">{formatCurrency(subtotal)}</span></div>
+            {totalGst > 0 && <div className="flex justify-between text-sm"><span className="text-blue-600">GST</span><span className="font-medium text-blue-900">{formatCurrency(totalGst)}</span></div>}
+            {discountAmount > 0 && <div className="flex justify-between text-sm"><span className="text-blue-600">Discount</span><span className="font-medium text-red-600">-{formatCurrency(discountAmount)}</span></div>}
+            <div className="flex justify-between text-xl font-bold pt-2 border-t border-blue-200">
+              <span className="text-blue-900">Total</span><span className="text-blue-700">{formatCurrency(grandTotal)}</span>
             </div>
+            {grandTotal > 0 && status !== 'PENDING' && paidAmount < grandTotal && (
+              <div className="flex justify-between text-sm pt-1">
+                <span className="text-amber-600 font-medium">Balance Due</span>
+                <span className="font-bold text-amber-700">{formatCurrency(grandTotal - paidAmount)}</span>
+              </div>
+            )}
           </div>
 
           {/* Payment */}
-          <div className="space-y-3">
+          <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment</h3>
+
+            {/* Status — top level, drives everything */}
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Amount Paid</label>
-              <input type="number" value={paidAmount} min="0" max={grandTotal} placeholder="0"
-                onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
-            </div>
-            {paidAmount > 0 && (
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Payment Method</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['CASH', 'UPI', 'CARD'] as PaymentMethod[]).map((m) => (
-                    <button key={m} onClick={() => setPaymentMethod(m)}
-                      className={cn('py-2.5 rounded-lg text-xs font-semibold border transition-colors',
-                        paymentMethod === m ? 'bg-[#0A75BB] text-white border-[#0A75BB]' : 'bg-white text-gray-600 border-gray-200')}>
-                      {m === 'CASH' ? '💵 Cash' : m === 'UPI' ? '📱 UPI' : '💳 Card'}
-                    </button>
-                  ))}
-                </div>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="w-full mt-2 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20">
-                  <option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option><option value="CHEQUE">Cheque</option><option value="ONLINE">Online</option>
-                </select>
-              </div>
-            )}
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Status</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['PENDING', 'PARTIAL', 'PAID'] as InvoiceStatus[]).map((s) => (
+              <div className="grid grid-cols-2 gap-2">
+                {(['PAID', 'PENDING'] as InvoiceStatus[]).map((s) => (
                   <button key={s} onClick={() => {
                       setStatus(s);
                       if (s === 'PAID') setPaidAmount(grandTotal);
-                      else if (s === 'PARTIAL' && paidAmount === 0) setPaidAmount(Math.round(grandTotal / 2));
                       else if (s === 'PENDING') setPaidAmount(0);
                     }}
-                    className={cn('py-2.5 rounded-lg text-xs font-semibold border transition-colors',
+                    className={cn('py-3 rounded-xl text-sm font-semibold border-2 transition-all min-h-[44px]',
                       status === s
-                        ? s === 'PAID' ? 'bg-green-600 text-white border-green-600' : s === 'PARTIAL' ? 'bg-amber-600 text-white border-amber-600' : 'bg-[#0A75BB] text-white border-[#0A75BB]'
-                        : 'bg-white text-gray-600 border-gray-200')}>
-                    {s === 'PAID' ? '✓ Paid' : s === 'PARTIAL' ? '◐ Partial' : '⏳ Pending'}
+                        ? s === 'PAID' ? 'bg-green-600 text-white border-green-600 shadow-sm' : 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300')}>
+                    {s === 'PAID' ? '✓ Paid in Full' : '⏳ Unpaid'}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Amount + Payment Method — only when paid */}
+            {status === 'PAID' && (
+              <div className="space-y-3">
+                {/* Amount Paid */}
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">Amount Paid</label>
+                  {grandTotal > 0 && (
+                    <button onClick={() => setPaidAmount(grandTotal)}
+                      className="text-xs text-green-600 hover:underline">Full</button>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">₹</span>
+                  <input type="number" value={paidAmount} min="0" max={grandTotal} placeholder="0"
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setPaidAmount(val);
+                      if (val >= grandTotal && grandTotal > 0) setStatus('PAID');
+                    }}
+                    className="w-full pl-7 pr-4 py-3 border border-gray-200 rounded-xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/20" />
+                </div>
+
+                {/* Payment Method — horizontal pills */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">How was payment received?</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {([
+                      { key: 'CASH', emoji: '💵', label: 'Cash' },
+                      { key: 'UPI', emoji: '📱', label: 'UPI' },
+                      { key: 'CARD', emoji: '💳', label: 'Card' },
+                      { key: 'BANK_TRANSFER', emoji: '🏦', label: 'Bank' },
+                      { key: 'CHEQUE', emoji: '📄', label: 'Cheque' },
+                      { key: 'ONLINE', emoji: '🌐', label: 'Online' },
+                    ] as const).map(({ key, emoji, label }) => (
+                      <button key={key} onClick={() => setPaymentMethod(key as PaymentMethod)}
+                        className={cn('flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-xs font-medium transition-all min-h-[52px]',
+                          paymentMethod === key
+                            ? 'bg-[#0A75BB]/10 text-[#0A75BB] border-[#0A75BB] shadow-sm'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300')}>
+                        <span className="text-base">{emoji}</span>
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Notes */}
