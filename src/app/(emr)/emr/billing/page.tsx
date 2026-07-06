@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { RequirePermission } from '@/components/emr/RequirePermission';
 import {
   Receipt, Search, X, Download, Printer, MessageCircle,
   CheckCircle2, Clock, AlertTriangle, Eye, Plus, CreditCard,
@@ -389,6 +390,7 @@ export default function BillingPage() {
   }, [invoices]);
 
   return (
+    <RequirePermission permission="billing">
     <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5">
       {/* Page Header */}
       <div className="flex items-center justify-between">
@@ -858,5 +860,6 @@ export default function BillingPage() {
         )}
       </div>
     </div>
+    </RequirePermission>
   );
 }

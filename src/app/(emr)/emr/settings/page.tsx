@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { RequirePermission } from '@/components/emr/RequirePermission';
 import {
   Settings, User, Building2, Bell, FileText, Sparkles, CreditCard, Calendar,
   Camera, Lock, Save, X, Upload, Image as ImageIcon, Plus, Trash2, ChevronDown, ChevronRight, Stethoscope, Calculator, RefreshCw,
@@ -553,6 +554,7 @@ export default function SettingsPage() {
   }
 
   return (
+    <RequirePermission permission="settings">
     <div className="px-4 lg:px-8 space-y-5 pb-24 lg:pb-6">
       {/* Saved toast */}
       {saved && (
@@ -1364,5 +1366,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+    </RequirePermission>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { RequirePermission } from '@/components/emr/RequirePermission';
 import { Search, Play, Eye, Phone, CreditCard, Trash2 } from 'lucide-react';
 import { cn, calculateAge } from '@/lib/utils';
 import { todayAppointments, patients, consultations } from '@/lib/data/emr-mock';
@@ -168,6 +169,7 @@ export default function ConsultationListPage() {
   const completed = filtered.filter((a) => a.status === 'COMPLETED').length + filteredOnline.filter((b) => b.status !== 'pending').length + filteredSaved.filter((sc) => sc.status === 'COMPLETED').length;
 
   return (
+    <RequirePermission permission="consultation">
     <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -639,5 +641,6 @@ export default function ConsultationListPage() {
         </div>
       )}
     </div>
+    </RequirePermission>
   );
 }

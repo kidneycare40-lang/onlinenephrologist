@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { RequirePermission } from '@/components/emr/RequirePermission';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine, AreaChart, Area,
@@ -193,6 +194,7 @@ export default function KidneyChartsPage() {
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
   return (
+    <RequirePermission permission="reports">
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -404,5 +406,6 @@ export default function KidneyChartsPage() {
         </>
       )}
     </div>
+    </RequirePermission>
   );
 }

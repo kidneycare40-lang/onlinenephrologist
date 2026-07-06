@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { RequirePermission } from '@/components/emr/RequirePermission';
 import {
   Search, Eye, Printer, MessageCircle, Download, X, Filter,
   FileText, Stethoscope, Pill, Calendar, ChevronDown, Mail, RefreshCw,
@@ -117,6 +118,7 @@ export default function PrescriptionsPage() {
   };
 
   return (
+    <RequirePermission permission="prescriptions">
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -396,5 +398,6 @@ export default function PrescriptionsPage() {
         </div>
       )}
     </div>
+    </RequirePermission>
   );
 }

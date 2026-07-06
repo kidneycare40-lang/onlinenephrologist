@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, Component, type ReactNode } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { RequirePermission } from '@/components/emr/RequirePermission';
 import { cn, calculateAge, formatDate } from '@/lib/utils';
 import {
   consultations,
@@ -1025,6 +1026,7 @@ export default function ConsultationPage() {
   const ageMonths = Math.floor((age - ageYears) * 12);
 
   return (
+    <RequirePermission permission="consultation">
     <ErrorBoundary>
       <div className="flex flex-col lg:flex-row bg-slate-100" style={{ height: 'calc(100vh - 3.5rem)' }}>
         {showToast && (
@@ -1696,5 +1698,6 @@ export default function ConsultationPage() {
         )}
       </div>
     </ErrorBoundary>
+    </RequirePermission>
   );
 }
