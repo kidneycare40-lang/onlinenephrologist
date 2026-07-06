@@ -408,9 +408,9 @@ export default function AddPatientPage() {
           <div className="space-y-4">
             <div className="bg-primary-50 border border-primary-100 rounded-lg p-3">
               <p className="text-sm text-[#0A75BB] font-medium">UHID: {formData.uhid}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Auto-generated for {clinicId === 'psri-delhi' ? 'PSRI Hospital' : 'Kidney Care Centre'}. You can edit if needed.</p>
+              <p className="text-xs text-gray-500 mt-0.5">Auto-generated for {(clinicId === 'online' || clinicId === 'online-intl') ? 'Online' : clinicId === 'psri-delhi' ? 'PSRI Hospital' : 'Kidney Care Centre'}. You can edit if needed.</p>
             </div>
-            {renderInput('UHID', 'uhid', 'text', 'KCC-YYYY-XXX')}
+            {renderInput('UHID', 'uhid', 'text', (clinicId === 'online' || clinicId === 'online-intl') ? 'ONLINE-2026/1562' : 'KCC-YYYY-XXX')}
             {renderInput('ABHA Number', 'abhaNumber', 'text', '12-3456-7890-1234')}
             <p className="text-xs text-gray-400">Format: XX-XXXX-XXXX-XXXX</p>
             {renderInput('Aadhaar Number', 'aadhaar', 'text', 'XXXX XXXX XXXX')}
