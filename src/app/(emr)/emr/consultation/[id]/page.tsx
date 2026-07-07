@@ -1681,7 +1681,6 @@ export default function ConsultationPage() {
                           <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                           <input
                             type="date"
-                            ref={(el) => { (el as any).__nextVisitDateRef = true; }}
                             value={nextVisitDate}
                             onChange={(e) => {
                               setNextVisitDate(e.target.value);
