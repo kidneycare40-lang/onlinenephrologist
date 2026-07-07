@@ -1000,7 +1000,7 @@ export default function ConsultationPage() {
   return (
     <RequirePermission permission="consultation">
     <ErrorBoundary>
-      <div className="flex flex-col lg:flex-row bg-slate-100 lg:px-2" style={{ height: 'calc(100vh - 3.5rem)' }}>
+      <div className="flex flex-col lg:flex-row bg-slate-100" style={{ height: 'calc(100vh - 3.5rem)' }}>
         {showToast && (
           <div
             className={cn(
