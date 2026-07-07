@@ -212,7 +212,7 @@ export default function ConsultationPage() {
       // Check stored consultations
       const storedConsult = storedConsultations.find((c) => {
         if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
-        return c.id === id || c.patientId === id;
+        return c.id === id || c.patientId === id || c.patientId === patientId;
       });
       if (storedConsult) {
         const pat = allStored.find((p) => p.id === storedConsult.patientId);
@@ -227,10 +227,10 @@ export default function ConsultationPage() {
       // Check mock consultations
       let consult = consultations.find((c) => {
         if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
-        return c.id === id || c.patientId === id;
+        return c.id === id || c.patientId === id || c.patientId === patientId;
       });
       if (!consult) {
-        consult = consultations.find((c) => c.patientId === id);
+        consult = consultations.find((c) => c.patientId === id || c.patientId === patientId);
       }
       if (consult) {
         const pat = allStored.find((p) => p.id === consult!.patientId);
