@@ -1693,11 +1693,18 @@ export default function ConsultationPage() {
 
               <ErrorBoundary>
                 <div id="section-timeline">
-                  <PastVisitsTimeline
-                    currentConsultationId={consultation.id}
-                    consultations={consultations.filter((c) => c.patientId === patient.id)}
-                    prescriptions={allPrescriptions.filter((p) => p.patientId === patient.id)}
-                  />
+                  {(() => {
+                    let storedConsults: EMRConsultation[] = [];
+                    try { storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]'); } catch { /* */ }
+                    const patientStored = storedConsults.filter((c) => c.patientId === patient.id);
+                    const mergedConsults = [...patientStored, ...consultations.filter((c) => c.patientId === patient.id && !patientStored.some((sc) => sc.id === c.id))];
+                    return (
+                      <PastVisitsTimeline
+                        currentConsultationId={consultation.id}
+                        consultations={mergedConsults}
+                      />
+                    );
+                  })()}
                 </div>
               </ErrorBoundary>
             </div>

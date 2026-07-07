@@ -3,25 +3,20 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ArrowUp } from 'lucide-react';
-import type { EMRConsultation, EMRPrescription } from '@/types/emr';
+import type { EMRConsultation } from '@/types/emr';
 
 interface PastVisitsTimelineProps {
   currentConsultationId: string;
   consultations: EMRConsultation[];
-  prescriptions: EMRPrescription[];
 }
 
 export default function PastVisitsTimeline({
   currentConsultationId,
   consultations,
-  prescriptions,
 }: PastVisitsTimelineProps) {
   const pastConsultations = consultations
     .filter((c) => c.id !== currentConsultationId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  const getPrescriptions = (consultationId: string) =>
-    prescriptions.filter((p) => p.consultationId === consultationId);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -54,7 +49,6 @@ export default function PastVisitsTimeline({
           </div>
 
           {pastConsultations.map((consult) => {
-            const consultPrescriptions = getPrescriptions(consult.id);
             return (
               <div key={consult.id} className="relative flex items-start gap-3 mb-4">
                 {/* Timeline dot */}
@@ -77,6 +71,14 @@ export default function PastVisitsTimeline({
                   </div>
 
                   <div className="p-3 space-y-2">
+                    {/* Chief Complaint */}
+                    {consult.chiefComplaint && (
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase">Chief Complaint: </span>
+                        <span className="text-xs text-slate-700">{consult.chiefComplaint}</span>
+                      </div>
+                    )}
+
                     {/* Diagnosis */}
                     <div>
                       <span className="text-[10px] font-semibold text-slate-500 uppercase">Diagnosis: </span>
@@ -85,8 +87,8 @@ export default function PastVisitsTimeline({
                       </span>
                     </div>
 
-                    {/* Rx */}
-                    {consultPrescriptions.length > 0 && (
+                    {/* Rx - from consultation.prescriptions (inline) */}
+                    {consult.prescriptions.length > 0 && (
                       <div>
                         <span className="text-[10px] font-semibold text-slate-500 uppercase">Rx: </span>
                         <div className="mt-1">
@@ -100,19 +102,25 @@ export default function PastVisitsTimeline({
                               </tr>
                             </thead>
                             <tbody>
-                              {consultPrescriptions.map((p) =>
-                                p.medications.map((med, i) => (
-                                  <tr key={i} className="text-slate-600">
-                                    <td className="py-0.5">{med.name}</td>
-                                    <td className="py-0.5">{med.dosage}</td>
-                                    <td className="py-0.5">{med.frequency}</td>
-                                    <td className="py-0.5">{med.duration}</td>
-                                  </tr>
-                                ))
-                              )}
+                              {consult.prescriptions.map((med, i) => (
+                                <tr key={i} className="text-slate-600">
+                                  <td className="py-0.5">{med.name}</td>
+                                  <td className="py-0.5">{med.dosage}</td>
+                                  <td className="py-0.5">{med.frequency}</td>
+                                  <td className="py-0.5">{med.duration}</td>
+                                </tr>
+                              ))}
                             </tbody>
                           </table>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Advice */}
+                    {consult.advice && (
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase">Advice: </span>
+                        <span className="text-xs text-slate-700">{consult.advice}</span>
                       </div>
                     )}
 

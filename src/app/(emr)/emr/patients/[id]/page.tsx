@@ -190,7 +190,34 @@ export default function PatientDetailPage() {
   }, [patient]);
   const clinicTimeline = useMemo(() => {
     if (!patient) return [];
-    return timelineEvents.filter((te) => te.patientId === patient.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const mockEvents = timelineEvents.filter((te) => te.patientId === patient.id);
+    try {
+      const storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const patientConsults = storedConsults.filter((c) => c.patientId === patient.id);
+      const consultEvents = patientConsults.map((c) => ({
+        id: `tl-${c.id}`,
+        patientId: c.patientId,
+        date: c.date,
+        time: '',
+        type: 'opd_visit' as const,
+        title: `Consultation — ${c.diagnoses.length > 0 ? c.diagnoses.map((d) => d.name).join(', ') : c.chiefComplaint || 'Visit'}`,
+        description: [
+          c.chiefComplaint ? `Chief Complaint: ${c.chiefComplaint}` : '',
+          c.prescriptions.length > 0 ? `Medicines: ${c.prescriptions.map((m) => m.name).join(', ')}` : '',
+          c.advice ? `Advice: ${c.advice}` : '',
+          c.investigations.length > 0 ? `Tests: ${c.investigations.map((i) => i.testName).join(', ')}` : '',
+        ].filter(Boolean).join(' | ') || 'No details',
+        doctorName: c.doctorName || 'Dr. Rajesh Goel',
+        details: c.prescriptions.length > 0 ? c.prescriptions.map((m) => `${m.name} ${m.dosage} ${m.frequency} x ${m.duration}`).join('\n') : '',
+        relatedLinks: [] as { label: string; href: string }[],
+        clinicId: c.clinicId || '',
+      }));
+      const allIds = new Set(consultEvents.map((e) => e.id));
+      const merged = [...consultEvents, ...mockEvents.filter((e) => !allIds.has(e.id))];
+      return merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } catch {
+      return mockEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
   }, [patient]);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
