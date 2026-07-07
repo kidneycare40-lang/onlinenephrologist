@@ -150,7 +150,13 @@ export default function PatientDetailPage() {
     const mockRx = prescriptions.filter((pr) => pr.patientId === patient.id);
     try {
       const storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
-      const patientConsults = storedConsultations.filter((c) => c.patientId === patient.id && c.prescriptions.length > 0);
+      console.log('[PatientProfile] All stored consultations:', storedConsultations.length);
+      console.log('[PatientProfile] Looking for patientId:', patient.id);
+      storedConsultations.forEach((c) => {
+        console.log(`  Consult ${c.id}: patientId=${c.patientId}, prescriptions=${c.prescriptions?.length ?? 'undefined'}, chiefComplaint=${c.chiefComplaint}`);
+      });
+      const patientConsults = storedConsultations.filter((c) => c.patientId === patient.id && c.prescriptions && c.prescriptions.length > 0);
+      console.log('[PatientProfile] Matching consults with prescriptions:', patientConsults.length);
       const dynamicRx = patientConsults
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map((c) => ({

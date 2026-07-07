@@ -535,6 +535,7 @@ export default function ConsultationPage() {
 
   const saveConsultationDirectlyToStorage = useCallback((consult: EMRConsultation) => {
     try {
+      console.log('[ConsultSave] Saving consultation:', consult.id, 'patientId:', consult.patientId, 'prescriptions:', consult.prescriptions?.length);
       const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
       const updated = { ...consult, updatedAt: new Date().toISOString() };
       const idx = stored.findIndex((c) => c.id === consult.id || c.patientId === consult.patientId);
@@ -544,7 +545,8 @@ export default function ConsultationPage() {
         stored.push(updated);
       }
       localStorage.setItem('emr_consultations', JSON.stringify(stored));
-    } catch { /* ignore */ }
+      console.log('[ConsultSave] Saved. Total consultations in storage:', stored.length);
+    } catch (e) { console.error('[ConsultSave] Error:', e); }
   }, []);
 
   const saveConsultationToStorage = useCallback((consult: EMRConsultation) => {
