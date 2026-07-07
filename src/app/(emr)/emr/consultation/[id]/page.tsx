@@ -1423,26 +1423,91 @@ export default function ConsultationPage() {
                       </div>
                     </div>
                     <div className="p-3">
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {testRequests.map((test) => (
-                          <span
-                            key={test}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-full"
-                          >
-                            {test}
-                            <button
-                              onClick={() => removeTestRequest(test)}
-                              className="text-slate-400 hover:text-red-500 transition-colors"
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-wrap gap-2 flex-1">
+                          {testRequests.map((test) => (
+                            <span
+                              key={test}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-full"
                             >
-                              ×
-                            </button>
-                          </span>
-                        ))}
+                              {test}
+                              <button
+                                onClick={() => removeTestRequest(test)}
+                                className="text-slate-400 hover:text-red-500 transition-colors"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-xs text-slate-500 font-medium whitespace-nowrap">By When:</span>
+                          <select
+                            value={testRequestByWhenType}
+                            onChange={(e) => {
+                              const t = e.target.value as typeof testRequestByWhenType;
+                              setTestRequestByWhenType(t);
+                              if (t === 'None') setTestRequestByWhen('');
+                              else if (t === 'Today') setTestRequestByWhen(new Date().toISOString().split('T')[0]);
+                              else if (t === 'Next Visit') setTestRequestByWhen(nextVisitDate || computeByWhenDate(nextVisitValue, nextVisitUnit));
+                              else if (t === 'ASAP') setTestRequestByWhen('ASAP');
+                              else if (t === 'Days' || t === 'Weeks' || t === 'Months') {
+                                setTestRequestByWhenUnit(t);
+                                setTestRequestByWhen(computeByWhenDate(testRequestByWhenValue, t));
+                              }
+                              else if (t === 'Calendar') setTestRequestByWhen(testRequestByWhenDate || '');
+                            }}
+                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] bg-white pr-6"
+                          >
+                            <option value="None">None</option>
+                            <option value="Today">Today</option>
+                            <option value="Next Visit">Next Visit</option>
+                            <option value="ASAP">ASAP</option>
+                            <option value="Days">Days</option>
+                            <option value="Weeks">Weeks</option>
+                            <option value="Months">Months</option>
+                            <option value="Calendar">Calendar</option>
+                          </select>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2 relative">
-                        <Search className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                        <input
+                      {(testRequestByWhenType === 'Days' || testRequestByWhenType === 'Weeks' || testRequestByWhenType === 'Months') && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={99}
+                            value={testRequestByWhenValue}
+                            onChange={(e) => {
+                              const v = Math.max(1, parseInt(e.target.value) || 1);
+                              setTestRequestByWhenValue(v);
+                              setTestRequestByWhen(computeByWhenDate(v, testRequestByWhenType));
+                            }}
+                            className="w-14 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] text-center"
+                          />
+                          <span className="text-xs text-slate-500">{testRequestByWhenType}</span>
+                          <span className="text-[10px] text-slate-400">[{testRequestByWhenValue} {testRequestByWhenType}]</span>
+                        </div>
+                      )}
+                      {testRequestByWhenType === 'Calendar' && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                          <input
+                            type="date"
+                            value={testRequestByWhenDate}
+                            onChange={(e) => {
+                              setTestRequestByWhenDate(e.target.value);
+                              setTestRequestByWhen(e.target.value);
+                            }}
+                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                          />
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="relative">
+                          <Search className="h-3.5 w-3.5 text-slate-400 flex-shrink-0 absolute left-2 top-1/2 -translate-y-1/2" />
+                          <input
                           ref={testInputRef}
                           type="text"
                           value={testGroupSearch}
@@ -1549,69 +1614,6 @@ export default function ConsultationPage() {
                           )}
                         </div>
                       )}
-
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <span className="text-xs text-slate-500 font-medium">By When:</span>
-                        <div className="relative">
-                          <select
-                            value={testRequestByWhenType}
-                            onChange={(e) => {
-                              const t = e.target.value as typeof testRequestByWhenType;
-                              setTestRequestByWhenType(t);
-                              if (t === 'None') setTestRequestByWhen('');
-                              else if (t === 'Today') setTestRequestByWhen(new Date().toISOString().split('T')[0]);
-                              else if (t === 'Next Visit') setTestRequestByWhen(nextVisitDate || computeByWhenDate(nextVisitValue, nextVisitUnit));
-                              else if (t === 'ASAP') setTestRequestByWhen('ASAP');
-                              else if (t === 'Days' || t === 'Weeks' || t === 'Months') {
-                                setTestRequestByWhenUnit(t);
-                                setTestRequestByWhen(computeByWhenDate(testRequestByWhenValue, t));
-                              }
-                              else if (t === 'Calendar') setTestRequestByWhen(testRequestByWhenDate || '');
-                            }}
-                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] bg-white pr-6"
-                          >
-                            <option value="None">None</option>
-                            <option value="Today">Today</option>
-                            <option value="Next Visit">Next Visit</option>
-                            <option value="ASAP">ASAP</option>
-                            <option value="Days">Days</option>
-                            <option value="Weeks">Weeks</option>
-                            <option value="Months">Months</option>
-                            <option value="Calendar">Calendar</option>
-                          </select>
-                        </div>
-                        {(testRequestByWhenType === 'Days' || testRequestByWhenType === 'Weeks' || testRequestByWhenType === 'Months') && (
-                          <>
-                            <input
-                              type="number"
-                              min={1}
-                              max={99}
-                              value={testRequestByWhenValue}
-                              onChange={(e) => {
-                                const v = Math.max(1, parseInt(e.target.value) || 1);
-                                setTestRequestByWhenValue(v);
-                                setTestRequestByWhen(computeByWhenDate(v, testRequestByWhenType));
-                              }}
-                              className="w-14 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] text-center"
-                            />
-                            <span className="text-xs text-slate-500">{testRequestByWhenType}</span>
-                          </>
-                        )}
-                        {testRequestByWhenType === 'Calendar' && (
-                          <input
-                            type="date"
-                            value={testRequestByWhenDate}
-                            onChange={(e) => {
-                              setTestRequestByWhenDate(e.target.value);
-                              setTestRequestByWhen(e.target.value);
-                            }}
-                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
-                          />
-                        )}
-                        {testRequestByWhen && testRequestByWhenType !== 'Calendar' && (
-                          <span className="text-[10px] text-slate-400">[{testRequestByWhenType === 'ASAP' ? 'ASAP' : testRequestByWhenType === 'Today' ? 'Today' : testRequestByWhenType === 'Next Visit' ? 'Next Visit' : `${testRequestByWhenValue} ${testRequestByWhenType}`}]</span>
-                        )}
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1666,7 +1668,7 @@ export default function ConsultationPage() {
                           ))}
                         </div>
                         <span className="text-xs text-slate-400">Or</span>
-                        <div className="relative">
+                        <div className="relative group">
                           <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                           <input
                             type="date"
@@ -1675,10 +1677,10 @@ export default function ConsultationPage() {
                               setNextVisitDate(e.target.value);
                               setConsultation((prev) => prev ? { ...prev, followUpDate: e.target.value } : prev);
                             }}
-                            className="pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px]"
+                            className="pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px] text-slate-700"
                           />
                           {!nextVisitDate && (
-                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">select date</span>
+                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>
                           )}
                         </div>
                       </div>

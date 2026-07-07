@@ -209,3 +209,11 @@ html {
     scroll-behavior: auto !important;
   }
 }
+
+/* Hide native date input placeholder text so custom "select date" shows */
+input[type="date"]:not(:valid)::-webkit-datetime-edit {
+  color: transparent;
+}
+input[type="date"]:not(:valid)::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
