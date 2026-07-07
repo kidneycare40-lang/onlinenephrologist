@@ -180,11 +180,11 @@ export default function EMRDashboardPage() {
   const handleMarkPaid = (bookingId: string) => {
     try {
       const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-      const updated = bookings.map((b: OnlineBooking) =>
-        b.bookingId === bookingId ? { ...b, paymentStatus: 'paid' } : b
-      );
-      localStorage.setItem('emr_bookings', JSON.stringify(updated));
-      setOnlineBookings(updated);
+      const idx = bookings.findIndex((b: OnlineBooking) => b.bookingId === bookingId);
+      if (idx === -1) return;
+      bookings[idx] = { ...bookings[idx], paymentStatus: 'paid' };
+      localStorage.setItem('emr_bookings', JSON.stringify(bookings));
+      setOnlineBookings([...bookings]);
     } catch {}
   };
 

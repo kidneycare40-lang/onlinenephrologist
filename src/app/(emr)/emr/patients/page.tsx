@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { filterDeletedPatients } from '@/lib/emr-delete';
 import {
   Search, Calendar, ChevronLeft, ChevronRight, Phone, Stethoscope,
   Bell, Trash2, RefreshCw, Users, Activity, Filter,
@@ -143,7 +144,7 @@ export default function PatientListPage() {
         }
       } catch { /* ignore */ }
 
-      setAllPatients(apiPatients);
+      setAllPatients(filterDeletedPatients(apiPatients));
     } catch (err: any) {
       setError(err.message);
       // Fallback: try loading from localStorage + mock data
@@ -204,7 +205,7 @@ export default function PatientListPage() {
             });
           }
         }
-        setAllPatients(dynamicPatients);
+        setAllPatients(filterDeletedPatients(dynamicPatients));
       } catch {
         setAllPatients([]);
       }

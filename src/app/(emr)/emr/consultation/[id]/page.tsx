@@ -681,79 +681,20 @@ export default function ConsultationPage() {
       );
       await new Promise((r) => setTimeout(r, 300));
 
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        root.unmount();
-        document.body.removeChild(printContainer);
-        showToastMessage('Pop-up blocked. Allow pop-ups for this site.', 'error');
-        return;
-      }
+      const html2pdf = (await import('html2pdf.js')).default;
+      const pdfBlob = await html2pdf()
+        .set({
+          margin: [5, 8, 5, 8],
+          filename: `Prescription_${patient.firstName}_${patient.lastName}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(printContainer)
+        .outputPdf('blob');
 
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Prescription - ${patient.firstName} ${patient.lastName}</title>
-          <style>
-            @page { size: A4; margin: 5mm 8mm; }
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            html, body {
-              width: 100%; margin: 0; padding: 0;
-              font-family: Arial, Helvetica, sans-serif;
-              font-size: 10pt; line-height: 1.35;
-              color: #000; background: #fff;
-            }
-            .rx-footer { position: relative; }
-            @media print {
-              html, body {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .rx-prescription-table { width: 100% !important; border-collapse: collapse; }
-              .rx-prescription-table thead { display: table-header-group !important; }
-              .rx-prescription-table tbody td { vertical-align: top !important; }
-              .rx-footer {
-                position: fixed !important; bottom: 0 !important;
-                left: 0 !important; right: 0 !important;
-                width: 100% !important; z-index: 1000 !important;
-                background: #fff !important;
-              }
-              .rx-medicine-row { page-break-inside: avoid !important; }
-              .rx-advice-block, .rx-tests-block, .rx-signature { page-break-inside: avoid !important; }
-            }
-          </style>
-        </head>
-        <body>
-          ${printContainer.innerHTML}
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-
-      await new Promise<void>((resolve) => {
-        const checkReady = setInterval(() => {
-          try {
-            if (printWindow.document.readyState === 'complete') {
-              clearInterval(checkReady);
-              setTimeout(resolve, 500);
-            }
-          } catch { clearInterval(checkReady); resolve(); }
-        }, 100);
-        setTimeout(() => { clearInterval(checkReady); resolve(); }, 3000);
-      });
-
-      const pdfBlob = await new Promise<Blob>((resolve, reject) => {
-        try {
-          printWindow.print();
-          printWindow.close();
-          root.unmount();
-          document.body.removeChild(printContainer);
-          resolve(new Blob([], { type: 'application/pdf' }));
-        } catch (e) {
-          reject(e);
-        }
-      });
+      root.unmount();
+      document.body.removeChild(printContainer);
 
       const pdfFile = new File([pdfBlob], `Prescription_${patient.firstName}_${patient.lastName}.pdf`, { type: 'application/pdf' });
 
