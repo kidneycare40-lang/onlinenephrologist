@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { patientsApi } from '@/lib/api-client';
+import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { useRouter } from 'next/navigation';
+import type { EMRConsultation, EMRPatient } from '@/types/emr';
 
 interface KidneyParam {
   date: string;
@@ -132,15 +134,41 @@ export default function KidneyChartsPage() {
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set([0, 1, 2]));
 
   useEffect(() => {
-    patientsApi.list({ limit: '200' }).then((res) => {
-      setPatients((res.data || []).map((p: any) => ({
-        id: p.id,
-        firstName: p.first_name,
-        lastName: p.last_name,
-        phone: p.phone,
-        uhid: p.uhid,
-      })));
-    }).catch(() => {});
+    const loadPatients = async () => {
+      const allPatients: Patient[] = [];
+      // Load from API
+      try {
+        const res = await patientsApi.list({ limit: '200' });
+        if (res.data) {
+          allPatients.push(...(res.data || []).map((p: any) => ({
+            id: p.id,
+            firstName: p.first_name,
+            lastName: p.last_name,
+            phone: p.phone,
+            uhid: p.uhid,
+          })));
+        }
+      } catch { /* */ }
+      // Merge localStorage patients
+      try {
+        const addedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]') as EMRPatient[];
+        const existingIds = new Set(allPatients.map((p) => p.id));
+        for (const p of addedPatients) {
+          if (!existingIds.has(p.id)) {
+            allPatients.push({ id: p.id, firstName: p.firstName, lastName: p.lastName, phone: p.phone, uhid: p.uhid });
+            existingIds.add(p.id);
+          }
+        }
+      } catch { /* */ }
+      // Merge mock patients
+      for (const p of mockPatients) {
+        if (!allPatients.some((ap) => ap.id === p.id)) {
+          allPatients.push({ id: p.id, firstName: p.firstName, lastName: p.lastName, phone: p.phone, uhid: p.uhid });
+        }
+      }
+      setPatients(allPatients);
+    };
+    loadPatients();
   }, []);
 
   const loadChartData = useCallback(async (patientId: string) => {
@@ -149,9 +177,46 @@ export default function KidneyChartsPage() {
       const res = await fetch(`/api/patients/${patientId}?view=kidney-chart`);
       if (res.ok) {
         const data = await res.json();
-        setChartData(data);
+        if (data.data && data.data.length > 0) {
+          setChartData(data);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch { /* */ }
+    // Fallback: build from localStorage consultations (vitals only have creatinine/egfr)
+    try {
+      const storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const patientConsults = storedConsults
+        .filter((c) => c.patientId === patientId && c.vitals && (c.vitals.creatinine || c.vitals.egfr))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const data: KidneyParam[] = patientConsults.map((c) => ({
+        date: c.date,
+        creatinine: c.vitals.creatinine ? parseFloat(c.vitals.creatinine) : null,
+        gfr: c.vitals.egfr ? parseFloat(c.vitals.egfr) : null,
+        blood_urea: null,
+        potassium: null,
+        hemoglobin: null,
+      }));
+      if (data.length > 0) {
+        const latest = data[data.length - 1];
+        setChartData({
+          data,
+          summary: {
+            creatinine: latest.creatinine ?? null,
+            gfr: latest.gfr ?? null,
+            blood_urea: null,
+            potassium: null,
+            hemoglobin: null,
+            albumin: null,
+          },
+          total_records: data.length,
+        });
+      } else {
+        setChartData({ data: [], summary: null, total_records: 0 });
       }
     } catch {
+      setChartData({ data: [], summary: null, total_records: 0 });
     } finally {
       setLoading(false);
     }
