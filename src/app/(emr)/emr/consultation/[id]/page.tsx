@@ -1490,8 +1490,8 @@ export default function ConsultationPage() {
                         </div>
                       )}
                       {testRequestByWhenType === 'Calendar' && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                        <div className="relative mt-2">
+                          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                           <input
                             type="date"
                             value={testRequestByWhenDate}
@@ -1499,8 +1499,11 @@ export default function ConsultationPage() {
                               setTestRequestByWhenDate(e.target.value);
                               setTestRequestByWhen(e.target.value);
                             }}
-                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                            className="date-with-placeholder pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px]"
                           />
+                          {!testRequestByWhenDate && (
+                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>
+                          )}
                         </div>
                       )}
 
