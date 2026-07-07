@@ -30,7 +30,7 @@ import PastVisitsTimeline from '@/components/emr/PastVisitsTimeline';
 import BottomActionBar from '@/components/emr/BottomActionBar';
 import PrintPreviewModal from '@/components/emr/PrintPreviewModal';
 import ReportUploadOCR from '@/components/emr/ReportUploadOCR';
-import { Plus, Search, Trash2, X, Stethoscope } from 'lucide-react';
+import { Plus, Search, Trash2, X, Stethoscope, Calendar } from 'lucide-react';
 import { type ExtractedLabValue, type ExtractedMedicine, type OCRResult } from '@/lib/ocr-utils';
 import { autoCorrect } from '@/lib/spellcheck';
 import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR } from '@/lib/consultation-api';
@@ -66,6 +66,8 @@ export default function ConsultationPage() {
   const patientId = id.startsWith('consult-emr-') ? id.replace('consult-emr-', '') : id;
   const { clinicId } = useClinic();
 
+  const today = new Date().toISOString().split('T')[0];
+  const [consultationDate, setConsultationDate] = useState(today);
   const [activeSection, setActiveSection] = useState('documents');
   const [isSaving, setIsSaving] = useState(false);
   const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -605,7 +607,7 @@ export default function ConsultationPage() {
   const generatePrescriptionText = () => {
     if (!consultation || !patient) return '';
     const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
-    const date = new Date().toLocaleDateString('en-IN');
+    const date = new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN');
     let rx = `*KIDNEY CARE CENTRE*\nDr. Rajesh Goel | MBBS, DNB (Nephrology)\nReg. No. DMC/R/00734\n\n`;
     rx += `Date: ${date}\n`;
     rx += `Patient: ${patient.firstName} ${patient.lastName} | ${age}Y | ${patient.gender}\n`;
@@ -657,7 +659,7 @@ export default function ConsultationPage() {
           <PrescriptionPrint
             patient={patient}
             consultation={consultation}
-            consultationDate={new Date().toLocaleDateString('en-IN')}
+            consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
             testRequests={testRequests}
             testRequestByWhen={testRequestByWhen}
             labResults={patientLabResults}
@@ -760,7 +762,7 @@ export default function ConsultationPage() {
       return;
     }
     const text = generatePrescriptionText().replace(/\*/g, '').replace(/━/g, '─');
-    const subject = `Prescription - ${patient.firstName} ${patient.lastName} - ${new Date().toLocaleDateString('en-IN')}`;
+    const subject = `Prescription - ${patient.firstName} ${patient.lastName} - ${new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}`;
     const url = `mailto:${patient.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
     showToastMessage('Opening email client...');
@@ -1040,6 +1042,26 @@ export default function ConsultationPage() {
                   onApplyComplaints={handleApplyComplaints}
                 />
               </ErrorBoundary>
+
+              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                <Calendar className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-medium text-slate-600">Prescription Date:</span>
+                <input
+                  type="date"
+                  value={consultationDate}
+                  max={today}
+                  onChange={(e) => setConsultationDate(e.target.value)}
+                  className="text-sm font-semibold text-[#0A75BB] border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 cursor-pointer"
+                />
+                {consultationDate !== today && (
+                  <button
+                    onClick={() => setConsultationDate(today)}
+                    className="text-xs text-slate-500 hover:text-slate-700 underline"
+                  >
+                    Today
+                  </button>
+                )}
+              </div>
 
               <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-3">
@@ -1672,7 +1694,7 @@ export default function ConsultationPage() {
           onClose={() => setShowPrintPreview(false)}
           patient={patient}
           consultation={consultation}
-          consultationDate={new Date().toLocaleDateString('en-IN')}
+          consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
           testRequests={testRequests}
           testRequestByWhen={testRequestByWhen}
           labResults={patientLabResults}
