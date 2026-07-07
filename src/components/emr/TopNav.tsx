@@ -78,7 +78,7 @@ export default function TopNav() {
       return `ONLINE-${now.getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}`;
     }
     const prefix = clinicId === 'psri-delhi' ? 'PSRI' : 'KCC';
-    return `${prefix}-${now.getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
+    return `${prefix}-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`;
   }, [clinicId, showAddPatient]);
 
   // Detect duplicates as user types phone or name
@@ -229,10 +229,10 @@ export default function TopNav() {
 
     const now = new Date();
     const uhid = clinicId === 'psri-delhi'
-      ? (patientUhid.trim() || `PSRI-${now.getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`)
+      ? (patientUhid.trim() || `PSRI-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`)
       : (clinicId === 'online' || clinicId === 'online-intl')
         ? (patientUhid.trim() || `ONLINE-${now.getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}`)
-        : (patientUhid.trim() || `KCC-${now.getFullYear()}-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`);
+        : (patientUhid.trim() || `KCC-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`);
     const dob = patientDob || (patientAge ? `${now.getFullYear() - parseInt(patientAge || '0')}-01-01` : '');
 
     const nameParts = patientName.trim().split(/\s+/);
