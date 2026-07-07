@@ -1205,10 +1205,28 @@ export default function ConsultationPage() {
                     <TemplateSelector
                       type="investigations"
                       onSelect={(items) => {
-                        const newTests = items.map((i: any) => i.test_name || i.name || '').filter(Boolean);
-                        if (newTests.length > 0) {
-                          setTestRequests((prev) => [...new Set([...prev, ...newTests])]);
-                          showToastMessage(`Added ${newTests.length} test(s) from panel`);
+                        if (!consultation) return;
+                        const existingTests = consultation.investigations.map((inv) => inv.testName);
+                        const newInvestigations = [...consultation.investigations];
+                        for (const item of items) {
+                          const testName = item.test_name || item.name || '';
+                          if (testName && !existingTests.includes(testName)) {
+                            newInvestigations.push({
+                              id: generateId(),
+                              testName,
+                              result: '',
+                              unit: '',
+                              normalRange: '',
+                              isAbnormal: false,
+                              status: 'pending' as const,
+                              date: new Date().toISOString(),
+                            });
+                            existingTests.push(testName);
+                          }
+                        }
+                        if (newInvestigations.length > consultation.investigations.length) {
+                          setConsultation({ ...consultation, investigations: newInvestigations });
+                          showToastMessage(`Added ${newInvestigations.length - consultation.investigations.length} test(s) to Investigations`);
                         }
                       }}
                       clinicId={clinicId ?? undefined}
