@@ -317,7 +317,7 @@ export function InvestigationsTable({
                       <div className="flex items-center gap-2">
                         <span className="text-[12px] font-medium text-slate-800">{testName}</span>
                         <button onClick={() => removeTest(testName)}
-                          className="opacity-0 group-hover/row:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all rounded"
+                          className="p-1 text-slate-300 hover:text-red-500 transition-all rounded"
                           title="Remove test">
                           <Trash2 className="h-3 w-3" />
                         </button>
