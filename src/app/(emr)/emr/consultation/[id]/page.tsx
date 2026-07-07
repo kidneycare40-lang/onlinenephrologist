@@ -1490,8 +1490,7 @@ export default function ConsultationPage() {
                         </div>
                       )}
                       {testRequestByWhenType === 'Calendar' && (
-                        <div className="relative mt-2">
-                          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none z-10" />
+                        <div className="mt-2">
                           <input
                             type="date"
                             value={testRequestByWhenDate}
@@ -1499,15 +1498,12 @@ export default function ConsultationPage() {
                               setTestRequestByWhenDate(e.target.value);
                               setTestRequestByWhen(e.target.value);
                             }}
-                            className="date-display pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[220px]"
+                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
                           />
-                          {!testRequestByWhenDate && (
-                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>
-                          )}
                           {testRequestByWhenDate && (
-                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-700 pointer-events-none select-none whitespace-nowrap">
+                            <div className="text-[10px] text-slate-500 mt-0.5">
                               {new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ({new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })})
-                            </span>
+                            </div>
                           )}
                         </div>
                       )}
@@ -1677,8 +1673,7 @@ export default function ConsultationPage() {
                           ))}
                         </div>
                         <span className="text-xs text-slate-400">Or</span>
-                        <div className="relative">
-                          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none z-10" />
+                        <div>
                           <input
                             type="date"
                             value={nextVisitDate}
@@ -1686,15 +1681,12 @@ export default function ConsultationPage() {
                               setNextVisitDate(e.target.value);
                               setConsultation((prev) => prev ? { ...prev, followUpDate: e.target.value } : prev);
                             }}
-                            className="date-display pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[220px]"
+                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
                           />
-                          {!nextVisitDate && (
-                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>
-                          )}
                           {nextVisitDate && (
-                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-700 pointer-events-none select-none whitespace-nowrap">
+                            <div className="text-[10px] text-slate-500 mt-0.5">
                               {new Date(nextVisitDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ({new Date(nextVisitDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })})
-                            </span>
+                            </div>
                           )}
                         </div>
                       </div>
