@@ -104,18 +104,19 @@ export default function PatientDetailPage() {
       const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
       if (Array.isArray(bookings)) {
         for (const b of bookings) {
-          if (b.patientData?.firstName) {
-            const id = b.patientId || 'obp-' + b.bookingId;
+          if (b.firstName) {
+            const id = 'obp-' + b.bookingId;
             if (!dynamic.some(p => p.id === id) && !patients.some(p => p.id === id)) {
               dynamic.push({
-                id, firstName: b.patientData.firstName || '', lastName: b.patientData.lastName || '',
-                phone: b.patientData.phone || '', email: b.patientData.email || '',
-                dateOfBirth: b.patientData.dateOfBirth || '', gender: b.patientData.gender || 'Male',
-                bloodGroup: '', uhid: 'OB-' + id.slice(4), clinicId: b.clinicId || '',
-                abhaNumber: '', address: b.patientData.address || '', city: '', state: '', pincode: '',
+                id, firstName: b.firstName || '', lastName: b.lastName || '',
+                phone: b.phone || '', email: b.email || '',
+                dateOfBirth: b.age ? `${new Date().getFullYear() - parseInt(b.age)}-01-01` : '',
+                gender: b.gender || 'Male',
+                bloodGroup: '', uhid: 'OB-' + b.bookingId.slice(-6).toUpperCase(), clinicId: b.clinicId || '',
+                abhaNumber: '', address: '', city: '', state: '', pincode: '',
                 emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelation: '',
                 allergies: [], medicalHistory: '', isChronic: false, isActive: true,
-                createdAt: b.createdAt || '', lastVisit: b.createdAt || '', totalVisits: 1, familyMembers: [],
+                source: 'website' as const, createdAt: b.createdAt || '', lastVisit: b.createdAt || '', totalVisits: 1, familyMembers: [],
               });
             }
           }

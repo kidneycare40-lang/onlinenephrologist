@@ -28,7 +28,7 @@ import type { AppointmentStatus, AppointmentType } from '@/types/emr';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
   'online': 'online',
-  'online-intl': 'online',
+  'online-intl': 'online-intl',
   'faridabad': 'kcc-faridabad',
   'kcc-faridabad': 'kcc-faridabad',
   'psri': 'psri-delhi',
@@ -410,10 +410,13 @@ export default function EMRDashboardPage() {
                           </button>
                         )}
                         {apt.status === 'WAITING' && (
-                          <button className="text-xs font-medium text-[#0A75BB] hover:underline flex items-center gap-1">
+                          <Link
+                            href={apt.isOnline ? `/emr/consultation/consult-obp-${apt.id}` : apt.patientId ? `/emr/consultation/consult-emr-${apt.patientId}` : '#'}
+                            className="text-xs font-medium text-[#0A75BB] hover:underline flex items-center gap-1"
+                          >
                             <Stethoscope className="h-3 w-3" />
                             Start
-                          </button>
+                          </Link>
                         )}
                         {apt.status === 'IN_PROGRESS' && (
                           <Link

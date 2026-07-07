@@ -93,14 +93,14 @@ export default function TopNav() {
       const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
       if (Array.isArray(bookings)) {
         for (const b of bookings) {
-          if (b.patientData?.firstName) {
-            const id = b.patientId || 'obp-' + b.bookingId;
+          if (b.firstName) {
+            const id = 'obp-' + b.bookingId;
             if (!allStored.some((p: any) => p.id === id)) {
               allStored.push({
-                id, firstName: b.patientData.firstName, lastName: b.patientData.lastName || '',
-                phone: b.patientData.phone || '', clinicId: b.clinicId || '',
-                uhid: 'OB-' + id.slice(4), dateOfBirth: b.patientData.dateOfBirth || '',
-                gender: b.patientData.gender || 'Male',
+                id, firstName: b.firstName, lastName: b.lastName || '',
+                phone: b.phone || '', clinicId: b.clinicId || '',
+                uhid: 'OB-' + b.bookingId.slice(-6).toUpperCase(), dateOfBirth: b.age ? `${new Date().getFullYear() - parseInt(b.age)}-01-01` : '',
+                gender: b.gender || 'Male',
               });
             }
           }

@@ -16,6 +16,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   WAITING: { label: 'Waiting', color: 'bg-amber-100 text-amber-700' },
   IN_PROGRESS: { label: 'In Progress', color: 'bg-blue-100 text-blue-700' },
   COMPLETED: { label: 'Completed', color: 'bg-emerald-100 text-emerald-700' },
+  CANCELLED: { label: 'Cancelled', color: 'bg-gray-100 text-gray-500' },
 };
 
 interface OnlineBooking {
@@ -124,7 +125,7 @@ export default function ConsultationListPage() {
     }
     const name = `${b.firstName} ${b.lastName}`.toLowerCase();
     const matchesSearch = !search || name.includes(search.toLowerCase()) || b.bookingId.toLowerCase().includes(search.toLowerCase());
-    const bookingStatus = b.status === 'pending' ? 'WAITING' : 'COMPLETED';
+    const bookingStatus = b.status === 'cancelled' ? 'CANCELLED' : b.status === 'pending' ? 'WAITING' : 'COMPLETED';
     const matchesStatus = statusFilter === 'ALL' || bookingStatus === statusFilter;
     const matchesDate = !dateFilter || b.date === dateFilter;
     return matchesSearch && matchesStatus && matchesDate;
@@ -166,7 +167,7 @@ export default function ConsultationListPage() {
 
   const waiting = filtered.filter((a) => a.status === 'WAITING').length + filteredOnline.filter((b) => b.status === 'pending').length;
   const inProgress = filtered.filter((a) => a.status === 'IN_PROGRESS').length + filteredSaved.filter((sc) => sc.status === 'IN_PROGRESS').length;
-  const completed = filtered.filter((a) => a.status === 'COMPLETED').length + filteredOnline.filter((b) => b.status !== 'pending').length + filteredSaved.filter((sc) => sc.status === 'COMPLETED').length;
+  const completed = filtered.filter((a) => a.status === 'COMPLETED').length + filteredOnline.filter((b) => b.status === 'confirmed').length + filteredSaved.filter((sc) => sc.status === 'COMPLETED').length;
 
   return (
     <RequirePermission permission="consultation">
@@ -316,7 +317,7 @@ export default function ConsultationListPage() {
             })}
             {filteredOnline.map((b) => {
               const name = `${b.firstName} ${b.lastName}`;
-              const status = b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
+              const status = b.status === 'cancelled' ? statusConfig.CANCELLED : b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
 
               return (
                 <tr key={b.bookingId} className="hover:bg-cyan-50/30 transition-colors border-t border-cyan-100">
@@ -373,7 +374,7 @@ export default function ConsultationListPage() {
                         </a>
                       )}
                       <Link
-                        href={`/emr/consultation/${b.bookingId}`}
+                        href={`/emr/consultation/consult-obp-${b.bookingId}`}
                         className="inline-flex items-center gap-1.5 px-3 h-11 text-xs font-semibold rounded-lg bg-[#0A75BB] text-white hover:bg-[#085D94] transition-colors"
                       >
                         <Play className="h-3 w-3" /> Start Rx
@@ -517,7 +518,7 @@ export default function ConsultationListPage() {
 
         {filteredOnline.map((b) => {
           const name = `${b.firstName} ${b.lastName}`;
-          const status = b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
+          const status = b.status === 'cancelled' ? statusConfig.CANCELLED : b.status === 'pending' ? statusConfig.WAITING : statusConfig.COMPLETED;
 
           return (
             <div key={b.bookingId} className="bg-white border border-cyan-200 rounded-xl p-4">
@@ -548,7 +549,7 @@ export default function ConsultationListPage() {
                   <Phone className="h-3.5 w-3.5" /> Call
                 </a>
                 <Link
-                  href={`/emr/consultation/${b.bookingId}`}
+                  href={`/emr/consultation/consult-obp-${b.bookingId}`}
                   className="flex-1 flex items-center justify-center gap-1.5 h-11 text-xs font-semibold bg-[#0A75BB] text-white rounded-lg hover:bg-[#085D94] transition-colors"
                 >
                   <Play className="h-3.5 w-3.5" /> Start Rx

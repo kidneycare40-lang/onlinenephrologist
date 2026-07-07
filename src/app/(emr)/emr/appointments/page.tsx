@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   ChevronLeft,
   ChevronRight,
@@ -84,12 +86,43 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('M');
   const [age, setAge] = useState('');
   const [duplicate, setDuplicate] = useState<any>(null);
   const { clinicId } = useClinic();
+
+  const savePatientAndRedirect = (action: 'rx' | 'bill' | 'appt') => {
+    if (!name.trim() || !phone.trim()) return;
+    const now = new Date();
+    const uhid = clinicId === 'psri-delhi'
+      ? `PSRI-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`
+      : `KCC-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`;
+    const nameParts = name.trim().split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const newPatient = {
+      id: `p-${Date.now()}`, firstName, lastName, phone: phone.trim(),
+      email: '', dateOfBirth: age ? `${now.getFullYear() - parseInt(age)}-01-01` : '',
+      gender: gender === 'F' ? 'Female' as const : 'Male' as const,
+      bloodGroup: '', uhid, clinicId: clinicId || 'kcc-faridabad',
+      abhaNumber: '', address: '', city: '', state: '', pincode: '',
+      emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelation: '',
+      allergies: [], medicalHistory: '', isChronic: false, isActive: true,
+      source: 'emr' as const, createdAt: now.toISOString().split('T')[0],
+      lastVisit: now.toISOString().split('T')[0], totalVisits: 1, familyMembers: [],
+    };
+    const existing = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+    existing.push(newPatient);
+    localStorage.setItem('emr_added_patients', JSON.stringify(existing));
+    setName(''); setPhone(''); setAge('');
+    onClose();
+    if (action === 'rx') router.push(`/emr/consultation/consult-emr-${newPatient.id}`);
+    else if (action === 'bill') router.push('/emr/billing');
+    else router.push('/emr/appointments');
+  };
 
   // Detect duplicates via API search
   useEffect(() => {
@@ -194,13 +227,13 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
         </div>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-3.5 flex flex-col sm:flex-row gap-2 rounded-b-2xl sm:rounded-b-2xl safe-area-bottom">
-          <button className="flex-1 h-11 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors">
+          <button onClick={() => savePatientAndRedirect('rx')} disabled={!name.trim() || !phone.trim()} className="flex-1 h-11 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors disabled:opacity-50">
             Add &amp; Create Rx
           </button>
-          <button className="flex-1 h-11 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors">
+          <button onClick={() => savePatientAndRedirect('bill')} disabled={!name.trim() || !phone.trim()} className="flex-1 h-11 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50">
             Add &amp; Create Bill
           </button>
-          <button className="flex-1 h-11 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors">
+          <button onClick={() => savePatientAndRedirect('appt')} disabled={!name.trim() || !phone.trim()} className="flex-1 h-11 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors disabled:opacity-50">
             Add &amp; Create Appt
           </button>
         </div>
@@ -282,7 +315,7 @@ export default function AppointmentsPage() {
       date: b.date,
       time: to24Hour(b.time),
       type: (typeMap[b.consultationType] || 'ONLINE') as AppointmentType,
-      status: b.status === 'confirmed' ? 'COMPLETED' : 'WAITING',
+      status: b.status === 'confirmed' ? 'COMPLETED' : b.status === 'cancelled' ? 'CANCELLED' : 'WAITING',
       reason: b.reason,
       payment: b.paymentStatus === 'paid' ? 'PAID' : 'UNPAID',
       amount: b.consultationFee,
