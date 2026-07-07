@@ -77,8 +77,13 @@ export default function ConsultationPage() {
     'URINE ROUTINE',
   ]);
   const [testRequestByWhen, setTestRequestByWhen] = useState('');
+  const [testRequestByWhenType, setTestRequestByWhenType] = useState<'None' | 'Today' | 'Next Visit' | 'ASAP' | 'Days' | 'Weeks' | 'Months' | 'Calendar'>('None');
   const [testRequestByWhenValue, setTestRequestByWhenValue] = useState<number>(4);
   const [testRequestByWhenUnit, setTestRequestByWhenUnit] = useState<'Days' | 'Weeks' | 'Months'>('Months');
+  const [testRequestByWhenDate, setTestRequestByWhenDate] = useState('');
+  const [nextVisitValue, setNextVisitValue] = useState<number>(0);
+  const [nextVisitUnit, setNextVisitUnit] = useState<'Days' | 'Weeks' | 'Months'>('Months');
+  const [nextVisitDate, setNextVisitDate] = useState('');
   const [testGroupSearch, setTestGroupSearch] = useState('');
   const [testSelectedIdx, setTestSelectedIdx] = useState(-1);
   const [testDropdownPos, setTestDropdownPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
@@ -637,8 +642,13 @@ export default function ConsultationPage() {
     }
     if (consultation.advice) rx += `ADVICE:\n${consultation.advice}\n\n`;
     if (testRequests.length) {
-      const byWhenText = testRequestByWhenValue && testRequestByWhenUnit ? ` by ${testRequestByWhenValue} ${testRequestByWhenUnit}` : '';
-      rx += `TESTS ADVISED${byWhenText}:\n${testRequests.join(', ')}\n\n`;
+      let byWhenLabel = '';
+      if (testRequestByWhenType === 'ASAP') byWhenLabel = 'ASAP';
+      else if (testRequestByWhenType === 'Today') byWhenLabel = 'Today';
+      else if (testRequestByWhenType === 'Next Visit') byWhenLabel = 'Next Visit';
+      else if (testRequestByWhenType === 'Days' || testRequestByWhenType === 'Weeks' || testRequestByWhenType === 'Months') byWhenLabel = `by ${testRequestByWhenValue} ${testRequestByWhenType}`;
+      else if (testRequestByWhenType === 'Calendar' && testRequestByWhenDate) byWhenLabel = new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      rx += `TESTS ADVISED${byWhenLabel ? `: [${byWhenLabel}]` : ':'}\n${testRequests.join(' , ')}\n\n`;
     }
     rx += `---\nKidney Care Centre | +91 98182 35613`;
     return rx;
@@ -670,7 +680,14 @@ export default function ConsultationPage() {
             consultation={consultation}
             consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
             testRequests={testRequests}
-            testRequestByWhen={testRequestByWhenValue && testRequestByWhenUnit ? `by ${testRequestByWhenValue} ${testRequestByWhenUnit}` : testRequestByWhen}
+            testRequestByWhen={(() => {
+              if (testRequestByWhenType === 'ASAP') return '[ASAP]';
+              if (testRequestByWhenType === 'Today') return '[Today]';
+              if (testRequestByWhenType === 'Next Visit') return '[Next Visit]';
+              if (testRequestByWhenType === 'Days' || testRequestByWhenType === 'Weeks' || testRequestByWhenType === 'Months') return `[by ${testRequestByWhenValue} ${testRequestByWhenType}]`;
+              if (testRequestByWhenType === 'Calendar' && testRequestByWhenDate) return `[${new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}]`;
+              return '';
+            })()}
             labResults={patientLabResults}
             clinicId={clinicId ?? undefined}
           />
@@ -1533,39 +1550,143 @@ export default function ConsultationPage() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-slate-500">By When:</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={99}
-                          value={testRequestByWhenValue}
-                          onChange={(e) => {
-                            const v = Math.max(1, parseInt(e.target.value) || 1);
-                            setTestRequestByWhenValue(v);
-                            setTestRequestByWhen(computeByWhenDate(v, testRequestByWhenUnit));
-                          }}
-                          className="w-14 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] text-center"
-                        />
-                        <select
-                          value={testRequestByWhenUnit}
-                          onChange={(e) => {
-                            const u = e.target.value as 'Days' | 'Weeks' | 'Months';
-                            setTestRequestByWhenUnit(u);
-                            setTestRequestByWhen(computeByWhenDate(testRequestByWhenValue, u));
-                          }}
-                          className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] bg-white"
-                        >
-                          <option value="Days">Days</option>
-                          <option value="Weeks">Weeks</option>
-                          <option value="Months">Months</option>
-                        </select>
-                        {testRequestByWhen && (
-                          <span className="text-[10px] text-slate-400">
-                            ({new Date(testRequestByWhen + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})
-                          </span>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="text-xs text-slate-500 font-medium">By When:</span>
+                        <div className="relative">
+                          <select
+                            value={testRequestByWhenType}
+                            onChange={(e) => {
+                              const t = e.target.value as typeof testRequestByWhenType;
+                              setTestRequestByWhenType(t);
+                              if (t === 'None') setTestRequestByWhen('');
+                              else if (t === 'Today') setTestRequestByWhen(new Date().toISOString().split('T')[0]);
+                              else if (t === 'Next Visit') setTestRequestByWhen(nextVisitDate || computeByWhenDate(nextVisitValue, nextVisitUnit));
+                              else if (t === 'ASAP') setTestRequestByWhen('ASAP');
+                              else if (t === 'Days' || t === 'Weeks' || t === 'Months') {
+                                setTestRequestByWhenUnit(t);
+                                setTestRequestByWhen(computeByWhenDate(testRequestByWhenValue, t));
+                              }
+                              else if (t === 'Calendar') setTestRequestByWhen(testRequestByWhenDate || '');
+                            }}
+                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] bg-white pr-6"
+                          >
+                            <option value="None">None</option>
+                            <option value="Today">Today</option>
+                            <option value="Next Visit">Next Visit</option>
+                            <option value="ASAP">ASAP</option>
+                            <option value="Days">Days</option>
+                            <option value="Weeks">Weeks</option>
+                            <option value="Months">Months</option>
+                            <option value="Calendar">Calendar</option>
+                          </select>
+                        </div>
+                        {(testRequestByWhenType === 'Days' || testRequestByWhenType === 'Weeks' || testRequestByWhenType === 'Months') && (
+                          <>
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              value={testRequestByWhenValue}
+                              onChange={(e) => {
+                                const v = Math.max(1, parseInt(e.target.value) || 1);
+                                setTestRequestByWhenValue(v);
+                                setTestRequestByWhen(computeByWhenDate(v, testRequestByWhenType));
+                              }}
+                              className="w-14 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] text-center"
+                            />
+                            <span className="text-xs text-slate-500">{testRequestByWhenType}</span>
+                          </>
+                        )}
+                        {testRequestByWhenType === 'Calendar' && (
+                          <input
+                            type="date"
+                            value={testRequestByWhenDate}
+                            onChange={(e) => {
+                              setTestRequestByWhenDate(e.target.value);
+                              setTestRequestByWhen(e.target.value);
+                            }}
+                            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                          />
+                        )}
+                        {testRequestByWhen && testRequestByWhenType !== 'Calendar' && (
+                          <span className="text-[10px] text-slate-400">[{testRequestByWhenType === 'ASAP' ? 'ASAP' : testRequestByWhenType === 'Today' ? 'Today' : testRequestByWhenType === 'Next Visit' ? 'Next Visit' : `${testRequestByWhenValue} ${testRequestByWhenType}`}]</span>
                         )}
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </ErrorBoundary>
+
+              <ErrorBoundary>
+                <div id="section-next-visit">
+                  <div className="bg-white border border-slate-200 rounded-lg">
+                    <div className="px-3 py-2 border-b border-slate-100">
+                      <h3 className="text-sm font-semibold text-slate-700">Next Visit</h3>
+                    </div>
+                    <div className="p-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-slate-500">No of</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={nextVisitValue}
+                          onChange={(e) => {
+                            const v = Math.max(0, parseInt(e.target.value) || 0);
+                            setNextVisitValue(v);
+                            if (v > 0 && !nextVisitDate) {
+                              setConsultation((prev) => prev ? { ...prev, followUpDate: computeByWhenDate(v, nextVisitUnit) } : prev);
+                            } else if (v > 0 && nextVisitDate) {
+                              setConsultation((prev) => prev ? { ...prev, followUpDate: nextVisitDate } : prev);
+                            } else {
+                              setConsultation((prev) => prev ? { ...prev, followUpDate: '' } : prev);
+                            }
+                          }}
+                          className="w-14 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] text-center"
+                          placeholder="No of"
+                        />
+                        <div className="flex items-center border border-slate-200 rounded overflow-hidden">
+                          {(['Days', 'Weeks', 'Months'] as const).map((unit) => (
+                            <button
+                              key={unit}
+                              onClick={() => {
+                                setNextVisitUnit(unit);
+                                if (nextVisitValue > 0 && !nextVisitDate) {
+                                  setConsultation((prev) => prev ? { ...prev, followUpDate: computeByWhenDate(nextVisitValue, unit) } : prev);
+                                }
+                              }}
+                              className={`px-2 py-1 text-[11px] font-medium transition-colors ${
+                                nextVisitUnit === unit
+                                  ? 'bg-[#0A75BB] text-white'
+                                  : 'bg-white text-slate-600 hover:bg-slate-50'
+                              }`}
+                            >
+                              {unit}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-xs text-slate-400">Or</span>
+                        <div className="relative">
+                          <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                          <input
+                            type="date"
+                            value={nextVisitDate}
+                            onChange={(e) => {
+                              setNextVisitDate(e.target.value);
+                              setConsultation((prev) => prev ? { ...prev, followUpDate: e.target.value } : prev);
+                            }}
+                            className="pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px]"
+                          />
+                          {!nextVisitDate && (
+                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">select date</span>
+                          )}
+                        </div>
+                      </div>
+                      {(nextVisitValue > 0 || nextVisitDate) && (
+                        <div className="mt-1.5 text-[10px] text-slate-400">
+                          Follow-up: {consultation?.followUpDate ? new Date(consultation.followUpDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1763,7 +1884,14 @@ export default function ConsultationPage() {
           consultation={consultation}
           consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
           testRequests={testRequests}
-          testRequestByWhen={testRequestByWhenValue && testRequestByWhenUnit ? `by ${testRequestByWhenValue} ${testRequestByWhenUnit}` : testRequestByWhen}
+          testRequestByWhen={(() => {
+              if (testRequestByWhenType === 'ASAP') return '[ASAP]';
+              if (testRequestByWhenType === 'Today') return '[Today]';
+              if (testRequestByWhenType === 'Next Visit') return '[Next Visit]';
+              if (testRequestByWhenType === 'Days' || testRequestByWhenType === 'Weeks' || testRequestByWhenType === 'Months') return `[by ${testRequestByWhenValue} ${testRequestByWhenType}]`;
+              if (testRequestByWhenType === 'Calendar' && testRequestByWhenDate) return `[${new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}]`;
+              return '';
+            })()}
           labResults={patientLabResults}
             onWhatsApp={handleWhatsAppPrescription}
           clinicId={clinicId ?? undefined}
