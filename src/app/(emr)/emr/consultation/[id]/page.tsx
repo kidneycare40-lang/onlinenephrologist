@@ -644,10 +644,13 @@ export default function ConsultationPage() {
     try {
       const printContainer = document.createElement('div');
       printContainer.style.position = 'fixed';
-      printContainer.style.left = '-9999px';
       printContainer.style.top = '0';
+      printContainer.style.left = '0';
       printContainer.style.width = '210mm';
       printContainer.style.background = 'white';
+      printContainer.style.zIndex = '-1';
+      printContainer.style.opacity = '0.01';
+      printContainer.style.pointerEvents = 'none';
       document.body.appendChild(printContainer);
 
       const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
