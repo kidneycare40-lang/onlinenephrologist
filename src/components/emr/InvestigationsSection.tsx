@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { Plus, Calendar, Search, X, ChevronDown } from 'lucide-react';
+import { Plus, Calendar, Search, X, ChevronDown, Trash2 } from 'lucide-react';
 import { labTestGroups } from '@/lib/data/emr-mock';
 
 const allSuggestedTests = labTestGroups.flatMap((g) => g.tests);
@@ -314,7 +314,14 @@ export function InvestigationsTable({
                   <tr key={testName} className="group/row" style={{ borderBottom: '1px solid #e8ecf1' }}>
                     <td className="px-2 py-2 text-[12px] text-slate-400 align-middle">{idx + 1}</td>
                     <td className="px-3 py-2 align-middle">
-                      <span className="text-[12px] font-medium text-slate-800">{testName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-medium text-slate-800">{testName}</span>
+                        <button onClick={() => removeTest(testName)}
+                          className="opacity-0 group-hover/row:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all rounded"
+                          title="Remove test">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-2 py-2 text-[11px] text-slate-500 align-middle">{unit}</td>
                     {dates.map((d) => {

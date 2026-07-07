@@ -41,7 +41,7 @@ export default function EMRLayout({ children }: { children: React.ReactNode }) {
   ) : (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <TopNav />
-      <main className="flex-1 pt-14 pb-20 lg:pb-0">
+      <main className="flex-1 pt-14 pb-20 lg:pb-0 px-4 lg:px-6">
         {children}
       </main>
       <MobileBottomNav />
