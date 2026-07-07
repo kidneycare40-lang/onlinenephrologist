@@ -17,11 +17,11 @@ const navItems = [
       { label: 'Medical Tourism', href: '/medical-tourism', desc: 'International patient care' },
       { label: 'International Patients', href: '/international-patients', desc: 'Video consultation worldwide' },
       { label: 'Videos', href: '/videos', desc: 'Educational kidney health content' },
-      { label: 'Calculators', href: '/calculators', desc: 'BMI, eGFR, Potassium & more' },
       { label: 'Medicines', href: '/medicines', desc: 'Treatment guide for kidney patients' },
       { label: 'Medical Terms', href: '/medical-abbreviations', desc: 'OD, BD, SOS & more explained' },
     ],
   },
+  { label: 'Calculators', href: '/calculators' },
   { label: 'EMR', href: '/emr/login' },
 ];
 
