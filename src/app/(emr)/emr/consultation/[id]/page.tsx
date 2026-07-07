@@ -1499,7 +1499,7 @@ export default function ConsultationPage() {
                               setTestRequestByWhenDate(e.target.value);
                               setTestRequestByWhen(e.target.value);
                             }}
-                            className="date-with-placeholder pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px]"
+                            className={cn("date-with-placeholder pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px]", testRequestByWhenDate && "has-value")}
                           />
                           {!testRequestByWhenDate && (
                             <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>
@@ -1681,7 +1681,7 @@ export default function ConsultationPage() {
                               setNextVisitDate(e.target.value);
                               setConsultation((prev) => prev ? { ...prev, followUpDate: e.target.value } : prev);
                             }}
-                            className="date-with-placeholder pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px] text-slate-700"
+                            className={cn("date-with-placeholder pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px] text-slate-700", nextVisitDate && "has-value")}
                           />
                           {!nextVisitDate && (
                             <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>

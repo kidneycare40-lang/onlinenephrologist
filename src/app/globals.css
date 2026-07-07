@@ -212,10 +212,10 @@ html {
 
 /* Hide native date input placeholder text so custom "select date" shows */
 .date-with-placeholder::-webkit-datetime-edit {
-  color: transparent;
+  color: transparent !important;
 }
 .date-with-placeholder:focus::-webkit-datetime-edit {
-  color: transparent;
+  color: transparent !important;
 }
 .date-with-placeholder::-webkit-calendar-picker-indicator {
   opacity: 0;
@@ -224,4 +224,7 @@ html {
   width: 100%;
   height: 100%;
   cursor: pointer;
+}
+.date-with-placeholder.has-value::-webkit-datetime-edit {
+  color: inherit !important;
 }
