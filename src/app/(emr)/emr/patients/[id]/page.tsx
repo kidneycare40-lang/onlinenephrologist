@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -150,13 +150,7 @@ export default function PatientDetailPage() {
     const mockRx = prescriptions.filter((pr) => pr.patientId === patient.id);
     try {
       const storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
-      console.log('[PatientProfile] All stored consultations:', storedConsultations.length);
-      console.log('[PatientProfile] Looking for patientId:', patient.id);
-      storedConsultations.forEach((c) => {
-        console.log(`  Consult ${c.id}: patientId=${c.patientId}, prescriptions=${c.prescriptions?.length ?? 'undefined'}, chiefComplaint=${c.chiefComplaint}`);
-      });
       const patientConsults = storedConsultations.filter((c) => c.patientId === patient.id && c.prescriptions && c.prescriptions.length > 0);
-      console.log('[PatientProfile] Matching consults with prescriptions:', patientConsults.length);
       const dynamicRx = patientConsults
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .map((c) => ({
@@ -213,6 +207,70 @@ export default function PatientDetailPage() {
     markPatientDeleted(patient.id);
     router.push('/emr/patients');
   };
+
+  const handlePrintPrescription = useCallback(async (rx: typeof clinicPrescriptions[0]) => {
+    if (!patient) return;
+    const printContainer = document.createElement('div');
+    printContainer.style.position = 'fixed';
+    printContainer.style.left = '-9999px';
+    printContainer.style.top = '0';
+    printContainer.style.width = '210mm';
+    printContainer.style.background = 'white';
+    document.body.appendChild(printContainer);
+
+    const consultation: EMRConsultation = {
+      id: rx.consultationId,
+      patientId: rx.patientId,
+      clinicId: rx.clinicId,
+      date: rx.date,
+      doctorName: rx.doctorName,
+      status: 'COMPLETED',
+      chiefComplaint: rx.diagnosis,
+      hpi: '',
+      examination: '',
+      vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
+      diagnoses: rx.diagnosis ? [{ id: 'd1', icdCode: '', name: rx.diagnosis, isPrimary: true }] : [],
+      prescriptions: (rx.medications || []).map((m, i) => ({ id: `m${i}`, name: m.name, dosage: m.dosage, frequency: m.frequency, duration: m.duration, route: 'oral', instructions: m.instructions })),
+      investigations: (rx.investigations || []).map((inv, i) => ({ id: `inv${i}`, testName: inv })),
+      advice: rx.instructions || '',
+      notes: '',
+      followUpDate: rx.followUpDate || '',
+    };
+
+    const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
+    const { createRoot } = await import('react-dom/client');
+    const root = createRoot(printContainer);
+
+    await new Promise<void>((resolve) => {
+      root.render(
+        <PrescriptionPrint
+          patient={patient}
+          consultation={consultation}
+          consultationDate={new Date(rx.date + 'T00:00:00').toLocaleDateString('en-IN')}
+          testRequests={rx.investigations || []}
+          clinicId={rx.clinicId || undefined}
+        />
+      );
+      setTimeout(resolve, 600);
+    });
+
+    const images = printContainer.querySelectorAll('img');
+    await Promise.all(
+      Array.from(images).map((img) => new Promise<void>((res) => {
+        if (img.complete) res();
+        else { img.onload = () => res(); img.onerror = () => res(); }
+      }))
+    );
+
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(`<!DOCTYPE html><html><head><title>Prescription - ${patient.firstName}</title><style>@media print{body{margin:0;}}</style></head><body></body></html>`);
+      printWindow.document.body.appendChild(printContainer);
+      printWindow.document.close();
+      setTimeout(() => { printWindow.print(); }, 500);
+    }
+    document.body.removeChild(printContainer);
+  }, [patient]);
 
   const patientConsultations = clinicConsultations;
   const patientPrescriptions = clinicPrescriptions;
@@ -723,11 +781,17 @@ export default function PatientDetailPage() {
                             </div>
                           )}
                           <div className="flex gap-2 pt-2">
-                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors">
+                            <button
+                              onClick={() => handlePrintPrescription(rx)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0A75BB] text-white rounded-lg text-xs font-medium hover:bg-[#085D94] transition-colors"
+                            >
                               <Download className="h-3.5 w-3.5" />
                               Download PDF
                             </button>
-                            <button className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+                            <button
+                              onClick={() => handlePrintPrescription(rx)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                            >
                               <Printer className="h-3.5 w-3.5" />
                               Print
                             </button>

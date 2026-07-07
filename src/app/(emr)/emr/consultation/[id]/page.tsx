@@ -535,7 +535,6 @@ export default function ConsultationPage() {
 
   const saveConsultationDirectlyToStorage = useCallback((consult: EMRConsultation) => {
     try {
-      console.log('[ConsultSave] Saving consultation:', consult.id, 'patientId:', consult.patientId, 'prescriptions:', consult.prescriptions?.length);
       const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
       const updated = { ...consult, updatedAt: new Date().toISOString() };
       const idx = stored.findIndex((c) => c.id === consult.id || c.patientId === consult.patientId);
@@ -545,8 +544,7 @@ export default function ConsultationPage() {
         stored.push(updated);
       }
       localStorage.setItem('emr_consultations', JSON.stringify(stored));
-      console.log('[ConsultSave] Saved. Total consultations in storage:', stored.length);
-    } catch (e) { console.error('[ConsultSave] Error:', e); }
+    } catch { /* ignore */ }
   }, []);
 
   const saveConsultationToStorage = useCallback((consult: EMRConsultation) => {
@@ -1069,6 +1067,33 @@ export default function ConsultationPage() {
                     className="text-xs text-[#0A75BB] hover:underline font-medium"
                   >
                     View Past
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!patient || !consultation) return;
+                      try {
+                        const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+                        const lastRx = stored
+                          .filter((c) => c.patientId === patient.id && c.id !== consultation.id && c.prescriptions.length > 0)
+                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                        if (lastRx) {
+                          setConsultation({
+                            ...consultation,
+                            prescriptions: lastRx.prescriptions,
+                            diagnoses: lastRx.diagnoses,
+                            advice: lastRx.advice,
+                            chiefComplaint: consultation.chiefComplaint || lastRx.chiefComplaint,
+                            investigations: lastRx.investigations,
+                          });
+                          showToastMessage(`Loaded ${lastRx.prescriptions.length} medicines from ${new Date(lastRx.date).toLocaleDateString('en-IN')}`);
+                        } else {
+                          showToastMessage('No previous prescriptions found', 'error');
+                        }
+                      } catch { showToastMessage('Failed to load previous Rx', 'error'); }
+                    }}
+                    className="px-3 py-1.5 text-[11px] font-medium text-emerald-600 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors border border-emerald-200"
+                  >
+                    Load Last Rx
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
