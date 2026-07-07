@@ -111,16 +111,16 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   }, [isOpen, existingInvoice]);
 
   const loadPatients = async () => {
+    let apiPatients: any[] = [];
     try {
       const res = await patientsApi.list();
       if (res?.data?.length) {
-        setAllPatients(res.data.map((p: any) => ({
+        apiPatients = res.data.map((p: any) => ({
           id: p.id, firstName: p.first_name, lastName: p.last_name,
           phone: p.phone || '', uhid: p.uhid || '',
           gender: p.gender === 'female' ? 'Female' : p.gender === 'other' ? 'Other' : 'Male',
           clinicId: p.clinic_id || 'kcc-faridabad',
-        })));
-        return;
+        }));
       }
     } catch {}
     try {
@@ -160,7 +160,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
           return { id: a.patientId, firstName: nameParts[0] || a.patientName || '', lastName: nameParts.slice(1).join(' ') || '',
             phone: a.patientPhone || '', email: '', uhid: '', gender: 'Male' as const, clinicId: a.clinicId || 'kcc-faridabad' };
         });
-      const combined: any[] = [...mockPatients];
+      const combined: any[] = [...apiPatients, ...mockPatients];
       // Build a lookup from bookings for correct clinicId
       const bookingClinicLookup: Record<string, string> = {};
       for (const b of bookings) {
