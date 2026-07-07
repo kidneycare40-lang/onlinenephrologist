@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { patients, consultations, prescriptions, labOrders, timelineEvents } from '@/lib/data/emr-mock';
 import { useClinic } from '@/lib/emr-clinic-context';
-import { EMRPatient } from '@/types/emr';
+import { EMRPatient, EMRConsultation } from '@/types/emr';
 import { deleteAddedPatient, markPatientDeleted } from '@/lib/emr-delete';
 
 type Tab = 'overview' | 'visits' | 'prescriptions' | 'lab' | 'reports' | 'timeline';
@@ -135,11 +135,54 @@ export default function PatientDetailPage() {
 
   const clinicConsultations = useMemo(() => {
     if (!patient) return [];
-    return consultations.filter((c) => c.patientId === patient.id && (!clinicId || !c.clinicId || c.clinicId === clinicId));
+    const mockConsults = consultations.filter((c) => c.patientId === patient.id && (!clinicId || !c.clinicId || c.clinicId === clinicId));
+    try {
+      const storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const dynamicConsults = storedConsultations.filter((c) => c.patientId === patient.id);
+      const allConsults = [...dynamicConsults, ...mockConsults.filter((mc) => !dynamicConsults.some((dc) => dc.id === mc.id))];
+      return allConsults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } catch {
+      return mockConsults;
+    }
   }, [patient, clinicId]);
   const clinicPrescriptions = useMemo(() => {
     if (!patient) return [];
-    return prescriptions.filter((pr) => pr.patientId === patient.id);
+    const mockRx = prescriptions.filter((pr) => pr.patientId === patient.id);
+    try {
+      const storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const patientConsults = storedConsultations.filter((c) => c.patientId === patient.id && c.prescriptions.length > 0);
+      const dynamicRx = patientConsults
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .map((c) => ({
+          id: c.id,
+          prescriptionNumber: 'RX-' + c.id.slice(-6).toUpperCase(),
+          patientId: c.patientId,
+          patientName: `${patient.firstName} ${patient.lastName}`,
+          patientAge: calculateAge(patient.dateOfBirth),
+          patientGender: (patient.gender || 'Other') as 'Male' | 'Female' | 'Other',
+          consultationId: c.id,
+          date: c.date,
+          doctorName: c.doctorName || 'Dr. Rajesh Goel',
+          doctorQualification: 'MBBS, DNB (Nephrology)',
+          diagnosis: c.diagnoses.length > 0 ? c.diagnoses.map((d) => d.name).join(', ') : c.chiefComplaint || 'General',
+          medications: c.prescriptions.map((m) => ({
+            name: m.name,
+            dosage: m.dosage || '',
+            frequency: m.frequency || '',
+            duration: m.duration || '',
+            instructions: m.instructions || '',
+          })),
+          investigations: c.investigations?.map((inv) => inv.testName) || [],
+          instructions: c.advice || '',
+          followUpDate: c.followUpDate || '',
+          status: c.status === 'COMPLETED' ? ('Active' as const) : ('Active' as const),
+          clinicId: c.clinicId || '',
+        }));
+      const allIds = new Set(dynamicRx.map((r) => r.id));
+      return [...dynamicRx, ...mockRx.filter((r) => !allIds.has(r.id))];
+    } catch {
+      return mockRx;
+    }
   }, [patient]);
   const clinicLabOrders = useMemo(() => {
     if (!patient) return [];
