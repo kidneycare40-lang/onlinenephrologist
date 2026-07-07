@@ -533,22 +533,11 @@ export default function ConsultationPage() {
     showToastMessage('Complaints applied');
   };
 
-  const saveConsultationToStorage = useCallback((consult: EMRConsultation) => {
-    // Save to both API and localStorage
-    if (consult && patient) {
-      saveConsultationToApi(consult, patient.id, clinicId || '').catch(() => {});
-    }
-    // Also save to localStorage as backup
+  const saveConsultationDirectlyToStorage = useCallback((consult: EMRConsultation) => {
     try {
       const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
-      const allPats = [...patients, ...JSON.parse(localStorage.getItem('emr_added_patients') || '[]') as EMRPatient[]];
-      const pat = allPats.find((p) => p.id === consult.patientId);
-      const key = pat?.phone || consult.patientId;
-      const idx = stored.findIndex((c) => {
-        const cPat = allPats.find((p) => p.id === c.patientId);
-        return (cPat?.phone || c.patientId) === key;
-      });
       const updated = { ...consult, updatedAt: new Date().toISOString() };
+      const idx = stored.findIndex((c) => c.id === consult.id || c.patientId === consult.patientId);
       if (idx >= 0) {
         stored[idx] = updated;
       } else {
@@ -556,7 +545,14 @@ export default function ConsultationPage() {
       }
       localStorage.setItem('emr_consultations', JSON.stringify(stored));
     } catch { /* ignore */ }
-  }, [patient, clinicId]);
+  }, []);
+
+  const saveConsultationToStorage = useCallback((consult: EMRConsultation) => {
+    saveConsultationDirectlyToStorage(consult);
+    if (consult && patient) {
+      saveConsultationToApi(consult, patient.id, clinicId || '').catch(() => {});
+    }
+  }, [patient, clinicId, saveConsultationDirectlyToStorage]);
 
   // Auto-save: debounced API save when consultation changes
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -567,7 +563,7 @@ export default function ConsultationPage() {
     if (!(consultation.prescriptions.length > 0 || consultation.diagnoses.length > 0 || consultation.advice || consultation.chiefComplaint)) return;
 
     // Save to localStorage immediately
-    saveConsultationToStorage(consultation);
+    saveConsultationDirectlyToStorage(consultation);
 
     // Debounce API save by 3 seconds
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
@@ -579,14 +575,14 @@ export default function ConsultationPage() {
     }, 3000);
 
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
-  }, [consultation, patient, clinicId, saveConsultationToStorage]);
+  }, [consultation, patient, clinicId, saveConsultationDirectlyToStorage]);
 
   const handleSave = async () => {
     if (!consultation || !patient) return;
     setIsSaving(true);
+    saveConsultationDirectlyToStorage(consultation);
     await saveConsultationToApi(consultation, patient.id, clinicId || '').catch(() => {});
-    saveConsultationToStorage(consultation);
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 300));
     setIsSaving(false);
     showToastMessage('Consultation saved successfully');
   };
@@ -596,9 +592,9 @@ export default function ConsultationPage() {
     setIsSaving(true);
     const completedConsult = { ...consultation, status: 'COMPLETED' as const };
     setConsultation(completedConsult);
+    saveConsultationDirectlyToStorage(completedConsult);
     await saveConsultationToApi(completedConsult, patient.id, clinicId || '').catch(() => {});
-    saveConsultationToStorage(completedConsult);
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 300));
     setIsSaving(false);
     showToastMessage('Consultation ended');
     setTimeout(() => router.push('/emr/consultation'), 800);
