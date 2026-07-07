@@ -229,9 +229,12 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
           color: '#000',
           background: '#fff',
           width: '100%',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <table className="rx-prescription-table" style={{ width: '100%', borderCollapse: 'collapse', borderSpacing: 0 }}>
+        <table className="rx-prescription-table" style={{ width: '100%', borderCollapse: 'collapse', borderSpacing: 0, flex: '1 0 auto' }}>
           <thead>
             <tr>
               <td style={{ padding: 0, borderBottom: 'none' }}>
@@ -425,11 +428,11 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
         </table>
 
         {footerContent && (
-          <div className="rx-footer">{footerContent}</div>
+          <div className="rx-footer" style={{ marginTop: 'auto', flexShrink: 0 }}>{footerContent}</div>
         )}
 
         {useCustom && customFooterImage && (
-          <div className="rx-footer" style={{ width: '100%' }}>
+          <div className="rx-footer" style={{ width: '100%', marginTop: 'auto', flexShrink: 0 }}>
             <img src={customFooterImage} alt="Custom Footer" style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
           </div>
         )}
