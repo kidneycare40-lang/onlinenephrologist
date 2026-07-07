@@ -1000,7 +1000,7 @@ export default function ConsultationPage() {
   return (
     <RequirePermission permission="consultation">
     <ErrorBoundary>
-      <div className="flex flex-col lg:flex-row bg-slate-100 -mx-4 lg:-mx-6" style={{ height: 'calc(100vh - 3.5rem)' }}>
+      <div className="flex flex-col lg:flex-row bg-slate-100" style={{ height: 'calc(100vh - 3.5rem)' }}>
         {showToast && (
           <div
             className={cn(
@@ -1027,7 +1027,7 @@ export default function ConsultationPage() {
           />
 
           <div className="flex-1 overflow-y-auto pb-20">
-            <div className="space-y-4">
+            <div className="max-w-5xl mx-auto p-4 space-y-4">
               <ErrorBoundary>
                 <ReportUploadOCR
                   onApplyLabValues={handleApplyLabValues}
