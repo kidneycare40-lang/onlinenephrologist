@@ -1552,8 +1552,9 @@ export default function ConsultationPage() {
                             }
                           }}
                           placeholder="Type to add test..."
-                          className="flex-1 px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                          className="flex-1 px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A75BB] pl-7"
                         />
+                        </div>
                       </div>
 
                       {testGroupSearch && testSuggestedTests.length > 0 && (
