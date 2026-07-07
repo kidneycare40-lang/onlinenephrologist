@@ -210,13 +210,6 @@ export default function PatientDetailPage() {
 
   const handlePrintPrescription = useCallback(async (rx: typeof clinicPrescriptions[0]) => {
     if (!patient) return;
-    const printContainer = document.createElement('div');
-    printContainer.style.position = 'fixed';
-    printContainer.style.left = '-9999px';
-    printContainer.style.top = '0';
-    printContainer.style.width = '210mm';
-    printContainer.style.background = 'white';
-    document.body.appendChild(printContainer);
 
     const consultation: EMRConsultation = {
       id: rx.consultationId,
@@ -237,9 +230,19 @@ export default function PatientDetailPage() {
       followUpDate: rx.followUpDate || '',
     };
 
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) { window.alert('Please allow popups'); return; }
+
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map((el) => el.outerHTML).join('\n');
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Prescription - ${patient.firstName}</title>${styles}<style>@media print{body{margin:0;}@page{margin:15mm;}}</style></head><body><div id="rx-root"></div></body></html>`);
+    printWindow.document.close();
+
+    const rootEl = printWindow.document.getElementById('rx-root');
+    if (!rootEl) return;
+
     const { default: PrescriptionPrint } = await import('@/components/emr/PrescriptionPrint');
     const { createRoot } = await import('react-dom/client');
-    const root = createRoot(printContainer);
+    const root = createRoot(rootEl);
 
     await new Promise<void>((resolve) => {
       root.render(
@@ -251,25 +254,10 @@ export default function PatientDetailPage() {
           clinicId={rx.clinicId || undefined}
         />
       );
-      setTimeout(resolve, 600);
+      setTimeout(resolve, 800);
     });
 
-    const images = printContainer.querySelectorAll('img');
-    await Promise.all(
-      Array.from(images).map((img) => new Promise<void>((res) => {
-        if (img.complete) res();
-        else { img.onload = () => res(); img.onerror = () => res(); }
-      }))
-    );
-
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (printWindow) {
-      printWindow.document.write(`<!DOCTYPE html><html><head><title>Prescription - ${patient.firstName}</title><style>@media print{body{margin:0;}}</style></head><body></body></html>`);
-      printWindow.document.body.appendChild(printContainer);
-      printWindow.document.close();
-      setTimeout(() => { printWindow.print(); }, 500);
-    }
-    document.body.removeChild(printContainer);
+    setTimeout(() => { printWindow.print(); }, 500);
   }, [patient]);
 
   const patientConsultations = clinicConsultations;
