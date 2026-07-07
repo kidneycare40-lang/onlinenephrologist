@@ -1490,7 +1490,7 @@ export default function ConsultationPage() {
                         </div>
                       )}
                       {testRequestByWhenType === 'Calendar' && (
-                        <div className="relative mt-2">
+                        <div className="relative mt-2 border border-slate-200 rounded focus-within:ring-1 focus-within:ring-[#0A75BB]">
                           <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                           <input
                             type="date"
@@ -1499,10 +1499,15 @@ export default function ConsultationPage() {
                               setTestRequestByWhenDate(e.target.value);
                               setTestRequestByWhen(e.target.value);
                             }}
-                            className={cn("date-with-placeholder pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px]", testRequestByWhenDate && "has-value")}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            style={{ zIndex: 2 }}
                           />
-                          {!testRequestByWhenDate && (
-                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>
+                          {testRequestByWhenDate ? (
+                            <span className="pl-7 pr-2 py-1 text-xs text-slate-700 whitespace-nowrap pointer-events-none">
+                              {new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ({new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })})
+                            </span>
+                          ) : (
+                            <span className="pl-7 pr-2 py-1 text-xs text-slate-400 pointer-events-none select-none">select date</span>
                           )}
                         </div>
                       )}
@@ -1672,19 +1677,25 @@ export default function ConsultationPage() {
                           ))}
                         </div>
                         <span className="text-xs text-slate-400">Or</span>
-                        <div className="relative group">
+                        <div className="relative group border border-slate-200 rounded focus-within:ring-1 focus-within:ring-[#0A75BB]">
                           <Calendar className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                           <input
                             type="date"
+                            ref={(el) => { (el as any).__nextVisitDateRef = true; }}
                             value={nextVisitDate}
                             onChange={(e) => {
                               setNextVisitDate(e.target.value);
                               setConsultation((prev) => prev ? { ...prev, followUpDate: e.target.value } : prev);
                             }}
-                            className={cn("date-with-placeholder pl-7 pr-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] min-w-[160px] text-slate-700", nextVisitDate && "has-value")}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            style={{ zIndex: 2 }}
                           />
-                          {!nextVisitDate && (
-                            <span className="absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none select-none">select date</span>
+                          {nextVisitDate ? (
+                            <span className="pl-7 pr-2 py-1 text-xs text-slate-700 whitespace-nowrap pointer-events-none">
+                              {new Date(nextVisitDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} ({new Date(nextVisitDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })})
+                            </span>
+                          ) : (
+                            <span className="pl-7 pr-2 py-1 text-xs text-slate-400 pointer-events-none select-none">select date</span>
                           )}
                         </div>
                       </div>
