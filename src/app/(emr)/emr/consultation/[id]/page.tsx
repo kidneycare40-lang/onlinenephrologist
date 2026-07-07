@@ -77,6 +77,8 @@ export default function ConsultationPage() {
     'URINE ROUTINE',
   ]);
   const [testRequestByWhen, setTestRequestByWhen] = useState('');
+  const [testRequestByWhenValue, setTestRequestByWhenValue] = useState<number>(4);
+  const [testRequestByWhenUnit, setTestRequestByWhenUnit] = useState<'Days' | 'Weeks' | 'Months'>('Months');
   const [testGroupSearch, setTestGroupSearch] = useState('');
   const [testSelectedIdx, setTestSelectedIdx] = useState(-1);
   const [testDropdownPos, setTestDropdownPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
@@ -93,6 +95,14 @@ export default function ConsultationPage() {
 
   const [showTestPanelTemplates, setShowTestPanelTemplates] = useState(false);
   const [testPanelSearch, setTestPanelSearch] = useState('');
+
+  const computeByWhenDate = (value: number, unit: 'Days' | 'Weeks' | 'Months'): string => {
+    const d = new Date();
+    if (unit === 'Days') d.setDate(d.getDate() + value);
+    else if (unit === 'Weeks') d.setDate(d.getDate() + value * 7);
+    else d.setMonth(d.getMonth() + value);
+    return d.toISOString().split('T')[0];
+  };
   const [customTestPanelTemplates, setCustomTestPanelTemplates] = useState<TestPanelTemplate[]>([]);
   const [showSaveTestTemplate, setShowSaveTestTemplate] = useState(false);
   const [testTemplateName, setTestTemplateName] = useState('');
@@ -626,7 +636,10 @@ export default function ConsultationPage() {
       rx += `\n`;
     }
     if (consultation.advice) rx += `ADVICE:\n${consultation.advice}\n\n`;
-    if (testRequests.length) rx += `INVESTIGATIONS:\n${testRequests.join(', ')}\n\n`;
+    if (testRequests.length) {
+      const byWhenText = testRequestByWhenValue && testRequestByWhenUnit ? ` by ${testRequestByWhenValue} ${testRequestByWhenUnit}` : '';
+      rx += `TESTS ADVISED${byWhenText}:\n${testRequests.join(', ')}\n\n`;
+    }
     rx += `---\nKidney Care Centre | +91 98182 35613`;
     return rx;
   };
@@ -657,7 +670,7 @@ export default function ConsultationPage() {
             consultation={consultation}
             consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
             testRequests={testRequests}
-            testRequestByWhen={testRequestByWhen}
+            testRequestByWhen={testRequestByWhenValue && testRequestByWhenUnit ? `by ${testRequestByWhenValue} ${testRequestByWhenUnit}` : testRequestByWhen}
             labResults={patientLabResults}
             clinicId={clinicId ?? undefined}
           />
@@ -1523,11 +1536,35 @@ export default function ConsultationPage() {
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-xs text-slate-500">By When:</span>
                         <input
-                          type="date"
-                          value={testRequestByWhen}
-                          onChange={(e) => setTestRequestByWhen(e.target.value)}
-                          className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                          type="number"
+                          min={1}
+                          max={99}
+                          value={testRequestByWhenValue}
+                          onChange={(e) => {
+                            const v = Math.max(1, parseInt(e.target.value) || 1);
+                            setTestRequestByWhenValue(v);
+                            setTestRequestByWhen(computeByWhenDate(v, testRequestByWhenUnit));
+                          }}
+                          className="w-14 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] text-center"
                         />
+                        <select
+                          value={testRequestByWhenUnit}
+                          onChange={(e) => {
+                            const u = e.target.value as 'Days' | 'Weeks' | 'Months';
+                            setTestRequestByWhenUnit(u);
+                            setTestRequestByWhen(computeByWhenDate(testRequestByWhenValue, u));
+                          }}
+                          className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] bg-white"
+                        >
+                          <option value="Days">Days</option>
+                          <option value="Weeks">Weeks</option>
+                          <option value="Months">Months</option>
+                        </select>
+                        {testRequestByWhen && (
+                          <span className="text-[10px] text-slate-400">
+                            ({new Date(testRequestByWhen + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })})
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1726,7 +1763,7 @@ export default function ConsultationPage() {
           consultation={consultation}
           consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
           testRequests={testRequests}
-          testRequestByWhen={testRequestByWhen}
+          testRequestByWhen={testRequestByWhenValue && testRequestByWhenUnit ? `by ${testRequestByWhenValue} ${testRequestByWhenUnit}` : testRequestByWhen}
           labResults={patientLabResults}
             onWhatsApp={handleWhatsAppPrescription}
           clinicId={clinicId ?? undefined}

@@ -404,7 +404,7 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                   <div className="rx-tests-block" style={{ marginBottom: '12px', pageBreakInside: 'avoid' }}>
                     <div style={{ fontSize: '10.5pt', fontWeight: 'bold', marginBottom: '2px' }}>Tests Advised:</div>
                     <div style={{ fontSize: '9.5pt', lineHeight: '1.5' }}>
-                      {testRequestByWhen ? `[after ${testRequestByWhen}] ` : ''}{testRequests.join(' , ')}
+                      {testRequestByWhen ? `[Retest ${testRequestByWhen}] ` : ''}{testRequests.join(' , ')}
                     </div>
                   </div>
                 )}
