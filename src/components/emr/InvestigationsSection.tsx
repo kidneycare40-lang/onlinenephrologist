@@ -70,8 +70,10 @@ interface LabResult {
 
 export function InvestigationsTable({
   pastResults,
+  consultationInvestigations = [],
 }: {
   pastResults: { testName: string; value: string; unit: string; date: string; isAbnormal: boolean }[];
+  consultationInvestigations?: { testName: string; result?: string; unit?: string; normalRange?: string; isAbnormal?: boolean; date?: string; status?: string }[];
 }) {
   const [showAddInput, setShowAddInput] = useState(false);
   const [newTestName, setNewTestName] = useState('');
@@ -90,12 +92,27 @@ export function InvestigationsTable({
     return toISODate(d);
   };
 
-  const [entries, setEntries] = useState<LabResult[]>(() =>
-    pastResults.map((r) => ({
+  const [entries, setEntries] = useState<LabResult[]>(() => {
+    const base = pastResults.map((r) => ({
       ...r,
       dateISO: normalizeDate(r.date),
-    }))
-  );
+    }));
+    const existingNames = new Set(base.map((e) => e.testName));
+    for (const inv of consultationInvestigations) {
+      if (inv.testName && !existingNames.has(inv.testName)) {
+        base.push({
+          testName: inv.testName,
+          value: inv.result || '',
+          unit: inv.unit || '',
+          date: formatDisplayDate(normalizeDate(inv.date || todayISO)),
+          dateISO: normalizeDate(inv.date || todayISO),
+          isAbnormal: inv.isAbnormal || false,
+        });
+        existingNames.add(inv.testName);
+      }
+    }
+    return base;
+  });
 
   const [extraDates, setExtraDates] = useState<string[]>([]);
 

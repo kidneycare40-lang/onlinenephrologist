@@ -1217,7 +1217,7 @@ export default function ConsultationPage() {
 
               <ErrorBoundary>
                 <div id="section-investigations">
-                  <InvestigationsTable pastResults={patientLabResults} />
+                  <InvestigationsTable pastResults={patientLabResults} consultationInvestigations={consultation?.investigations || []} />
                   <div className="mt-2">
                     <TemplateSelector
                       type="investigations"
