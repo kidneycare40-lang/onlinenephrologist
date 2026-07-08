@@ -82,7 +82,7 @@ export default function ConsultationPage() {
   const [testRequestByWhenUnit, setTestRequestByWhenUnit] = useState<'Days' | 'Weeks' | 'Months'>('Months');
   const [testRequestByWhenDate, setTestRequestByWhenDate] = useState('');
   const [nextVisitValue, setNextVisitValue] = useState<number>(0);
-  const [nextVisitUnit, setNextVisitUnit] = useState<'Days' | 'Weeks' | 'Months'>('Months');
+  const [nextVisitUnit, setNextVisitUnit] = useState<'Days' | 'Weeks' | 'Months' | ''>('');
   const [nextVisitDate, setNextVisitDate] = useState('');
   const [testGroupSearch, setTestGroupSearch] = useState('');
   const [testSelectedIdx, setTestSelectedIdx] = useState(-1);
@@ -101,7 +101,7 @@ export default function ConsultationPage() {
   const [showTestPanelTemplates, setShowTestPanelTemplates] = useState(false);
   const [testPanelSearch, setTestPanelSearch] = useState('');
 
-  const computeByWhenDate = (value: number, unit: 'Days' | 'Weeks' | 'Months'): string => {
+  const computeByWhenDate = (value: number, unit: string): string => {
     const d = new Date();
     if (unit === 'Days') d.setDate(d.getDate() + value);
     else if (unit === 'Weeks') d.setDate(d.getDate() + value * 7);
@@ -1641,7 +1641,7 @@ export default function ConsultationPage() {
                           onChange={(e) => {
                             const v = Math.max(0, parseInt(e.target.value) || 0);
                             setNextVisitValue(v);
-                            if (v > 0 && !nextVisitDate) {
+                            if (v > 0 && nextVisitUnit && !nextVisitDate) {
                               setConsultation((prev) => prev ? { ...prev, followUpDate: computeByWhenDate(v, nextVisitUnit) } : prev);
                             } else if (v > 0 && nextVisitDate) {
                               setConsultation((prev) => prev ? { ...prev, followUpDate: nextVisitDate } : prev);
