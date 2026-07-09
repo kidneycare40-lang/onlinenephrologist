@@ -71,9 +71,11 @@ interface LabResult {
 export function InvestigationsTable({
   pastResults,
   consultationInvestigations = [],
+  onChange,
 }: {
   pastResults: { testName: string; value: string; unit: string; date: string; isAbnormal: boolean }[];
   consultationInvestigations?: { testName: string; result?: string; unit?: string; normalRange?: string; isAbnormal?: boolean; date?: string; status?: string }[];
+  onChange?: (investigations: { testName: string; result: string; unit: string; date: string; isAbnormal: boolean }[]) => void;
 }) {
   const [showAddInput, setShowAddInput] = useState(false);
   const [newTestName, setNewTestName] = useState('');
@@ -123,10 +125,9 @@ export function InvestigationsTable({
 
   const dates = useMemo(() => {
     const dateSet = new Set(entries.map((r) => r.dateISO));
-    dateSet.add(todayISO);
     extraDates.forEach((d) => dateSet.add(d));
     return [...dateSet].sort((a, b) => b.localeCompare(a));
-  }, [entries, todayISO, extraDates]);
+  }, [entries, extraDates]);
 
   const suggestedTests = useMemo(() => {
     if (!newTestName.trim()) return allSuggestedTests.filter((t) => !allTestNames.includes(t)).slice(0, 20);
@@ -140,12 +141,14 @@ export function InvestigationsTable({
     const trimmed = testName.trim();
     if (!trimmed || allTestNames.includes(trimmed)) return;
     const ref = referenceRanges[trimmed];
-    setEntries([
+    const newEntries = [
       ...entries,
       { testName: trimmed, value: '', unit: ref?.unit || '', date: formatDisplayDate(todayISO), dateISO: todayISO, isAbnormal: false },
-    ]);
+    ];
+    setEntries(newEntries);
     setNewTestName('');
     setShowAddInput(false);
+    onChange?.(newEntries.map((e) => ({ testName: e.testName, result: e.value, unit: e.unit, date: e.dateISO, isAbnormal: e.isAbnormal })));
   };
 
   const addNewDate = () => {
@@ -159,7 +162,16 @@ export function InvestigationsTable({
   };
 
   const removeTest = (testName: string) => {
-    setEntries((prev) => prev.filter((r) => r.testName !== testName));
+    const newEntries = entries.filter((r) => r.testName !== testName);
+    setEntries(newEntries);
+    onChange?.(newEntries.map((e) => ({ testName: e.testName, result: e.value, unit: e.unit, date: e.dateISO, isAbnormal: e.isAbnormal })));
+  };
+
+  const removeDate = (dateISO: string) => {
+    const newEntries = entries.filter((r) => r.dateISO !== dateISO);
+    setEntries(newEntries);
+    setExtraDates((prev) => prev.filter((d) => d !== dateISO));
+    onChange?.(newEntries.map((e) => ({ testName: e.testName, result: e.value, unit: e.unit, date: e.dateISO, isAbnormal: e.isAbnormal })));
   };
 
   const getValue = (testName: string, dateISO: string): string => {
@@ -176,22 +188,22 @@ export function InvestigationsTable({
     const abnormal = isAbnormal(testName, value);
     setEntries((prev) => {
       const existing = prev.find((r) => r.testName === testName && r.dateISO === dateISO);
-      if (existing) {
-        return prev.map((r) =>
-          r.testName === testName && r.dateISO === dateISO
-            ? { ...r, value, isAbnormal: abnormal }
-            : r
-        );
-      }
-      const ref = referenceRanges[testName];
-      return [...prev, {
-        testName,
-        value,
-        unit: ref?.unit || '',
-        date: formatDisplayDate(dateISO),
-        dateISO,
-        isAbnormal: abnormal,
-      }];
+      const newEntries = existing
+        ? prev.map((r) =>
+            r.testName === testName && r.dateISO === dateISO
+              ? { ...r, value, isAbnormal: abnormal }
+              : r
+          )
+        : [...prev, {
+            testName,
+            value,
+            unit: referenceRanges[testName]?.unit || '',
+            date: formatDisplayDate(dateISO),
+            dateISO,
+            isAbnormal: abnormal,
+          }];
+      onChange?.(newEntries.map((e) => ({ testName: e.testName, result: e.value, unit: e.unit, date: e.dateISO, isAbnormal: e.isAbnormal })));
+      return newEntries;
     });
   };
 
@@ -291,11 +303,20 @@ export function InvestigationsTable({
               <th className="px-2 py-2.5 text-left text-[11px] font-semibold text-slate-600 border-b border-slate-200">Units</th>
               {dates.map((d) => (
                 <th key={d} className={cn(
-                  "px-2 py-2.5 text-center text-[11px] font-semibold border-b border-slate-200",
+                  "px-2 py-2.5 text-center text-[11px] font-semibold border-b border-slate-200 group/date",
                   d === todayISO ? 'text-[#0A75BB]' : 'text-slate-600'
                 )}>
-                  {formatDisplayDate(d)}
-                  {d === todayISO && <span className="text-[10px] font-normal ml-0.5">Today</span>}
+                  <div className="flex items-center justify-center gap-1">
+                    <span>{formatDisplayDate(d)}</span>
+                    {d === todayISO && <span className="text-[10px] font-normal">Today</span>}
+                    <button
+                      onClick={() => removeDate(d)}
+                      className="p-0.5 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/date:opacity-100"
+                      title="Remove date column"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 </th>
               ))}
             </tr>

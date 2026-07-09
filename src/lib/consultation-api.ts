@@ -174,7 +174,7 @@ export async function saveConsultationToApi(
         status: consultation.status || 'IN_PROGRESS',
       });
       if (created) {
-        consultation.id = created.id;
+        // Don't mutate the original consultation ID - it's used as localStorage key
       }
     }
 
@@ -192,7 +192,7 @@ export async function saveConsultationToApi(
 function saveConsultationToLocalStorage(consultation: EMRConsultation) {
   try {
     const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
-    const idx = stored.findIndex((c) => c.id === consultation.id || c.patientId === consultation.patientId);
+    const idx = stored.findIndex((c) => c.id === consultation.id);
     const updated = { ...consultation, updatedAt: new Date().toISOString() };
     if (idx >= 0) {
       stored[idx] = updated;

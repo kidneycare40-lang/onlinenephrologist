@@ -276,7 +276,7 @@ export default function PatientDetailPage() {
         <PrescriptionPrint
           patient={patient}
           consultation={consultation}
-          consultationDate={new Date(rx.date + 'T00:00:00').toLocaleDateString('en-IN')}
+          consultationDate={rx.date}
           testRequests={rx.investigations || []}
           clinicId={rx.clinicId || undefined}
         />

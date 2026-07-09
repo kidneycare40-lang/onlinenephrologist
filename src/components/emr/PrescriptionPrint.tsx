@@ -24,8 +24,9 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
     const accentColor = isPsri ? '#c0392b' : isOnline ? '#059669' : '#095187';
     const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
     const now = new Date();
+    const displayDate = consultationDate ? new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const dateStr = displayDate;
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
     const onlineHeaderContent = (
       <div style={{ padding: '0' }}>
@@ -211,12 +212,13 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
     function frequencyToDosagePattern(freq: string, route: string): string {
       const f = (freq || '').toLowerCase();
       const r = (route || '').toLowerCase();
+      if (!f && !r) return '';
       if (r === 'sc' || r === 'iv' || f.includes('week')) return '0 - 0 - 0';
       if (f.includes('thrice') || f.includes('three times') || f.includes('3 times') || f.includes('tds') || f.includes('tid')) return '1 - 1 - 1';
       if (f.includes('twice') || f.includes('2 times') || f.includes('bd') || f.includes('two times')) return '1 - 0 - 1';
       if (f.includes('once') || f.includes('1 time') || f.includes('od') || f.includes('daily')) return '1 - 0 - 0';
       if (f.includes('needed') || f.includes('prn') || f.includes('sos') || f.includes('stat')) return 'SOS';
-      return '1 - 0 - 0';
+      return '';
     }
 
     return (
@@ -272,15 +274,16 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                 {(() => {
                   const v = consultation.vitals;
                   const items: { label: string; value: string }[] = [];
-                  if (v.bloodPressure) items.push({ label: 'BP', value: v.bloodPressure });
-                  if (v.heartRate) items.push({ label: 'Pulse', value: `${v.heartRate} bpm` });
-                  if (v.temperature) items.push({ label: 'Temp', value: `${v.temperature}°F` });
-                  if (v.spo2) items.push({ label: 'SpO2', value: `${v.spo2}%` });
-                  if (v.weight) items.push({ label: 'Wt', value: `${v.weight} kg` });
-                  if (v.height) items.push({ label: 'Ht', value: `${v.height} cm` });
-                  if (v.bmi) items.push({ label: 'BMI', value: `${v.bmi} kg/m²` });
-                  if (v.creatinine) items.push({ label: 'Creat', value: `${v.creatinine} mg/dL` });
-                  if (v.egfr) items.push({ label: 'eGFR', value: `${v.egfr} mL/min` });
+                  const bp = (v.bloodPressure || '').trim();
+                  if (bp && bp !== '0/0') items.push({ label: 'BP', value: bp });
+                  if (v.heartRate && Number(v.heartRate) > 0) items.push({ label: 'Pulse', value: `${v.heartRate} bpm` });
+                  if (v.temperature && Number(v.temperature) > 0) items.push({ label: 'Temp', value: `${v.temperature}°F` });
+                  if (v.spo2 && Number(v.spo2) > 0) items.push({ label: 'SpO2', value: `${v.spo2}%` });
+                  if (v.weight && Number(v.weight) > 0) items.push({ label: 'Wt', value: `${v.weight} kg` });
+                  if (v.height && Number(v.height) > 0) items.push({ label: 'Ht', value: `${v.height} cm` });
+                  if (v.bmi && Number(v.bmi) > 0) items.push({ label: 'BMI', value: `${v.bmi} kg/m²` });
+                  if (v.creatinine && Number(v.creatinine) > 0) items.push({ label: 'Creat', value: `${v.creatinine} mg/dL` });
+                  if (v.egfr && Number(v.egfr) > 0) items.push({ label: 'eGFR', value: `${v.egfr} mL/min` });
                   if (items.length === 0) return null;
                   const vitalsBg = isOnline ? '#ecfdf5' : isPsri ? '#fef2f2' : '#f0f7ff';
                   const vitalsLabelColor = isOnline ? '#059669' : isPsri ? '#c0392b' : '#095187';
@@ -336,16 +339,16 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                   );
                 })()}
 
-                {consultation.diagnoses.length > 0 && (
+                {consultation.diagnoses.filter(d => d.name && d.name.trim()).length > 0 && (
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '10.5pt', fontWeight: 'bold', marginBottom: '4px' }}>Diagnosis:</div>
                     <div style={{ fontSize: '9.5pt', lineHeight: '1.6' }}>
-                      {consultation.diagnoses.map((d) => d.name).join(' , ')}
+                      {consultation.diagnoses.filter(d => d.name && d.name.trim()).map((d) => d.name).join(' , ')}
                     </div>
                   </div>
                 )}
 
-                {consultation.prescriptions.length > 0 && (
+                {consultation.prescriptions.filter(p => p.name && p.name.trim()).length > 0 && (
                   <div style={{ marginBottom: '14px' }}>
                     <div style={{ fontSize: '18pt', fontWeight: 'bold', color: '#000', marginBottom: '4px', fontFamily: 'serif' }}>&#8478;</div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', tableLayout: 'fixed' }}>
@@ -362,13 +365,14 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
                         </tr>
                       </thead>
                       <tbody>
-                        {consultation.prescriptions.map((med, i) => {
+                        {consultation.prescriptions.filter(p => p.name && p.name.trim()).map((med, i) => {
                           const timingParts: string[] = [];
                           if (med.when) timingParts.push(med.when);
                           if (med.frequency) timingParts.push(med.frequency);
                           if (med.duration) timingParts.push(med.duration);
                           const timingStr = timingParts.join(' - ');
-                          const nameWithDose = `${med.name} ${med.strength || med.dosage}`.toUpperCase();
+                          const doseLabel = (med.strength && med.strength !== med.dosage) ? med.strength : '';
+                          const nameWithDose = `${med.name} ${doseLabel}`.trim().toUpperCase();
                           const dosagePattern = med.dosage || frequencyToDosagePattern(med.frequency, med.route);
                           return (
                             <tr key={i} className="rx-medicine-row" style={{ borderBottom: '0.5px solid #e5e7eb', pageBreakInside: 'avoid' }}>
@@ -411,7 +415,7 @@ const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintProps>(
 
                 {consultation.followUpDate && (
                   <div style={{ fontSize: '10pt', marginBottom: '12px' }}>
-                    <strong>Follow-up:</strong> {consultation.followUpDate}
+                    <strong>Follow-up:</strong> {consultation.followUpText || new Date(consultation.followUpDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </div>
                 )}
 

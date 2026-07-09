@@ -30,7 +30,7 @@ import PastVisitsTimeline from '@/components/emr/PastVisitsTimeline';
 import BottomActionBar from '@/components/emr/BottomActionBar';
 import PrintPreviewModal from '@/components/emr/PrintPreviewModal';
 import ReportUploadOCR from '@/components/emr/ReportUploadOCR';
-import { Plus, Search, Trash2, X, Stethoscope, Calendar } from 'lucide-react';
+import { Plus, Search, Trash2, X, Stethoscope, Calendar, FileText, ChevronRight, ChevronDown } from 'lucide-react';
 import { type ExtractedLabValue, type ExtractedMedicine, type OCRResult } from '@/lib/ocr-utils';
 import { autoCorrect } from '@/lib/spellcheck';
 import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR } from '@/lib/consultation-api';
@@ -111,6 +111,8 @@ export default function ConsultationPage() {
   const [customTestPanelTemplates, setCustomTestPanelTemplates] = useState<TestPanelTemplate[]>([]);
   const [showSaveTestTemplate, setShowSaveTestTemplate] = useState(false);
   const [testTemplateName, setTestTemplateName] = useState('');
+  const [showPreviousRx, setShowPreviousRx] = useState(false);
+  const [previousRx, setPreviousRx] = useState<EMRConsultation | null>(null);
 
   useEffect(() => {
     setCustomAdviceTemplates(adviceTemplateStorage.getAll());
@@ -132,8 +134,7 @@ export default function ConsultationPage() {
     { name: 'Vasculitis Workup', description: 'ANCA, ANA, Complement, ESR', tests: ['P-ANCA (MPO)', 'C-ANCA (PR3)', 'ANCA Profile', 'ANA', 'Complement C3', 'Complement C4', 'Erythrocyte Sedimentation Rate (ESR)'] },
   ];
 
-  const [historyText, setHistoryText] = useState('');
-  const [showHistorySection, setShowHistorySection] = useState(false);
+
 
   const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -143,11 +144,26 @@ export default function ConsultationPage() {
   // Load online bookings from localStorage (kept as fallback)
   const onlineBookings = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem('emr_bookings') || '[]') as { bookingId: string; firstName: string; lastName: string; phone: string; email: string; age: string; gender: string; consultationType: string; clinicId: string; date: string; time: string; reason: string; createdAt: string; status: string; consultationFee: number; paymentStatus?: string }[];
+      return JSON.parse(localStorage.getItem('emr_bookings') || '[]') as { bookingId: string; firstName: string; lastName: string; phone: string; email: string; age: string; gender: string; consultationType: string; clinicId: string; date: string; time: string; reason: string; complaints?: string; currentMedications?: string; medicines?: string; notes?: string; previousKidneyIssue?: string; reportFiles?: string[]; ultrasoundFile?: string; bookingMedicines?: { id: string; name: string; strength: string; dosage: string; when: string; frequency: string; duration: string }[]; doctorName?: string; consultationFee?: number; consultationFeeCurrency?: string; createdAt: string; status: string; paymentStatus?: string }[];
     } catch { return []; }
   }, []);
 
   const allPatients = useMemo(() => [...patients, ...addedPatients], [addedPatients]);
+
+  const convertBookingMedicinesToPrescriptions = (meds?: { id: string; name: string; strength: string; dosage: string; when: string; frequency: string; duration: string }[]): PrescriptionItem[] => {
+    if (!meds || meds.length === 0) return [];
+    return meds.filter(m => m.name.trim()).map(m => ({
+      id: m.id || `presc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: m.name,
+      strength: m.strength || '',
+      dosage: m.dosage || '',
+      when: m.when || '',
+      frequency: m.frequency || '',
+      duration: m.duration || '',
+      route: 'oral' as const,
+      instructions: '',
+    }));
+  };
 
   // Load consultation and patient from API (with localStorage fallback)
   useEffect(() => {
@@ -180,26 +196,41 @@ export default function ConsultationPage() {
 
           if (directPatient) {
             setPatient(directPatient);
-            // Create new consultation for this patient
-            const newConsult: EMRConsultation = {
-              id: `consult-${directPatient.id}`,
-              patientId: directPatient.id,
-              clinicId: directPatient.clinicId || clinicId || '',
-              date: new Date().toISOString().split('T')[0],
-              doctorName: 'Dr Rajesh Goel',
-              chiefComplaint: '',
-              hpi: '',
-              examination: '',
-              vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
-              diagnoses: [],
-              prescriptions: [],
-              investigations: [],
-              advice: '',
-              notes: '',
-              followUpDate: '',
-              status: 'IN_PROGRESS',
-            };
-            setConsultation(newConsult);
+
+            // Check localStorage for existing consultation for this patient
+            let existingConsult: EMRConsultation | null = null;
+            try {
+              const storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+              existingConsult = storedConsults
+                .filter((c) => c.patientId === directPatient.id)
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || null;
+            } catch { /* ignore */ }
+
+            if (existingConsult) {
+              // Load existing consultation
+              setConsultation(existingConsult);
+            } else {
+              // Create new consultation for this patient
+              const newConsult: EMRConsultation = {
+                id: `consult-${directPatient.id}-${Date.now()}`,
+                patientId: directPatient.id,
+                clinicId: directPatient.clinicId || clinicId || '',
+                date: new Date().toISOString().split('T')[0],
+                doctorName: 'Dr Rajesh Goel',
+                chiefComplaint: '',
+                hpi: '',
+                examination: '',
+                vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
+                diagnoses: [],
+                prescriptions: [],
+                investigations: [],
+                advice: '',
+                notes: '',
+                followUpDate: '',
+                status: 'IN_PROGRESS',
+              };
+              setConsultation(newConsult);
+            }
             setIsLoadingData(false);
             return;
           }
@@ -224,29 +255,64 @@ export default function ConsultationPage() {
       setAddedPatients(storedPatients);
       const allStored = [...patients, ...storedPatients];
 
-      // Check stored consultations
-      const storedConsult = storedConsultations.find((c) => {
+      // Look up booking data early for backfilling existing consultations
+      const booking = onlineBookings.find((b) => b.bookingId === rawBookingId);
+
+      // Check stored consultations — match by consultation ID first, then by patient ID
+      let storedConsult = storedConsultations.find((c) => {
         if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
-        return c.id === id || c.patientId === id || c.patientId === patientId;
+        return c.id === id;
       });
+      // If no match by ID, try finding by patient ID (most recent)
+      if (!storedConsult) {
+        const patientConsults = storedConsultations
+          .filter((c) => {
+            if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
+            return c.patientId === id;
+          })
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        storedConsult = patientConsults[0];
+      }
       if (storedConsult) {
         const pat = allStored.find((p) => p.id === storedConsult.patientId);
         if (pat) {
-          setConsultation(storedConsult);
+          let consultToUse = storedConsult;
+          if (booking && (!storedConsult.chiefComplaint || storedConsult.chiefComplaint === booking.reason)) {
+            const bookingNotesParts: string[] = [];
+            if (booking.complaints) bookingNotesParts.push(`Complaints: ${booking.complaints}`);
+            if (booking.currentMedications || booking.medicines) bookingNotesParts.push(`Current Medicines: ${booking.currentMedications || booking.medicines}`);
+            if (booking.previousKidneyIssue === 'yes') bookingNotesParts.push('Previous kidney issue: Yes');
+            if (booking.notes) bookingNotesParts.push(`Notes: ${booking.notes}`);
+            const reportCount = booking.reportFiles?.length || 0;
+            if (reportCount > 0) bookingNotesParts.push(`${reportCount} report(s) uploaded by patient`);
+            if (booking.ultrasoundFile) bookingNotesParts.push('Ultrasound report uploaded by patient');
+            const bookingPrescriptions = convertBookingMedicinesToPrescriptions(booking.bookingMedicines);
+            consultToUse = {
+              ...storedConsult,
+              chiefComplaint: [booking.reason, booking.complaints].filter(Boolean).join(' — ') || storedConsult.chiefComplaint,
+              notes: bookingNotesParts.length > 0 ? bookingNotesParts.join('\n') : storedConsult.notes,
+              prescriptions: bookingPrescriptions.length > 0 ? bookingPrescriptions : storedConsult.prescriptions,
+              bookingReportFiles: booking.reportFiles || storedConsult.bookingReportFiles,
+              bookingUltrasoundFile: booking.ultrasoundFile || storedConsult.bookingUltrasoundFile,
+            };
+            const idx = storedConsultations.findIndex((c) => c.id === consultToUse.id);
+            if (idx >= 0) {
+              storedConsultations[idx] = consultToUse;
+              localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
+            }
+          }
+          setConsultation(consultToUse);
           setPatient(pat);
           setIsLoadingData(false);
           return;
         }
       }
 
-      // Check mock consultations
+      // Check mock consultations — only match by consultation ID
       let consult = consultations.find((c) => {
         if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
-        return c.id === id || c.patientId === id || c.patientId === patientId;
+        return c.id === id;
       });
-      if (!consult) {
-        consult = consultations.find((c) => c.patientId === id || c.patientId === patientId);
-      }
       if (consult) {
         const pat = allStored.find((p) => p.id === consult!.patientId);
         setConsultation(consult);
@@ -258,19 +324,26 @@ export default function ConsultationPage() {
       // Check online bookings - auto-create patient + consultation
       // First check if patient already exists in emr_added_patients
       const existingPat = storedPatients.find((p) => p.id === id || p.id === `obp-${rawBookingId}`);
-      const booking = onlineBookings.find((b) => b.bookingId === rawBookingId);
       if (existingPat && !storedConsultations.find((c) => c.patientId === existingPat.id)) {
-        // Patient exists but no consultation yet — create one
+        // Patient exists but no consultation yet — create one from booking data
         const patClinicId = existingPat.clinicId || 'online';
+        const bookingNotesParts: string[] = [];
+        if (booking?.complaints) bookingNotesParts.push(`Complaints: ${booking.complaints}`);
+        if (booking?.currentMedications || booking?.medicines) bookingNotesParts.push(`Current Medicines: ${booking.currentMedications || booking.medicines}`);
+        if (booking?.previousKidneyIssue === 'yes') bookingNotesParts.push('Previous kidney issue: Yes');
+        if (booking?.notes) bookingNotesParts.push(`Notes: ${booking.notes}`);
+        const reportCount = booking?.reportFiles?.length || 0;
+        if (reportCount > 0) bookingNotesParts.push(`${reportCount} report(s) uploaded by patient`);
+        if (booking?.ultrasoundFile) bookingNotesParts.push('Ultrasound report uploaded by patient');
         const newConsult: EMRConsultation = {
-          id: `consult-${existingPat.id}`,
+          id: `consult-${existingPat.id}-${Date.now()}`,
           patientId: existingPat.id,
           clinicId: patClinicId,
           date: booking?.date || new Date().toISOString().split('T')[0],
           doctorName: 'Dr. Rajesh Goel',
           status: 'IN_PROGRESS',
           tokenId: `#${existingPat.id.slice(-6).toUpperCase()}`,
-          chiefComplaint: booking?.reason || '',
+          chiefComplaint: [booking?.reason, booking?.complaints].filter(Boolean).join(' — ') || '',
           hpi: '',
           examination: '',
           vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
@@ -278,13 +351,22 @@ export default function ConsultationPage() {
           prescriptions: [],
           investigations: [],
           advice: '',
-          notes: '',
+          notes: bookingNotesParts.join('\n'),
           followUpDate: '',
+          bookingReportFiles: booking?.reportFiles || [],
+          bookingUltrasoundFile: booking?.ultrasoundFile || '',
         };
         storedConsultations.push(newConsult);
         localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
+        if (booking) {
+          const updatedPat = { ...existingPat, medicalHistory: [existingPat.medicalHistory, booking.reason, booking.previousKidneyIssue === 'yes' ? 'Previous kidney issue' : ''].filter(Boolean).join(', ') };
+          const patIdx = storedPatients.findIndex((p) => p.id === existingPat.id);
+          if (patIdx >= 0) { storedPatients[patIdx] = updatedPat; localStorage.setItem('emr_added_patients', JSON.stringify(storedPatients)); }
+          setPatient(updatedPat);
+        } else {
+          setPatient(existingPat);
+        }
         setConsultation(newConsult);
-        setPatient(existingPat);
         setIsLoadingData(false);
         return;
       }
@@ -311,7 +393,7 @@ export default function ConsultationPage() {
           emergencyContactPhone: '',
           emergencyContactRelation: '',
           allergies: [],
-          medicalHistory: '',
+          medicalHistory: [booking.reason, booking.previousKidneyIssue === 'yes' ? 'Previous kidney issue' : ''].filter(Boolean).join(', '),
           isChronic: false,
           isActive: true,
           source: 'website',
@@ -327,6 +409,15 @@ export default function ConsultationPage() {
           localStorage.setItem('emr_added_patients', JSON.stringify(storedPatients));
         }
 
+        const bookingNotesParts: string[] = [];
+        if (booking.complaints) bookingNotesParts.push(`Complaints: ${booking.complaints}`);
+        if (booking.currentMedications || booking.medicines) bookingNotesParts.push(`Current Medicines: ${booking.currentMedications || booking.medicines}`);
+        if (booking.previousKidneyIssue === 'yes') bookingNotesParts.push('Previous kidney issue: Yes');
+        if (booking.notes) bookingNotesParts.push(`Notes: ${booking.notes}`);
+        const reportCount = booking.reportFiles?.length || 0;
+        if (reportCount > 0) bookingNotesParts.push(`${reportCount} report(s) uploaded by patient`);
+        if (booking.ultrasoundFile) bookingNotesParts.push('Ultrasound report uploaded by patient');
+
         const newConsult: EMRConsultation = {
           id: `consult-${booking.bookingId}`,
           patientId,
@@ -335,16 +426,18 @@ export default function ConsultationPage() {
           doctorName: 'Dr. Rajesh Goel',
           status: 'IN_PROGRESS',
           tokenId: `#${booking.bookingId.slice(-6).toUpperCase()}`,
-          chiefComplaint: booking.reason || '',
+          chiefComplaint: [booking.reason, booking.complaints].filter(Boolean).join(' — ') || '',
           hpi: '',
           examination: '',
           vitals: { bloodPressure: '', pulse: '', temperature: '', spo2: '', weight: '', height: '', bmi: '' },
           diagnoses: [],
-          prescriptions: [],
+          prescriptions: convertBookingMedicinesToPrescriptions(booking.bookingMedicines),
           investigations: [],
           advice: '',
-          notes: '',
+          notes: bookingNotesParts.join('\n'),
           followUpDate: '',
+          bookingReportFiles: booking.reportFiles || [],
+          bookingUltrasoundFile: booking.ultrasoundFile || '',
         };
 
         storedConsultations.push(newConsult);
@@ -360,7 +453,7 @@ export default function ConsultationPage() {
       const pat = allStored.find((p) => p.id === patientId);
       if (pat) {
         const newConsult: EMRConsultation = {
-          id: `consult-${pat.id}`,
+          id: `consult-${pat.id}-${Date.now()}`,
           patientId: pat.id,
           clinicId: pat.clinicId || clinicId || '',
           date: new Date().toISOString().split('T')[0],
@@ -552,7 +645,7 @@ export default function ConsultationPage() {
     try {
       const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
       const updated = { ...consult, updatedAt: new Date().toISOString() };
-      const idx = stored.findIndex((c) => c.id === consult.id || c.patientId === consult.patientId);
+      const idx = stored.findIndex((c) => c.id === consult.id);
       if (idx >= 0) {
         stored[idx] = updated;
       } else {
@@ -650,6 +743,7 @@ export default function ConsultationPage() {
       else if (testRequestByWhenType === 'Calendar' && testRequestByWhenDate) byWhenLabel = new Date(testRequestByWhenDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
       rx += `TESTS ADVISED${byWhenLabel ? `: [${byWhenLabel}]` : ':'}\n${testRequests.join(' , ')}\n\n`;
     }
+    if (consultation.followUpDate) rx += `FOLLOW-UP: ${consultation.followUpText || new Date(consultation.followUpDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}\n\n`;
     rx += `---\nKidney Care Centre | +91 98182 35613`;
     return rx;
   };
@@ -678,7 +772,7 @@ export default function ConsultationPage() {
           <PrescriptionPrint
             patient={patient}
             consultation={consultation}
-            consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
+            consultationDate={consultationDate}
             testRequests={testRequests}
             testRequestByWhen={(() => {
               if (testRequestByWhenType === 'ASAP') return '[ASAP]';
@@ -980,6 +1074,7 @@ export default function ConsultationPage() {
   const patientLabResults = useMemo(() => {
     if (!patient) return [];
     const results: { testName: string; value: string; unit: string; date: string; isAbnormal: boolean }[] = [];
+    const seen = new Set<string>();
     labOrders
       .filter((lo) => lo.patientId === patient.id && lo.results)
       .forEach((lo) => {
@@ -991,10 +1086,27 @@ export default function ConsultationPage() {
             date: formatDate(lo.date),
             isAbnormal: r.isAbnormal,
           });
+          seen.add(`${r.testName}|${formatDate(lo.date)}`);
         });
       });
+    if (consultation?.investigations) {
+      consultation.investigations.forEach((inv) => {
+        const invDate = inv.date || consultationDate;
+        const key = `${inv.testName}|${invDate}`;
+        const hasValue = inv.result && inv.result.trim() !== '' && inv.result.trim() !== '-';
+        if (!seen.has(key) && hasValue) {
+          results.push({
+            testName: inv.testName,
+            value: inv.result,
+            unit: inv.unit || '',
+            date: invDate,
+            isAbnormal: inv.isAbnormal || false,
+          });
+        }
+      });
+    }
     return results;
-  }, [patient]);
+  }, [patient, consultation, consultationDate]);
 
   if (isLoadingData) {
     return (
@@ -1069,29 +1181,79 @@ export default function ConsultationPage() {
                 />
               </ErrorBoundary>
 
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
-                <Calendar className="h-4 w-4 text-slate-500" />
-                <span className="text-xs font-medium text-slate-600">Prescription Date:</span>
-                <input
-                  type="date"
-                  value={consultationDate}
-                  max={today}
-                  onChange={(e) => setConsultationDate(e.target.value)}
-                  className="text-sm font-semibold text-[#0A75BB] border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 cursor-pointer"
-                />
-                {consultationDate !== today && (
-                  <button
-                    onClick={() => setConsultationDate(today)}
-                    className="text-xs text-slate-500 hover:text-slate-700 underline"
-                  >
-                    Today
-                  </button>
-                )}
-              </div>
+              {consultation && ((consultation.bookingReportFiles?.length ?? 0) > 0 || consultation.bookingUltrasoundFile) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-800">Patient Uploaded Reports</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {consultation.bookingReportFiles?.map((f: any, i: number) => {
+                      const fileName = typeof f === 'string' ? (f.split('/').pop()?.split(';')[0] || `Report ${i + 1}`) : (f.name || `Report ${i + 1}`);
+                      const dataUrl = typeof f === 'string' ? f : (f.data || '');
+                      const mimeType = typeof f === 'string' ? (f.match(/data:([^;]+)/)?.[1] || 'application/octet-stream') : (f.type || 'application/octet-stream');
+                      return (
+                        <button key={i}
+                          onClick={() => {
+                            try {
+                              const byteString = atob(dataUrl.split(',')[1] || dataUrl);
+                              const ab = new ArrayBuffer(byteString.length);
+                              const ia = new Uint8Array(ab);
+                              for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
+                              const blob = new Blob([ab], { type: mimeType });
+                              const url = URL.createObjectURL(blob);
+                              window.open(url, '_blank');
+                            } catch {
+                              window.open(dataUrl, '_blank');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
+                        >
+                          <FileText className="h-3 w-3" />
+                          {fileName}
+                        </button>
+                      );
+                    })}
+                    {consultation.bookingUltrasoundFile && (() => {
+                      const uf = consultation.bookingUltrasoundFile as any;
+                      const dataUrl = typeof uf === 'string' ? uf : (uf.data || '');
+                      const uname = typeof uf === 'string' ? 'Ultrasound Report' : (uf.name || 'Ultrasound Report');
+                      const mimeType = typeof uf === 'string' ? (uf.match(/data:([^;]+)/)?.[1] || 'application/octet-stream') : (uf.type || 'application/octet-stream');
+                      return (
+                        <button
+                          onClick={() => {
+                            try {
+                              const byteString = atob(dataUrl.split(',')[1] || dataUrl);
+                              const ab = new ArrayBuffer(byteString.length);
+                              const ia = new Uint8Array(ab);
+                              for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
+                              const blob = new Blob([ab], { type: mimeType });
+                              const url = URL.createObjectURL(blob);
+                              window.open(url, '_blank');
+                            } catch {
+                              window.open(dataUrl, '_blank');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer"
+                        >
+                          <FileText className="h-3 w-3" />
+                          {uname}
+                        </button>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-slate-700">2nd Visit</span>
+                  {(() => {
+                    const pastCount = patient ? (JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[])
+                      .filter((c) => c.patientId === patient.id && c.id !== consultation?.id).length : 0;
+                    const label = pastCount === 0 ? '1st Visit' : pastCount === 1 ? '2nd Visit' : `${pastCount + 1}th Visit`;
+                    return <span className="text-sm font-semibold text-slate-700">{label}</span>;
+                  })()}
+                  <span className="text-slate-300">|</span>
                   <button
                     onClick={() => scrollToSection('past-history')}
                     className="text-xs text-[#0A75BB] hover:underline font-medium"
@@ -1107,15 +1269,8 @@ export default function ConsultationPage() {
                           .filter((c) => c.patientId === patient.id && c.id !== consultation.id && c.prescriptions.length > 0)
                           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                         if (lastRx) {
-                          setConsultation({
-                            ...consultation,
-                            prescriptions: lastRx.prescriptions,
-                            diagnoses: lastRx.diagnoses,
-                            advice: lastRx.advice,
-                            chiefComplaint: consultation.chiefComplaint || lastRx.chiefComplaint,
-                            investigations: lastRx.investigations,
-                          });
-                          showToastMessage(`Loaded ${lastRx.prescriptions.length} medicines from ${new Date(lastRx.date).toLocaleDateString('en-IN')}`);
+                          setPreviousRx(lastRx);
+                          setShowPreviousRx(true);
                         } else {
                           showToastMessage('No previous prescriptions found', 'error');
                         }
@@ -1123,10 +1278,28 @@ export default function ConsultationPage() {
                     }}
                     className="px-3 py-1.5 text-[11px] font-medium text-emerald-600 bg-emerald-50 rounded hover:bg-emerald-100 transition-colors border border-emerald-200"
                   >
-                    Load Last Rx
+                    View Previous Rx
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mr-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <input
+                      type="date"
+                      value={consultationDate}
+                      max={today}
+                      onChange={(e) => setConsultationDate(e.target.value)}
+                      className="text-[11px] font-medium text-[#0A75BB] border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#0A75BB]/30 cursor-pointer"
+                    />
+                    {consultationDate !== today && (
+                      <button
+                        onClick={() => setConsultationDate(today)}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 underline"
+                      >
+                        Today
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={() => {
                       const stored = adviceTemplateStorage.getAll();
@@ -1183,33 +1356,6 @@ export default function ConsultationPage() {
               </ErrorBoundary>
 
               <ErrorBoundary>
-                <div id="section-history">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm font-semibold text-slate-700">History</h3>
-                    {!showHistorySection && (
-                      <button
-                        onClick={() => setShowHistorySection(true)}
-                        className="flex items-center gap-1 text-xs font-medium text-[#0A75BB] hover:text-[#085a94] transition-colors"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add
-                      </button>
-                    )}
-                  </div>
-                  {showHistorySection && (
-                    <TextSection
-                      label=""
-                      value={historyText}
-                      onChange={setHistoryText}
-                      onBlur={() => setHistoryText(autoCorrect(historyText))}
-                      placeholder="Enter patient history..."
-                      rows={3}
-                    />
-                  )}
-                </div>
-              </ErrorBoundary>
-
-              <ErrorBoundary>
                 <div id="section-past-history">
                     <TextSection
                       label="Past History"
@@ -1218,6 +1364,7 @@ export default function ConsultationPage() {
                       onBlur={() => autoCorrectField('notes')}
                       placeholder="Enter past medical history, surgeries, chronic conditions..."
                       rows={4}
+                      defaultCollapsed
                     />
                 </div>
               </ErrorBoundary>
@@ -1231,6 +1378,7 @@ export default function ConsultationPage() {
                       onBlur={() => autoCorrectField('chiefComplaint')}
                       placeholder="Enter patient complaints..."
                       rows={4}
+                      defaultCollapsed
                     />
                     <div className="mt-2">
                       <TemplateSelector
@@ -1247,7 +1395,10 @@ export default function ConsultationPage() {
 
               <ErrorBoundary>
                 <div id="section-investigations">
-                  <InvestigationsTable pastResults={patientLabResults} consultationInvestigations={consultation?.investigations || []} />
+                  <InvestigationsTable pastResults={patientLabResults} consultationInvestigations={consultation?.investigations || []} onChange={(inv) => {
+                    if (!consultation) return;
+                    setConsultation({ ...consultation, investigations: inv.map((i) => ({ id: generateId(), testName: i.testName, result: i.result, unit: i.unit, date: i.date, isAbnormal: i.isAbnormal })) });
+                  }} />
                   <div className="mt-2">
                     <TemplateSelector
                       type="investigations"
@@ -1373,7 +1524,7 @@ export default function ConsultationPage() {
                         onBlur={() => autoCorrectField('advice')}
                         placeholder="Patient instructions, diet, lifestyle advice..."
                         rows={4}
-                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 resize-none"
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 resize-y"
                       />
                     </div>
                   </div>
@@ -1642,11 +1793,11 @@ export default function ConsultationPage() {
                             const v = Math.max(0, parseInt(e.target.value) || 0);
                             setNextVisitValue(v);
                             if (v > 0 && nextVisitUnit && !nextVisitDate) {
-                              setConsultation((prev) => prev ? { ...prev, followUpDate: computeByWhenDate(v, nextVisitUnit) } : prev);
+                              setConsultation((prev) => prev ? { ...prev, followUpDate: computeByWhenDate(v, nextVisitUnit), followUpText: `${v} ${nextVisitUnit}` } : prev);
                             } else if (v > 0 && nextVisitDate) {
                               setConsultation((prev) => prev ? { ...prev, followUpDate: nextVisitDate } : prev);
                             } else {
-                              setConsultation((prev) => prev ? { ...prev, followUpDate: '' } : prev);
+                              setConsultation((prev) => prev ? { ...prev, followUpDate: '', followUpText: '' } : prev);
                             }
                           }}
                           className="w-14 px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] text-center"
@@ -1658,8 +1809,9 @@ export default function ConsultationPage() {
                               key={unit}
                               onClick={() => {
                                 setNextVisitUnit(unit);
+                                setNextVisitDate(''); // Clear date when unit is picked
                                 if (nextVisitValue > 0 && !nextVisitDate) {
-                                  setConsultation((prev) => prev ? { ...prev, followUpDate: computeByWhenDate(nextVisitValue, unit) } : prev);
+                                  setConsultation((prev) => prev ? { ...prev, followUpDate: computeByWhenDate(nextVisitValue, unit), followUpText: `${nextVisitValue} ${unit}` } : prev);
                                 }
                               }}
                               className={`px-2 py-1 text-[11px] font-medium transition-colors ${
@@ -1679,7 +1831,8 @@ export default function ConsultationPage() {
                             value={nextVisitDate}
                             onChange={(e) => {
                               setNextVisitDate(e.target.value);
-                              setConsultation((prev) => prev ? { ...prev, followUpDate: e.target.value } : prev);
+                              setNextVisitUnit(''); // Clear unit when date is picked
+                              setConsultation((prev) => prev ? { ...prev, followUpDate: e.target.value, followUpText: '' } : prev);
                             }}
                             className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
                           />
@@ -1690,11 +1843,6 @@ export default function ConsultationPage() {
                           )}
                         </div>
                       </div>
-                      {(nextVisitValue > 0 || nextVisitDate) && (
-                        <div className="mt-1.5 text-[10px] text-slate-400">
-                          Follow-up: {consultation?.followUpDate ? new Date(consultation.followUpDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1890,7 +2038,7 @@ export default function ConsultationPage() {
           onClose={() => setShowPrintPreview(false)}
           patient={patient}
           consultation={consultation}
-          consultationDate={new Date(consultationDate + 'T00:00:00').toLocaleDateString('en-IN')}
+          consultationDate={consultationDate}
           testRequests={testRequests}
           testRequestByWhen={(() => {
               if (testRequestByWhenType === 'ASAP') return '[ASAP]';
@@ -1911,6 +2059,115 @@ export default function ConsultationPage() {
             <button onClick={() => setTestDuplicateWarning(null)} className="p-0.5 hover:bg-amber-100 rounded text-amber-500">
               <X className="h-3.5 w-3.5" />
             </button>
+          </div>
+        )}
+
+        {showPreviousRx && previousRx && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50" onClick={() => { setShowPreviousRx(false); setPreviousRx(null); }}>
+            <div className="bg-white rounded-xl shadow-2xl w-[95vw] max-w-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[#0A75BB]" />
+                  <h2 className="text-sm font-semibold text-slate-800">Previous Prescription</h2>
+                  <span className="text-xs text-slate-500">— {new Date(previousRx.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </div>
+                <button onClick={() => { setShowPreviousRx(false); setPreviousRx(null); }} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+                  <X className="h-4 w-4 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {previousRx.diagnoses.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase mb-1">Diagnosis</h3>
+                    <div className="text-sm text-slate-700">
+                      {previousRx.diagnoses.map((d) => d.name).join(', ')}
+                    </div>
+                  </div>
+                )}
+
+                {previousRx.prescriptions.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase mb-1">Prescription</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs border border-slate-200 rounded overflow-hidden">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-500">
+                            <th className="text-left font-medium px-2 py-1.5 w-8">#</th>
+                            <th className="text-left font-medium px-2 py-1.5">Medicine</th>
+                            <th className="text-left font-medium px-2 py-1.5">Dosage</th>
+                            <th className="text-left font-medium px-2 py-1.5">When</th>
+                            <th className="text-left font-medium px-2 py-1.5">Frequency</th>
+                            <th className="text-left font-medium px-2 py-1.5">Duration</th>
+                            <th className="text-left font-medium px-2 py-1.5">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previousRx.prescriptions.map((med, i) => (
+                            <tr key={med.id} className="border-t border-slate-100 text-slate-700">
+                              <td className="px-2 py-1.5">{i + 1}</td>
+                              <td className="px-2 py-1.5">
+                                <span className="font-medium">{med.name}</span>
+                                {med.strength && <span className="block text-[10px] text-slate-400">{med.strength}</span>}
+                              </td>
+                              <td className="px-2 py-1.5">{med.dosage}</td>
+                              <td className="px-2 py-1.5">{med.when || '-'}</td>
+                              <td className="px-2 py-1.5">{med.frequency}</td>
+                              <td className="px-2 py-1.5">{med.duration}</td>
+                              <td className="px-2 py-1.5 text-slate-500">{med.instructions || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {previousRx.investigations.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase mb-1">Investigations</h3>
+                    <div className="text-xs text-slate-600">
+                      {previousRx.investigations.map((inv) => inv.testName).join(', ')}
+                    </div>
+                  </div>
+                )}
+
+                {previousRx.advice && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase mb-1">Advice</h3>
+                    <div className="text-xs text-slate-700 whitespace-pre-line">{previousRx.advice}</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+                <button
+                  onClick={() => { setShowPreviousRx(false); setPreviousRx(null); }}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!consultation || !previousRx) return;
+                    setConsultation({
+                      ...consultation,
+                      prescriptions: previousRx.prescriptions,
+                      diagnoses: previousRx.diagnoses,
+                      advice: previousRx.advice,
+                      chiefComplaint: consultation.chiefComplaint || previousRx.chiefComplaint,
+                      investigations: previousRx.investigations,
+                    });
+                    setShowPreviousRx(false);
+                    setPreviousRx(null);
+                    showToastMessage(`Loaded ${previousRx.prescriptions.length} medicines from previous visit`);
+                  }}
+                  className="px-4 py-2 text-xs font-medium text-white bg-[#0A75BB] rounded-lg hover:bg-[#085D94] transition-colors"
+                >
+                  Load This Prescription
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

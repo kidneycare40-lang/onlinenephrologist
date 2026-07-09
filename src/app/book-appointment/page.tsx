@@ -7,7 +7,7 @@ import { SITE_CONFIG } from '@/lib/constants';
 import {
   Video, Building2, CheckCircle2, MapPin, Clock, IndianRupee, AlertTriangle,
   Phone, Calendar, User, FileText, ChevronRight, Star, Info,
-  Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital
+  Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital, Plus, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { loadBookingSettings, type BookingSettings } from '@/lib/booking-settings';
@@ -100,6 +100,7 @@ function BookingForm() {
   });
   const [reportFiles, setReportFiles] = useState<File[]>([]);
   const [ultrasoundFile, setUltrasoundFile] = useState<File | null>(null);
+  const [bookingMedicines, setBookingMedicines] = useState<{ id: string; name: string; strength: string; dosage: string; when: string; frequency: string; duration: string }[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [bookingId, setBookingId] = useState('');
   const [showPayment, setShowPayment] = useState(false);
@@ -189,6 +190,7 @@ function BookingForm() {
       consultationFeeCurrency: formData.consultationType === 'online_intl' ? 'USD' : 'INR',
       reportFiles: reportFilesData.length > 0 ? reportFilesData : undefined,
       ultrasoundFile: ultrasoundData || undefined,
+      bookingMedicines: bookingMedicines.filter(m => m.name.trim()),
     };
 
     try {
@@ -1333,13 +1335,6 @@ function BookingForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Current Medications (if any)</label>
-                  <input type="text" name="currentMedications" value={formData.currentMedications} onChange={handleChange}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
-                    placeholder="e.g. Amlodipine 5mg, Metformin 500mg" />
-                </div>
-
-                <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes</label>
                   <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
                     className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors resize-none"
@@ -1408,10 +1403,102 @@ function BookingForm() {
 
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">3. Current Medicines *</label>
-                    <p className="text-xs text-slate-400 mb-2">List all medicines with generic names if possible</p>
-                    <textarea name="medicines" required value={formData.medicines} onChange={handleChange} rows={4}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors resize-none"
-                      placeholder="e.g. Amlodipine 5mg (Amlodipine), Telmisartan 40mg..." />
+                    <p className="text-xs text-slate-400 mb-2">Add each medicine you are currently taking</p>
+                    <div className="space-y-2">
+                      {bookingMedicines.map((med, idx) => (
+                        <div key={med.id} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                          <span className="text-xs font-bold text-slate-400 w-5 text-center shrink-0">{idx + 1}</span>
+                          <input
+                            type="text"
+                            value={med.name}
+                            onChange={(e) => {
+                              const updated = [...bookingMedicines];
+                              updated[idx] = { ...updated[idx], name: e.target.value };
+                              setBookingMedicines(updated);
+                            }}
+                            placeholder="Medicine name"
+                            className="flex-1 min-w-0 px-2 py-1.5 text-xs border border-slate-200 rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#0A75BB]"
+                          />
+                          <input
+                            type="text"
+                            value={med.strength}
+                            onChange={(e) => {
+                              const updated = [...bookingMedicines];
+                              updated[idx] = { ...updated[idx], strength: e.target.value };
+                              setBookingMedicines(updated);
+                            }}
+                            list={`strength-options-${idx}`}
+                            placeholder="Strength"
+                            className="w-20 px-1 py-1.5 text-xs border border-slate-200 rounded bg-white focus:outline-none"
+                          />
+                          <datalist id={`strength-options-${idx}`}>
+                            {['5mg','10mg','20mg','25mg','30mg','40mg','50mg','60mg','75mg','100mg','120mg','250mg','500mg','1g'].map(s => <option key={s} value={s} />)}
+                          </datalist>
+                          <select
+                            value={med.dosage}
+                            onChange={(e) => {
+                              const updated = [...bookingMedicines];
+                              updated[idx] = { ...updated[idx], dosage: e.target.value };
+                              setBookingMedicines(updated);
+                            }}
+                            className="w-20 px-1 py-1.5 text-xs border border-slate-200 rounded bg-white focus:outline-none"
+                          >
+                            <option value="">Dosage</option>
+                            {['1-0-0','0-1-0','0-0-1','1-0-1','1-1-0','0-1-1','1-1-1','1-0-0,0-0-1','SOS'].map(d => <option key={d} value={d}>{d}</option>)}
+                          </select>
+                          <select
+                            value={med.when}
+                            onChange={(e) => {
+                              const updated = [...bookingMedicines];
+                              updated[idx] = { ...updated[idx], when: e.target.value };
+                              setBookingMedicines(updated);
+                            }}
+                            className="w-24 px-1 py-1.5 text-xs border border-slate-200 rounded bg-white focus:outline-none"
+                          >
+                            <option value="">When</option>
+                            {['After Food','Before Food','Empty Stomach','With Food','Any Time','BF','AF','Bed Time'].map(w => <option key={w} value={w}>{w}</option>)}
+                          </select>
+                          <select
+                            value={med.frequency}
+                            onChange={(e) => {
+                              const updated = [...bookingMedicines];
+                              updated[idx] = { ...updated[idx], frequency: e.target.value };
+                              setBookingMedicines(updated);
+                            }}
+                            className="w-28 px-1 py-1.5 text-xs border border-slate-200 rounded bg-white focus:outline-none"
+                          >
+                            <option value="">Frequency</option>
+                            {['Once daily','Twice daily','Thrice daily','Once weekly','Alternate day','As needed'].map(f => <option key={f} value={f}>{f}</option>)}
+                          </select>
+                          <select
+                            value={med.duration}
+                            onChange={(e) => {
+                              const updated = [...bookingMedicines];
+                              updated[idx] = { ...updated[idx], duration: e.target.value };
+                              setBookingMedicines(updated);
+                            }}
+                            className="w-24 px-1 py-1.5 text-xs border border-slate-200 rounded bg-white focus:outline-none"
+                          >
+                            <option value="">Duration</option>
+                            {['3 days','7 days','2 weeks','1 month','2 months','3 months','6 months','1 year','Ongoing'].map(d => <option key={d} value={d}>{d}</option>)}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => setBookingMedicines(bookingMedicines.filter((_, i) => i !== idx))}
+                            className="p-1 text-slate-400 hover:text-red-500 transition-colors shrink-0"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setBookingMedicines([...bookingMedicines, { id: `med-${Date.now()}`, name: '', strength: '', dosage: '', when: '', frequency: '', duration: '' }])}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#0A75BB] bg-[#0A75BB]/5 border border-dashed border-[#0A75BB]/30 rounded-lg hover:bg-[#0A75BB]/10 transition-colors w-full justify-center"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add Medicine
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

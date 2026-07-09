@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Pen, Mic, LayoutTemplate, Undo2, Bold, Italic, Underline, X, MicOff } from 'lucide-react';
+import { Pen, Mic, LayoutTemplate, Undo2, Bold, Italic, Underline, X, MicOff, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface TextSectionProps {
   label: string;
@@ -13,6 +13,7 @@ interface TextSectionProps {
   rows?: number;
   className?: string;
   showIcons?: boolean;
+  defaultCollapsed?: boolean;
   onMicClick?: () => void;
   onTemplateClick?: () => void;
   onUndoClick?: () => void;
@@ -44,6 +45,7 @@ export default function TextSection({
   rows = 4,
   className,
   showIcons = true,
+  defaultCollapsed = false,
   templates = defaultTemplates,
 }: TextSectionProps) {
   const [showFormatting, setShowFormatting] = useState(false);
@@ -51,6 +53,7 @@ export default function TextSection({
   const [isRecording, setIsRecording] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -160,8 +163,14 @@ export default function TextSection({
     <>
       <div className={cn('bg-white border border-slate-200 rounded-lg', className)}>
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
-          <label className="text-sm font-semibold text-slate-700">{label}</label>
-          {showIcons && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-[#0A75BB] transition-colors"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {label}
+          </button>
+          {!collapsed && showIcons && (
             <div className="flex items-center gap-0.5">
               {/* Formatting toggle */}
               <button
@@ -213,63 +222,73 @@ export default function TextSection({
           )}
         </div>
 
-        {/* Formatting toolbar */}
-        {showFormatting && (
-          <div className="flex items-center gap-1 px-3 py-1.5 border-b border-slate-100 bg-slate-50">
-            <button
-              onClick={() => wrapSelection('**', '**')}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
-              title="Bold"
-            >
-              <Bold className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => wrapSelection('_', '_')}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
-              title="Italic"
-            >
-              <Italic className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => wrapSelection('__', '__')}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
-              title="Underline"
-            >
-              <Underline className="h-3.5 w-3.5" />
-            </button>
-            <div className="w-px h-5 bg-slate-200 mx-1" />
-            <button
-              onClick={() => insertAtCursor('\n- ')}
-              className="px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200 rounded transition-colors font-medium"
-            >
-              Bullet
-            </button>
-            <button
-              onClick={() => insertAtCursor('\n1. ')}
-              className="px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200 rounded transition-colors font-medium"
-            >
-              Number
-            </button>
-          </div>
-        )}
+        {!collapsed && (
+          <>
+            {/* Formatting toolbar */}
+            {showFormatting && (
+              <div className="flex items-center gap-1 px-3 py-1.5 border-b border-slate-100 bg-slate-50">
+                <button
+                  onClick={() => wrapSelection('**', '**')}
+                  className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
+                  title="Bold"
+                >
+                  <Bold className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => wrapSelection('_', '_')}
+                  className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
+                  title="Italic"
+                >
+                  <Italic className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => wrapSelection('__', '__')}
+                  className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
+                  title="Underline"
+                >
+                  <Underline className="h-3.5 w-3.5" />
+                </button>
+                <div className="w-px h-5 bg-slate-200 mx-1" />
+                <button
+                  onClick={() => insertAtCursor('\n- ')}
+                  className="px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200 rounded transition-colors font-medium"
+                >
+                  Bullet
+                </button>
+                <button
+                  onClick={() => insertAtCursor('\n1. ')}
+                  className="px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200 rounded transition-colors font-medium"
+                >
+                  Number
+                </button>
+              </div>
+            )}
 
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onBlur={onBlur}
-            rows={rows}
-            className="w-full px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none"
-            placeholder={placeholder}
-          />
-          {isRecording && (
-            <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 bg-red-50 border border-red-200 rounded-full">
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-medium text-red-600">Listening...</span>
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => {
+                  onChange(e.target.value);
+                  const t = e.currentTarget;
+                  t.style.height = 'auto';
+                  t.style.height = t.scrollHeight + 'px';
+                }}
+                onBlur={onBlur}
+                rows={rows}
+                className="w-full px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none resize-y"
+                placeholder={placeholder}
+                style={{ minHeight: `${rows * 1.5}rem` }}
+              />
+              {isRecording && (
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 bg-red-50 border border-red-200 rounded-full">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-medium text-red-600">Listening...</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Template Modal */}

@@ -130,8 +130,11 @@ export interface EMRConsultation {
   advice: string;
   notes: string;
   followUpDate?: string;
+  followUpText?: string;
   tokenId?: string;
   updatedAt?: string;
+  bookingReportFiles?: string[];
+  bookingUltrasoundFile?: string;
 }
 
 export interface EMRPrescription {

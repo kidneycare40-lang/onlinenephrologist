@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import type { Vitals } from '@/types/emr';
 
@@ -45,67 +46,76 @@ const basicFields = [
 
 export default function VitalsSection({ vitals, onChange, patientAge, patientGender }: VitalsSectionProps) {
   const egfrValue = calculateEGFR(vitals.creatinine || '', patientAge || 0, patientGender || '');
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg" id="section-vitals">
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
-        <h3 className="text-sm font-semibold text-slate-700">Vitals</h3>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-[#0A75BB] transition-colors"
+        >
+          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          Vitals
+        </button>
       </div>
-      <div className="p-3">
-        <div className="flex flex-wrap gap-x-4 gap-y-3">
-          {basicFields.map(({ label, field, unit, placeholder, readOnly }) => (
-            <div key={field} className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-medium whitespace-nowrap">{label}:</span>
+      {!collapsed && (
+        <div className="p-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-3">
+            {basicFields.map(({ label, field, unit, placeholder, readOnly }) => (
+              <div key={field} className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-medium whitespace-nowrap">{label}:</span>
+                <input
+                  type="text"
+                  value={vitals[field] || ''}
+                  onChange={(e) => onChange(field, e.target.value)}
+                  readOnly={readOnly}
+                  className={cn(
+                    'w-24 px-2 h-11 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] focus:border-[#0A75BB] text-center',
+                    readOnly && 'bg-slate-50 text-slate-600'
+                  )}
+                  placeholder={placeholder}
+                />
+                <span className="text-[11px] text-slate-400 whitespace-nowrap">{unit}</span>
+              </div>
+            ))}
+
+            {/* Creatinine input */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Creatinine:</span>
               <input
                 type="text"
-                value={vitals[field] || ''}
-                onChange={(e) => onChange(field, e.target.value)}
-                readOnly={readOnly}
-                className={cn(
-                  'w-24 px-2 h-11 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] focus:border-[#0A75BB] text-center',
-                  readOnly && 'bg-slate-50 text-slate-600'
-                )}
-                placeholder={placeholder}
+                value={vitals.creatinine || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const egfr = calculateEGFR(val, patientAge || 0, patientGender || '');
+                  onChange('creatinine', val);
+                  onChange('egfr', egfr);
+                }}
+                className="w-24 px-2 h-11 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] focus:border-[#0A75BB] text-center"
+                placeholder="0.0"
               />
-              <span className="text-[11px] text-slate-400 whitespace-nowrap">{unit}</span>
+              <span className="text-[11px] text-slate-400 whitespace-nowrap">mg/dL</span>
             </div>
-          ))}
 
-          {/* Creatinine input */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Creatinine:</span>
-            <input
-              type="text"
-              value={vitals.creatinine || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                const egfr = calculateEGFR(val, patientAge || 0, patientGender || '');
-                onChange('creatinine', val);
-                onChange('egfr', egfr);
-              }}
-              className="w-24 px-2 h-11 text-sm border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-[#0A75BB] focus:border-[#0A75BB] text-center"
-              placeholder="0.0"
-            />
-            <span className="text-[11px] text-slate-400 whitespace-nowrap">mg/dL</span>
-          </div>
-
-          {/* eGFR auto-calculated */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium whitespace-nowrap">eGFR:</span>
-            <input
-              type="text"
-              value={egfrValue || vitals.egfr || ''}
-              readOnly
-              className={cn(
-                'w-24 px-2 h-11 text-sm border border-slate-200 rounded text-center',
-                egfrValue ? 'bg-slate-50 text-slate-700 font-semibold' : 'bg-slate-50 text-slate-400'
-              )}
-              placeholder="Auto"
-            />
-            <span className="text-[11px] text-slate-400 whitespace-nowrap">mL/min</span>
+            {/* eGFR auto-calculated */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 font-medium whitespace-nowrap">eGFR:</span>
+              <input
+                type="text"
+                value={egfrValue || vitals.egfr || ''}
+                readOnly
+                className={cn(
+                  'w-24 px-2 h-11 text-sm border border-slate-200 rounded text-center',
+                  egfrValue ? 'bg-slate-50 text-slate-700 font-semibold' : 'bg-slate-50 text-slate-400'
+                )}
+                placeholder="Auto"
+              />
+              <span className="text-[11px] text-slate-400 whitespace-nowrap">mL/min</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

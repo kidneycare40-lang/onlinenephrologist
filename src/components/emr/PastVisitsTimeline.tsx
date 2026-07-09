@@ -52,11 +52,6 @@ export default function PastVisitsTimeline({
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const formatShortDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-  };
-
   const collectInvestigationDates = (consult: EMRConsultation): string[] => {
     const dates = new Set<string>();
     consult.investigations.forEach((inv) => {
@@ -89,185 +84,152 @@ export default function PastVisitsTimeline({
         <h3 className="text-sm font-semibold text-slate-700">Past Visits</h3>
       </div>
       <div className="p-3">
-        <div className="relative">
-          <div className="absolute left-[18px] top-0 bottom-0 w-0.5 bg-slate-200" />
-
-          <div className="relative flex items-start gap-3 mb-4">
-            <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center z-10 flex-shrink-0">
-              <ArrowUp className="h-4 w-4 text-white" />
-            </div>
-            <div className="flex-1 pt-1">
-              <span className="text-xs font-bold text-emerald-600">Today</span>
-            </div>
+        <div className="mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+            <ArrowUp className="h-3.5 w-3.5 text-blue-600" />
+            <span className="text-xs font-bold text-blue-700">Today</span>
           </div>
+        </div>
 
-          {pastConsultations.map((consult) => {
-            const invDates = collectInvestigationDates(consult);
-            const testNames = uniqueTestNames(consult);
+        {pastConsultations.map((consult) => {
+          const invDates = collectInvestigationDates(consult);
+          const testNames = uniqueTestNames(consult);
 
-            return (
-              <div key={consult.id} className="relative flex items-start gap-3 mb-4">
-                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center z-10 flex-shrink-0">
-                  <span className="text-[10px] font-bold text-slate-600">
-                    {formatShortDate(consult.date)}
+          return (
+            <div key={consult.id} className="mb-4 border border-slate-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
+                <div>
+                  <span className="text-xs font-semibold text-slate-700">
+                    {formatDate(consult.date)}
                   </span>
+                  <span className="text-xs text-slate-500 ml-2">By : {consult.doctorName}</span>
                 </div>
-
-                <div className="flex-1 border border-slate-200 rounded-lg overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-700">
-                        {formatDate(consult.date)}
-                      </span>
-                      <span className="text-xs text-slate-500 ml-2">By: {consult.doctorName}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded transition-colors" title="Print">
-                        <Printer className="h-3.5 w-3.5" />
-                      </button>
-                      <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded transition-colors" title="Email">
-                        <Mail className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-3 space-y-3">
-                    {consult.chiefComplaint && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase">Chief Complaint: </span>
-                        <span className="text-xs text-slate-700">{consult.chiefComplaint}</span>
-                      </div>
-                    )}
-
-                    {consult.diagnoses.length > 0 && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">Diagnosis:</span>
-                        <table className="w-full text-[10px] border border-slate-200 rounded overflow-hidden">
-                          <thead>
-                            <tr className="bg-slate-50 text-slate-500">
-                              <th className="text-left font-medium px-2 py-1">#</th>
-                              <th className="text-left font-medium px-2 py-1">Diagnosis</th>
-                              <th className="text-left font-medium px-2 py-1">Duration</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {consult.diagnoses.map((d, i) => (
-                              <tr key={d.id} className="border-t border-slate-100 text-slate-700">
-                                <td className="px-2 py-1">{i + 1}</td>
-                                <td className="px-2 py-1 font-medium">
-                                  {d.name}
-                                  {d.isPrimary && <span className="ml-1 text-[8px] bg-blue-100 text-blue-700 px-1 rounded font-bold">P</span>}
-                                </td>
-                                <td className="px-2 py-1 text-slate-500">{d.duration || '-'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {consult.prescriptions.length > 0 && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">Rx:</span>
-                        <table className="w-full text-[10px] border border-slate-200 rounded overflow-hidden">
-                          <thead>
-                            <tr className="bg-slate-50 text-slate-500">
-                              <th className="text-left font-medium px-2 py-1">#</th>
-                              <th className="text-left font-medium px-2 py-1">Medicine</th>
-                              <th className="text-left font-medium px-2 py-1">Dosage</th>
-                              <th className="text-left font-medium px-2 py-1">When</th>
-                              <th className="text-left font-medium px-2 py-1">Frequency</th>
-                              <th className="text-left font-medium px-2 py-1">Duration</th>
-                              <th className="text-left font-medium px-2 py-1">Notes</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {consult.prescriptions.map((med, i) => (
-                              <tr key={med.id} className="border-t border-slate-100 text-slate-700">
-                                <td className="px-2 py-1">{i + 1}</td>
-                                <td className="px-2 py-1 font-medium">
-                                  {med.name}
-                                  {med.strength && <span className="block text-[9px] text-slate-400">{med.strength}</span>}
-                                </td>
-                                <td className="px-2 py-1">{med.dosage}</td>
-                                <td className="px-2 py-1">{med.when || '-'}</td>
-                                <td className="px-2 py-1">{med.frequency}</td>
-                                <td className="px-2 py-1">{med.duration}</td>
-                                <td className="px-2 py-1 text-slate-500">{med.instructions || '-'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {consult.advice && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">Advice:</span>
-                        <div className="text-xs text-slate-700 whitespace-pre-line bg-slate-50 rounded p-2 border border-slate-100">
-                          {consult.advice}
-                        </div>
-                      </div>
-                    )}
-
-                    {testNames.length > 0 && invDates.length > 0 && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">Investigations:</span>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-[10px] border border-slate-200 rounded overflow-hidden">
-                            <thead>
-                              <tr className="bg-slate-50 text-slate-500">
-                                <th className="text-left font-medium px-2 py-1">#</th>
-                                <th className="text-left font-medium px-2 py-1">Tests/Investigations</th>
-                                <th className="text-left font-medium px-2 py-1">Units</th>
-                                {invDates.map((date) => (
-                                  <th key={date} className="text-right font-medium px-2 py-1">
-                                    {new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {testNames.map((testName, idx) => {
-                                const values = getInvestigationValues(consult, testName, invDates);
-                                const unit = getInvestigationUnit(consult, testName);
-                                return (
-                                  <tr key={testName} className="border-t border-slate-100 text-slate-700">
-                                    <td className="px-2 py-1">{idx + 1}</td>
-                                    <td className="px-2 py-1 font-medium">{testName}</td>
-                                    <td className="px-2 py-1 text-slate-500">{unit}</td>
-                                    {values.map((val, vi) => (
-                                      <td key={vi} className={`px-2 py-1 text-right font-medium ${val && isAbnormal(testName, val) ? 'bg-red-50 text-red-700 font-bold' : ''}`}>
-                                        {val || '-'}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    {testNames.length > 0 && invDates.length === 0 && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase">Investigations: </span>
-                        <span className="text-xs text-slate-600">
-                          {testNames.join(', ')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                <div className="flex items-center gap-1">
+                  <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded transition-colors" title="Print">
+                    <Printer className="h-3.5 w-3.5" />
+                  </button>
+                  <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded transition-colors" title="Email">
+                    <Mail className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
-            );
-          })}
 
-          {pastConsultations.length === 0 && (
-            <p className="text-xs text-slate-400 italic ml-12">No past visits</p>
-          )}
-        </div>
+              <div className="p-3 space-y-3">
+                {consult.diagnoses.length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500">Diagnosis:</span>
+                    <div className="text-xs text-slate-700 mt-0.5">
+                      {consult.diagnoses.map((d) => d.name).join(', ')}
+                    </div>
+                  </div>
+                )}
+
+                {consult.prescriptions.length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500">Rx:</span>
+                    <div className="overflow-x-auto mt-1">
+                      <table className="w-full text-xs border border-slate-200 rounded overflow-hidden">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-500">
+                            <th className="text-left font-medium px-2 py-1.5 w-8">#</th>
+                            <th className="text-left font-medium px-2 py-1.5">Medicine</th>
+                            <th className="text-left font-medium px-2 py-1.5">Dosage</th>
+                            <th className="text-left font-medium px-2 py-1.5">When</th>
+                            <th className="text-left font-medium px-2 py-1.5">Frequency</th>
+                            <th className="text-left font-medium px-2 py-1.5">Duration</th>
+                            <th className="text-left font-medium px-2 py-1.5">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {consult.prescriptions.map((med, i) => (
+                            <tr key={med.id} className="border-t border-slate-100 text-slate-700">
+                              <td className="px-2 py-1.5">{i + 1}</td>
+                              <td className="px-2 py-1.5">
+                                <span className="font-medium">{med.name}</span>
+                                {med.strength && (
+                                  <span className="block text-[10px] text-slate-400">{med.strength}</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5">{med.dosage}</td>
+                              <td className="px-2 py-1.5">{med.when || '-'}</td>
+                              <td className="px-2 py-1.5">{med.frequency}</td>
+                              <td className="px-2 py-1.5">{med.duration}</td>
+                              <td className="px-2 py-1.5 text-slate-500">{med.instructions || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {testNames.length > 0 && invDates.length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500">Investigations:</span>
+                    <div className="overflow-x-auto mt-1">
+                      <table className="w-full text-xs border border-slate-200 rounded overflow-hidden">
+                        <thead>
+                          <tr className="bg-slate-50 text-slate-500">
+                            <th className="text-left font-medium px-2 py-1.5 w-8">#</th>
+                            <th className="text-left font-medium px-2 py-1.5">Tests/Investigations</th>
+                            <th className="text-left font-medium px-2 py-1.5">Units</th>
+                            {invDates.map((date) => (
+                              <th key={date} className="text-right font-medium px-2 py-1.5">
+                                {new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {testNames.map((testName, idx) => {
+                            const values = getInvestigationValues(consult, testName, invDates);
+                            const unit = getInvestigationUnit(consult, testName);
+                            return (
+                              <tr key={testName} className="border-t border-slate-100 text-slate-700">
+                                <td className="px-2 py-1.5">{idx + 1}</td>
+                                <td className="px-2 py-1.5 font-medium">{testName}</td>
+                                <td className="px-2 py-1.5 text-slate-500">{unit}</td>
+                                {values.map((val, vi) => (
+                                  <td key={vi} className={`px-2 py-1.5 text-right font-medium ${val && isAbnormal(testName, val) ? 'bg-red-50 text-red-700 font-bold' : ''}`}>
+                                    {val || '-'}
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {testNames.length > 0 && invDates.length === 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500">Investigations: </span>
+                    <span className="text-xs text-slate-600">
+                      {testNames.join(', ')}
+                    </span>
+                  </div>
+                )}
+
+                {consult.advice && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500">Advice:</span>
+                    <div className="text-xs text-slate-700 whitespace-pre-line mt-0.5">
+                      {consult.advice}
+                    </div>
+                  </div>
+                )}
+
+
+              </div>
+            </div>
+          );
+        })}
+
+        {pastConsultations.length === 0 && (
+          <p className="text-xs text-slate-400 italic">No past visits</p>
+        )}
       </div>
     </div>
   );

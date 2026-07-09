@@ -52,7 +52,7 @@ function generateId() {
   return Math.random().toString(36).substring(2, 9);
 }
 
-const strengthOptions = ['5mg', '10mg', '25mg', '40mg', '50mg', '75mg', '100mg', '200mg', '250mg', '500mg', '1g', '60000 IU', '10 ML', '15 ML', '30 ML'];
+const strengthOptions = ['5mg', '10mg', '20mg', '25mg', '30mg', '40mg', '50mg', '60mg', '75mg', '100mg', '120mg', '200mg', '250mg', '500mg', '1g', '60000 IU', '10 ML', '15 ML', '30 ML'];
 const dosageOptions = ['1-0-0', '0-1-0', '0-0-1', '1-0-1', '1-1-1', '1-1-0', '0-1-1', 'SOS'];
 const whenOptions = ['After Food', 'Before Food', 'Empty Stomach', 'With Food', 'Any Time', 'BF', 'AF', 'Bed Time'];
 const frequencyOptions = ['Once daily', 'Twice daily', 'Thrice daily', 'Once weekly', 'Twice weekly', 'Alternate day', 'Monthly', 'As needed', 'STAT'];
@@ -69,6 +69,7 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
   const [showCustom, setShowCustom] = useState(false);
   const [customVal, setCustomVal] = useState('');
   const ref = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
@@ -82,7 +83,8 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
 
   useEffect(() => {
     function handleClick(e: MouseEvent | TouchEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (ref.current && !ref.current.contains(target) && dropRef.current && !dropRef.current.contains(target)) {
         setOpen(false);
         setShowCustom(false);
       }
@@ -145,6 +147,7 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
       )}
       {open && !showCustom && createPortal(
         <div
+          ref={dropRef}
           className="fixed bg-white border border-slate-200 rounded-lg shadow-xl z-[250] max-h-48 overflow-y-auto"
           style={{ top: dropPos.top, left: dropPos.left, width: Math.max(dropPos.width, 120) }}
         >
