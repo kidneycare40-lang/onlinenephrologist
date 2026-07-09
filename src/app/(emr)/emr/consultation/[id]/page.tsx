@@ -1097,7 +1097,7 @@ export default function ConsultationPage() {
         if (!seen.has(key) && hasValue) {
           results.push({
             testName: inv.testName,
-            value: inv.result,
+            value: inv.result || '',
             unit: inv.unit || '',
             date: invDate,
             isAbnormal: inv.isAbnormal || false,
