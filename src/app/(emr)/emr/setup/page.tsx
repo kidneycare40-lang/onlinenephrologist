@@ -1,13 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Shield, Mail, KeyRound, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { useAuth } from '@/lib/emr-auth-context';
 
 export default function SetupPage() {
-  const router = useRouter();
-  const { login } = useAuth();
   const [email, setEmail] = useState('2311.rajesh@gmail.com');
   const [pin, setPin] = useState('');
   const [setupKey, setSetupKey] = useState('');
@@ -28,13 +24,9 @@ export default function SetupPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        const result = await login(email, pin);
-        if (result.success) {
-          router.push('/emr/dashboard');
-        } else {
-          setMessage({ type: 'success', text: 'PIN set! Redirecting to login...' });
-          setTimeout(() => router.push('/emr/login'), 1500);
-        }
+        setMessage({ type: 'success', text: data.message || 'PIN set successfully! You can now log in.' });
+        setPin('');
+        setSetupKey('');
       } else {
         setMessage({ type: 'error', text: data.error || 'Setup failed' });
       }
