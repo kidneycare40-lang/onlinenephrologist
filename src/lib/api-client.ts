@@ -1,5 +1,3 @@
-// API Client - Thin wrapper around fetch for all EMR API calls
-
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -9,11 +7,60 @@ export class ApiError extends Error {
   }
 }
 
+let accessToken: string | null = null;
+
+export function setAccessToken(token: string | null) {
+  accessToken = token;
+  if (token) {
+    if (typeof window !== 'undefined') sessionStorage.setItem('emr_access_token', token);
+  } else {
+    if (typeof window !== 'undefined') sessionStorage.removeItem('emr_access_token');
+  }
+}
+
+export function getAccessToken(): string | null {
+  if (accessToken) return accessToken;
+  if (typeof window !== 'undefined') {
+    accessToken = sessionStorage.getItem('emr_access_token');
+  }
+  return accessToken;
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.token) {
+      setAccessToken(data.token);
+      return data.token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    ...options,
-  });
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = getAccessToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  let res = await fetch(url, { headers, ...options });
+
+  if (res.status === 401 && token) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      headers['Authorization'] = `Bearer ${newToken}`;
+      res = await fetch(url, { headers, ...options });
+    } else {
+      setAccessToken(null);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/emr/login';
+      }
+      throw new ApiError('Session expired. Please login again.', 401);
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
@@ -32,7 +79,15 @@ export const api = {
   delete: (url: string) => request<{ success: boolean }>(url, { method: 'DELETE' }),
 };
 
-// Convenience builders
+export const authApi = {
+  login: (email: string, password: string) =>
+    api.post<{ user: any; token: string }>('/api/auth/login', { email, password }),
+  logout: () => api.post<{ success: boolean }>('/api/auth/logout', {}),
+  me: () => api.get<{ user: any; permissions: any }>('/api/auth/me'),
+  listUsers: () => api.get<any[]>('/api/auth/register'),
+  createUser: (data: any) => api.post<any>('/api/auth/register', data),
+};
+
 export const patientsApi = {
   list: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -51,18 +106,19 @@ export const appointmentsApi = {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     return api.get<any>(`/api/appointments${qs}`);
   },
-  getByDateRange: (start: string, end: string, doctorId?: string) => {
+  getByDateRange: (start: string, end: string, doctorId?: string, clinicId?: string) => {
     const qs = new URLSearchParams({ startDate: start, endDate: end });
     if (doctorId) qs.set('doctorId', doctorId);
+    if (clinicId) qs.set('clinicId', clinicId);
     return api.get<any[]>(`/api/appointments?${qs}`);
   },
+  getByPatient: (patientId: string) => api.get<any[]>(`/api/appointments?patientId=${patientId}`),
   getByDoctorAndDate: (doctorId: string, date: string) =>
     api.get<any[]>(`/api/appointments?doctorId=${doctorId}&date=${date}`),
   create: (data: any) => api.post<any>('/api/appointments', data),
   updateStatus: (id: string, status: string) =>
     api.put<any>('/api/appointments', { id, status }),
-  cancel: (id: string) =>
-    api.put<any>('/api/appointments', { id, action: 'cancel' }),
+  cancel: (id: string) => api.put<any>('/api/appointments', { id, action: 'cancel' }),
   reschedule: (id: string, newDate: string, newTime: string) =>
     api.put<any>('/api/appointments', { id, action: 'reschedule', newDate, newTime }),
   delete: (id: string) => api.delete(`/api/appointments?id=${id}`),
@@ -74,8 +130,7 @@ export const consultationsApi = {
     api.get<any[]>(`/api/consultations?patientId=${patientId}`),
   create: (data: any) => api.post<any>('/api/consultations', data),
   update: (id: string, data: any) => api.put<any>('/api/consultations', { id, ...data }),
-  complete: (id: string) =>
-    api.put<any>('/api/consultations', { id, action: 'complete' }),
+  complete: (id: string) => api.put<any>('/api/consultations', { id, action: 'complete' }),
   delete: (id: string) => api.delete(`/api/consultations?id=${id}`),
 };
 
@@ -85,8 +140,7 @@ export const prescriptionsApi = {
     return api.get<any>(`/api/prescriptions${qs}`);
   },
   get: (id: string) => api.get<any>(`/api/prescriptions?id=${id}`),
-  getByPatient: (patientId: string) =>
-    api.get<any[]>(`/api/prescriptions?patientId=${patientId}`),
+  getByPatient: (patientId: string) => api.get<any[]>(`/api/prescriptions?patientId=${patientId}`),
   getTemplates: () => api.get<any[]>('/api/prescriptions?templates=true'),
   create: (data: any) => api.post<any>('/api/prescriptions', data),
   update: (id: string, data: any) => api.put<any>('/api/prescriptions', { id, ...data }),
@@ -108,12 +162,10 @@ export const billingApi = {
     return api.get<any>(`/api/billing${qs}`);
   },
   get: (id: string) => api.get<any>(`/api/billing?id=${id}`),
-  getByPatient: (patientId: string) =>
-    api.get<any[]>(`/api/billing?patientId=${patientId}`),
+  getByPatient: (patientId: string) => api.get<any[]>(`/api/billing?patientId=${patientId}`),
   create: (data: any) => api.post<any>('/api/billing', data),
   update: (id: string, data: any) => api.put<any>('/api/billing', { id, ...data }),
-  recordPayment: (data: any) =>
-    api.post<any>('/api/billing', { ...data, action: 'record_payment' }),
+  recordPayment: (data: any) => api.post<any>('/api/billing', { ...data, action: 'record_payment' }),
   delete: (id: string) => api.delete(`/api/billing?id=${id}`),
 };
 
@@ -146,38 +198,25 @@ export const settingsApi = {
     if (clinicId) qs.set('clinicId', clinicId);
     return api.get<{ key: string; value: any }>(`/api/settings?${qs}`);
   },
-  set: (key: string, value: any, clinicId?: string) =>
-    api.post<any>('/api/settings', { key, value, clinicId }),
-  upsertSetting: (key: string, value: any, clinicId?: string) =>
-    api.post<any>('/api/settings', { key, value, clinicId }),
+  set: (key: string, value: any, clinicId?: string) => api.post<any>('/api/settings', { key, value, clinicId }),
+  upsertSetting: (key: string, value: any, clinicId?: string) => api.post<any>('/api/settings', { key, value, clinicId }),
   getClinics: () => api.get<any[]>('/api/settings?section=clinics'),
-  createClinic: (data: any) =>
-    api.post<any>('/api/settings', { ...data, action: 'create_clinic' }),
-  updateClinic: (id: string, data: any) =>
-    api.put<any>('/api/settings', { id, ...data, action: 'update_clinic' }),
-  deleteClinic: (id: string) =>
-    api.delete(`/api/settings?id=${id}&section=clinics`),
+  createClinic: (data: any) => api.post<any>('/api/settings', { ...data, action: 'create_clinic' }),
+  updateClinic: (id: string, data: any) => api.put<any>('/api/settings', { id, ...data, action: 'update_clinic' }),
+  deleteClinic: (id: string) => api.delete(`/api/settings?id=${id}&section=clinics`),
   getDoctors: (clinicId?: string) => {
     const qs = clinicId ? `?section=doctors&clinicId=${clinicId}` : '?section=doctors';
     return api.get<any[]>(`/api/settings${qs}`);
   },
-  createDoctor: (data: any) =>
-    api.post<any>('/api/settings', { ...data, action: 'create_user' }),
-  updateDoctor: (id: string, data: any) =>
-    api.put<any>('/api/settings', { id, ...data, action: 'update_user' }),
-  deleteDoctor: (id: string) =>
-    api.delete(`/api/settings?id=${id}&section=users`),
+  createDoctor: (data: any) => api.post<any>('/api/settings', { ...data, action: 'create_user' }),
+  updateDoctor: (id: string, data: any) => api.put<any>('/api/settings', { id, ...data, action: 'update_user' }),
+  deleteDoctor: (id: string) => api.delete(`/api/settings?id=${id}&section=users`),
   getLetterheads: (clinicId?: string) => {
     const qs = clinicId ? `?section=letterheads&clinicId=${clinicId}` : '?section=letterheads';
     return api.get<any[]>(`/api/settings${qs}`);
   },
-  upsertLetterhead: (clinicId: string, data: any) =>
-    api.post<any>('/api/settings', { ...data, clinic_id: clinicId, action: 'create_letterhead' }),
+  upsertLetterhead: (clinicId: string, data: any) => api.post<any>('/api/settings', { ...data, clinic_id: clinicId, action: 'create_letterhead' }),
 };
-
-// ============================================================
-// TEMPLATE APIs
-// ============================================================
 
 export const complaintTemplatesApi = {
   list: (params?: { category?: string; search?: string }) => {

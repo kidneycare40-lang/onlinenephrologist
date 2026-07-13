@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
+import { authenticateRequest, requirePermission, apiError } from '@/lib/auth/middleware';
 
 interface TimelineEvent {
   id: string;
@@ -16,6 +17,11 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { user, error: authError } = await authenticateRequest(request);
+  if (authError) return authError;
+  const permError = requirePermission(user, 'patients', 'view');
+  if (permError) return permError;
+
   const { id: patientId } = await params;
   const { searchParams } = new URL(request.url);
   const view = searchParams.get('view') || 'timeline';

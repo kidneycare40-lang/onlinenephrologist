@@ -1,37 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MedicineService } from '@/lib/db/services/template-service';
+import { authenticateRequest, requirePermission, applyRateLimit, withAudit, apiError } from '@/lib/auth/middleware';
 
 export async function GET(request: NextRequest) {
   try {
+    const rlError = applyRateLimit(request, 'api'); if (rlError) return rlError;
+    const { user, error: authError } = await authenticateRequest(request); if (authError) return authError;
+    const permError = requirePermission(user, 'medicines', 'view'); if (permError) return permError;
+
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
-    const category = searchParams.get('category');
-    const form = searchParams.get('form');
-    const isNephrotoxic = searchParams.get('nephrotoxic');
-    const limit = searchParams.get('limit');
-
-    const medicines = await MedicineService.search({
-      query: query || undefined,
-      category: category || undefined,
-      form: form || undefined,
-      isNephrotoxic: isNephrotoxic ? isNephrotoxic === 'true' : undefined,
-      limit: limit ? parseInt(limit) : undefined,
-    });
-
-    return NextResponse.json(medicines);
-  } catch (error) {
-    console.error('Medicines GET error:', error);
-    return NextResponse.json({ error: 'Failed to fetch medicines' }, { status: 500 });
-  }
+    return NextResponse.json(await MedicineService.search({
+      query: searchParams.get('q') || undefined,
+      category: searchParams.get('category') || undefined,
+      form: searchParams.get('form') || undefined,
+      isNephrotoxic: searchParams.get('nephrotoxic') ? searchParams.get('nephrotoxic') === 'true' : undefined,
+      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined,
+    }));
+  } catch (error) { console.error('Medicines GET error:', error); return apiError('Failed to fetch medicines', 500); }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const rlError = applyRateLimit(request, 'api'); if (rlError) return rlError;
+    const { user, error: authError } = await authenticateRequest(request); if (authError) return authError;
+    const permError = requirePermission(user, 'medicines', 'create'); if (permError) return permError;
+
     const body = await request.json();
-    const medicine = await MedicineService.create(body);
+    const medicine = await MedicineService.create({ ...body, created_by: user!.userId });
+    withAudit('CREATE', 'medicine', user!.userId, medicine?.id);
     return NextResponse.json(medicine, { status: 201 });
-  } catch (error) {
-    console.error('Medicines POST error:', error);
-    return NextResponse.json({ error: 'Failed to create medicine' }, { status: 500 });
-  }
+  } catch (error) { console.error('Medicines POST error:', error); return apiError('Failed to create medicine', 500); }
 }

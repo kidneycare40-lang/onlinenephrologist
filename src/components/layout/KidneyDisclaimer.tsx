@@ -1,22 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
-
-const STORAGE_KEY = 'kcc_disclaimer_seen';
 
 export function KidneyDisclaimer() {
   const [show, setShow] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    const seen = localStorage.getItem(STORAGE_KEY);
-    if (!seen) {
+    if (pathname === '/') {
       setShow(true);
     }
-  }, []);
+  }, [pathname]);
 
   const handleDismiss = () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
     setShow(false);
   };
 

@@ -1140,7 +1140,7 @@ export default function ConsultationPage() {
   const ageMonths = Math.floor((age - ageYears) * 12);
 
   return (
-    <RequirePermission permission="consultation">
+    <RequirePermission permission="consultations">
     <ErrorBoundary>
       <div className="flex flex-col lg:flex-row bg-slate-100" style={{ height: 'calc(100vh - 3.5rem)' }}>
         {showToast && (

@@ -441,7 +441,7 @@ export default function TopNav() {
                       <Building2 className="h-4 w-4 text-gray-400" /> Switch Clinic
                       <ChevronDown className="h-3 w-3 text-gray-400 ml-auto -rotate-90" />
                     </button>
-                    {can('settings') && (
+                    {can('settings' as any, 'view') && (
                       <button onClick={() => { setProfileOpen(false); router.push('/emr/settings'); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                         <Settings className="h-4 w-4 text-gray-400" /> Settings
                       </button>
