@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { BreadcrumbSchema, WebPageSchema, FAQSchema } from '@/components/seo/JsonLd';
+import { SITE_CONFIG } from '@/lib/constants';
 import { Calculator, ChevronRight, Info, AlertTriangle, CheckCircle } from 'lucide-react';
 import { loadCalculatorSettings, type CalculatorSettings } from '@/lib/calculator-settings';
 
@@ -88,6 +90,17 @@ export default function CalculatorsPage() {
         </div>
       </section>
 
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: SITE_CONFIG.url },
+          { name: 'Kidney Health Calculators', url: `${SITE_CONFIG.url}/calculators` },
+        ]}
+      />
+      <WebPageSchema
+        title="Kidney Health Calculators | Dr Rajesh Goel"
+        description="Free online kidney health calculators — BMI, eGFR (CKD-EPI 2021), potassium risk, creatinine clearance, BSA, and uACR."
+        url={`${SITE_CONFIG.url}/calculators`}
+      />
       <Footer />
     </>
   );

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SITE_CONFIG } from '@/lib/constants';
-import { FAQSchema } from '@/components/seo/JsonLd';
+import { FAQSchema, BreadcrumbSchema } from '@/components/seo/JsonLd';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
@@ -30,7 +30,8 @@ export const metadata: Metadata = {
     title: 'Medical Tourism India | Best Nephrologist Online Consultation',
     description: 'Consult Dr Rajesh Goel, top nephrologist in India, from anywhere in the world. Online video consultation for kidney diseases, CKD, dialysis, and kidney transplant.',
     url: `${SITE_CONFIG.url}/medical-tourism`,
-    images: [{ url: '/images/dr-rajesh-goel.jpg', width: 1200, height: 630, alt: 'Dr Rajesh Goel - Nephrologist India' }],
+    locale: 'en_IN',
+    images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: 'Dr Rajesh Goel - Nephrologist India' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -329,6 +330,12 @@ export default function MedicalTourismPage() {
         </div>
       </section>
 
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: SITE_CONFIG.url },
+          { name: 'Medical Tourism India', url: `${SITE_CONFIG.url}/medical-tourism` },
+        ]}
+      />
       <Footer />
     </>
   );

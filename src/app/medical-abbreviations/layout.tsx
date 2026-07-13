@@ -1,4 +1,12 @@
 import type { Metadata } from 'next';
+import { SITE_CONFIG } from '@/lib/constants';
+
+const ogImage = {
+  url: `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
+  width: 1200,
+  height: 630,
+  alt: 'Medical Abbreviations OD, BD, SOS Explained - Dr Rajesh Goel',
+};
 
 export const metadata: Metadata = {
   title: 'Medical Abbreviations: OD, BD, SOS Explained | Dr Goel',
@@ -30,23 +38,25 @@ export const metadata: Metadata = {
     title: 'Medical Abbreviations: OD, BD, SOS Explained | Dr Goel',
     description:
       'What do OD, BD, TDS, SOS, HS, AC, PC mean on your prescription? Complete guide to medical abbreviations.',
-    url: 'https://www.onlinenephrologist.com/medical-abbreviations',
-    siteName: 'Online Nephrologist',
+    url: `${SITE_CONFIG.url}/medical-abbreviations`,
+    siteName: SITE_CONFIG.name,
     type: 'website',
     locale: 'en_IN',
+    images: [ogImage],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Medical Abbreviations: OD, BD, SOS Explained | Dr Goel',
     description:
       'What do OD, BD, TDS, SOS, HS, AC, PC mean on your prescription? Complete guide to medical abbreviations.',
+    images: [ogImage.url],
   },
   robots: {
     index: true,
     follow: true,
   },
   alternates: {
-    canonical: 'https://www.onlinenephrologist.com/medical-abbreviations',
+    canonical: `${SITE_CONFIG.url}/medical-abbreviations`,
   },
 };
 

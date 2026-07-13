@@ -1,4 +1,12 @@
 import type { Metadata } from 'next';
+import { SITE_CONFIG } from '@/lib/constants';
+
+const ogImage = {
+  url: `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
+  width: 1200,
+  height: 630,
+  alt: 'International Nephrology Consultation - Dr Rajesh Goel',
+};
 
 export const metadata: Metadata = {
   title: 'International Patients | Online Kidney Consultation | Dr Goel',
@@ -15,17 +23,20 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'International Nephrology Consultation — Dr Rajesh Goel',
     description: 'Expert kidney care for patients worldwide. Online video consultation with Dr Rajesh Goel, Senior Nephrologist & Kidney Transplant Physician.',
-    url: 'https://onlinenephrologist.com/international-patients',
-    siteName: 'Online Nephrologist',
+    url: `${SITE_CONFIG.url}/international-patients`,
+    siteName: SITE_CONFIG.name,
     type: 'website',
+    locale: 'en_IN',
+    images: [ogImage],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'International Nephrology Consultation — Dr Rajesh Goel',
     description: 'Expert kidney care for patients worldwide via video consultation.',
+    images: [ogImage.url],
   },
   alternates: {
-    canonical: 'https://onlinenephrologist.com/international-patients',
+    canonical: `${SITE_CONFIG.url}/international-patients`,
   },
   robots: { index: true, follow: true },
 };

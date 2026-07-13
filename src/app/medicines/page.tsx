@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { BreadcrumbSchema, WebPageSchema } from '@/components/seo/JsonLd';
+import { SITE_CONFIG } from '@/lib/constants';
 import { Search, ChevronDown, ChevronRight, AlertTriangle, Info, Pill, BookOpen } from 'lucide-react';
 import { medicineCategories, medicines, getMedicinesByCategory, searchMedicines, type Medicine } from '@/lib/medicines-data';
 
@@ -170,6 +172,17 @@ export default function MedicinesPage() {
         </div>
       </section>
 
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: SITE_CONFIG.url },
+          { name: 'Kidney Medicines & Treatment Guide', url: `${SITE_CONFIG.url}/medicines` },
+        ]}
+      />
+      <WebPageSchema
+        title="Kidney Medicines & Treatment Guide | Dr Rajesh Goel"
+        description="Complete guide to commonly prescribed medicines for kidney and dialysis patients. Includes dosage, frequency, warnings, and precautions."
+        url={`${SITE_CONFIG.url}/medicines`}
+      />
       <Footer />
     </>
   );

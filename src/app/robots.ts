@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next';
+import { SITE_CONFIG } from '@/lib/constants';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/emr/', '/api/'],
       },
     ],
-    sitemap: 'https://onlinenephrologist.com/sitemap.xml',
+    sitemap: `${SITE_CONFIG.url}/sitemap.xml`,
   };
 }

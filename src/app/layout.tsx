@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Providers } from '@/components/layout/Providers';
 import { KidneyDisclaimer } from '@/components/layout/KidneyDisclaimer';
 import { SITE_CONFIG } from '@/lib/constants';
+import { WebSiteSchema } from '@/components/seo/JsonLd';
 import './globals.css';
 
 const inter = Inter({
@@ -16,6 +17,14 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: 'cover',
+  themeColor: '#111827',
+};
+
+const ogImage = {
+  url: `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
+  width: 1200,
+  height: 630,
+  alt: 'Online Nephrologist - Dr Rajesh Goel',
 };
 
 export const metadata: Metadata = {
@@ -41,10 +50,26 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     title: SITE_CONFIG.title,
     description: SITE_CONFIG.description,
+    images: [ogImage],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_CONFIG.title,
+    description: SITE_CONFIG.description,
+    images: [ogImage.url],
+    creator: '@kidneycarecentre',
+    site: '@kidneycarecentre',
   },
   robots: {
     index: true,
     follow: true,
+  },
+  alternates: {
+    canonical: SITE_CONFIG.url,
+    languages: {
+      'en': SITE_CONFIG.url,
+      'en-IN': SITE_CONFIG.url,
+    },
   },
 };
 
@@ -59,6 +84,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="preload" href="/images/dr-rajesh-goel.jpg" as="image" />
         <link rel="preload" href="/images/kidney_logo.png" as="image" />
+        <WebSiteSchema />
       </head>
       <body className="min-h-screen flex flex-col font-sans">
         <Providers>

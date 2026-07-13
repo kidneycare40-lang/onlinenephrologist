@@ -14,6 +14,14 @@ export const SITE_CONFIG = {
   youtubeChannelId: 'UC_LyzbuGmdoH7f51gWeH6yA',
   youtubeHandle: '@KidneyCareCentre',
   whatsappChannel: 'https://whatsapp.com/channel/0029Va9MG1xDTkK1Sm6ncW2q',
+  logo: '/images/kidney_logo.png',
+  sameAs: [
+    'https://www.youtube.com/kidneycarecentre',
+    'https://x.com/kidney_centre',
+    'https://www.instagram.com/kidneycarecentre/',
+    'https://www.linkedin.com/in/kidney-care-8b2633190/',
+    'https://www.facebook.com/kidneycarecentre',
+  ],
 };
 
 export const NAVIGATION = {

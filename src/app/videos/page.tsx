@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { SITE_CONFIG } from '@/lib/constants';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { BreadcrumbSchema, WebPageSchema } from '@/components/seo/JsonLd';
 
 interface YouTubeVideo {
   id: string;
@@ -131,6 +132,17 @@ export default function VideosPage() {
         </div>
       )}
 
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: SITE_CONFIG.url },
+          { name: 'Kidney Care Videos', url: `${SITE_CONFIG.url}/videos` },
+        ]}
+      />
+      <WebPageSchema
+        title="Kidney Health Videos | Nephrologist Delhi | Dr Rajesh Goel"
+        description="Watch educational videos about kidney disease, CKD, dialysis, kidney transplant, and kidney health by Dr Rajesh Goel, Senior Nephrologist."
+        url={`${SITE_CONFIG.url}/videos`}
+      />
       <Footer />
     </>
   );

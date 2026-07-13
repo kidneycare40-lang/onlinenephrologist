@@ -3,6 +3,7 @@
 import { SITE_CONFIG } from '@/lib/constants';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { BreadcrumbSchema, WebPageSchema } from '@/components/seo/JsonLd';
 
 export default function WhatsAppChannelPage() {
   return (
@@ -122,6 +123,17 @@ export default function WhatsAppChannelPage() {
         </div>
       </section>
 
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: SITE_CONFIG.url },
+          { name: 'WhatsApp Channel', url: `${SITE_CONFIG.url}/whatsapp-channel` },
+        ]}
+      />
+      <WebPageSchema
+        title="WhatsApp Channel | Kidney Health Updates | Dr Rajesh Goel"
+        description="Join Dr Rajesh Goel WhatsApp channel for kidney health tips, CKD management advice, dialysis guidance, and nephrology updates."
+        url={`${SITE_CONFIG.url}/whatsapp-channel`}
+      />
       <Footer />
     </>
   );

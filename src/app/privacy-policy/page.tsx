@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     url: `${SITE_CONFIG.url}/privacy-policy`,
     siteName: SITE_CONFIG.name,
     type: 'website',
-    locale: 'en_US',
+    locale: 'en_IN',
     images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: 'Online Nephrologist Privacy Policy' }],
   },
   twitter: {

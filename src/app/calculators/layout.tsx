@@ -1,4 +1,12 @@
 import type { Metadata } from 'next';
+import { SITE_CONFIG } from '@/lib/constants';
+
+const ogImage = {
+  url: `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
+  width: 1200,
+  height: 630,
+  alt: 'Kidney Health Calculators - Dr Rajesh Goel',
+};
 
 export const metadata: Metadata = {
   title: 'Kidney Calculators: eGFR, BMI, Potassium | Dr Goel',
@@ -22,23 +30,25 @@ export const metadata: Metadata = {
     title: 'Kidney Health Calculators | Dr Rajesh Goel',
     description:
       'Free BMI, eGFR, potassium, creatinine, BSA and uACR calculators for kidney health assessment.',
-    url: 'https://www.onlinenephrologist.com/calculators',
-    siteName: 'Online Nephrologist',
+    url: `${SITE_CONFIG.url}/calculators`,
+    siteName: SITE_CONFIG.name,
     type: 'website',
     locale: 'en_IN',
+    images: [ogImage],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kidney Health Calculators | Dr Rajesh Goel',
     description:
       'Free BMI, eGFR, potassium, creatinine, BSA and uACR calculators for kidney health assessment.',
+    images: [ogImage.url],
   },
   robots: {
     index: true,
     follow: true,
   },
   alternates: {
-    canonical: 'https://www.onlinenephrologist.com/calculators',
+    canonical: `${SITE_CONFIG.url}/calculators`,
   },
 };
 

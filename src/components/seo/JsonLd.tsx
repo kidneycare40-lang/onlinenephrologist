@@ -1,3 +1,5 @@
+import { SITE_CONFIG } from '@/lib/constants';
+
 interface JsonLdProps {
   data: Record<string, unknown>;
 }
@@ -17,12 +19,12 @@ export function MedicalOrganizationSchema() {
     '@type': 'MedicalOrganization',
     name: 'Kidney Care Centre',
     alternateName: 'KCC',
-    url: 'https://www.kidneycarecentre.in',
-    logo: 'https://www.kidneycarecentre.in/images/kidney_logo.png',
-    image: 'https://www.kidneycarecentre.in/images/dr-rajesh-goel.jpg',
+    url: SITE_CONFIG.url,
+    logo: `${SITE_CONFIG.url}${SITE_CONFIG.logo}`,
+    image: `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
     description: 'India leading kidney care and nephrology platform for CKD, dialysis, kidney transplant treatment.',
-    telephone: '+919818235613',
-    email: 'info@kidneycarecentre.in',
+    telephone: SITE_CONFIG.phone,
+    email: SITE_CONFIG.email,
     address: {
       '@type': 'PostalAddress',
       addressLocality: 'Delhi',
@@ -44,18 +46,9 @@ export function MedicalOrganizationSchema() {
     ],
     medicalSpecialty: 'Nephrology',
     availableService: [
-      {
-        '@type': 'MedicalProcedure',
-        name: 'Dialysis',
-      },
-      {
-        '@type': 'MedicalProcedure',
-        name: 'Kidney Transplant',
-      },
-      {
-        '@type': 'MedicalTherapy',
-        name: 'CKD Management',
-      },
+      { '@type': 'MedicalProcedure', name: 'Dialysis' },
+      { '@type': 'MedicalProcedure', name: 'Kidney Transplant' },
+      { '@type': 'MedicalTherapy', name: 'CKD Management' },
     ],
     physician: {
       '@type': 'Physician',
@@ -63,12 +56,7 @@ export function MedicalOrganizationSchema() {
       medicalSpecialty: 'Nephrology',
       qualifications: 'MBBS, DNB Medicine, DNB Nephrology, Fellow Kidney Transplant Medicine',
     },
-    sameAs: [
-      'https://www.facebook.com/kidneycarecentre',
-      'https://www.twitter.com/kidneycarecentre',
-      'https://www.instagram.com/kidneycarecentre',
-      'https://www.youtube.com/kidneycarecentre',
-    ],
+    sameAs: SITE_CONFIG.sameAs,
   };
 
   return <JsonLd data={schema} />;
@@ -79,10 +67,10 @@ export function PhysicianSchema() {
     '@context': 'https://schema.org',
     '@type': 'Physician',
     name: 'Dr Rajesh Goel',
-    image: 'https://www.kidneycarecentre.in/images/dr-rajesh-goel.jpg',
-    url: 'https://www.kidneycarecentre.in/dr-rajesh-goel',
-    telephone: '+919818235688',
-    email: '2311.rajesh@gmail.com',
+    image: `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
+    url: `${SITE_CONFIG.url}/dr-rajesh-goel`,
+    telephone: SITE_CONFIG.emergencyPhone,
+    email: SITE_CONFIG.email,
     medicalSpecialty: 'Nephrology',
     qualifications: 'MBBS, DNB Internal Medicine, DNB Nephrology, Fellow Kidney Transplant Medicine',
     availableService: [
@@ -120,13 +108,13 @@ export function WebPageSchema({
     name: title,
     description,
     url,
-    image: image || 'https://www.kidneycarecentre.in/images/og-default.jpg',
+    image: image || `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
     publisher: {
       '@type': 'Organization',
-      name: 'Kidney Care Centre',
+      name: SITE_CONFIG.name,
       logo: {
         '@type': 'ImageObject',
-        url: 'https://www.kidneycarecentre.in/images/logo.png',
+        url: `${SITE_CONFIG.url}${SITE_CONFIG.logo}`,
       },
     },
   };
@@ -192,20 +180,20 @@ export function ArticleSchema({
     '@type': 'Article',
     headline: title,
     description,
-    image: image || 'https://www.kidneycarecentre.in/images/og-default.jpg',
+    image: image || `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
     url,
     datePublished,
     dateModified,
     author: {
       '@type': 'Person',
-      name: author || 'Dr Rajesh Goel',
+      name: author || SITE_CONFIG.author,
     },
     publisher: {
       '@type': 'Organization',
-      name: 'Kidney Care Centre',
+      name: SITE_CONFIG.name,
       logo: {
         '@type': 'ImageObject',
-        url: 'https://www.kidneycarecentre.in/images/logo.png',
+        url: `${SITE_CONFIG.url}${SITE_CONFIG.logo}`,
       },
     },
   };
@@ -217,11 +205,11 @@ export function WebSiteSchema() {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Online Nephrologist',
-    url: 'https://onlinenephrologist.com',
+    name: SITE_CONFIG.name,
+    url: SITE_CONFIG.url,
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://onlinenephrologist.com/conditions?q={search_term_string}',
+      target: `${SITE_CONFIG.url}/conditions?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   };
@@ -256,8 +244,8 @@ export function LocalBusinessSchema({
     '@type': 'MedicalBusiness',
     name: `Kidney Care Centre - ${city}`,
     description: `Best nephrologist in ${city}, ${state}. Expert kidney care treatment by Dr Rajesh Goel.`,
-    url: `https://www.kidneycarecentre.in/nephrologist-in-${city.toLowerCase().replace(/\s+/g, '-')}`,
-    telephone: '+919818235613',
+    url: `${SITE_CONFIG.url}/nephrologist-in-${city.toLowerCase().replace(/\s+/g, '-')}`,
+    telephone: SITE_CONFIG.phone,
     address: {
       '@type': 'PostalAddress',
       addressLocality: city,
@@ -275,6 +263,49 @@ export function LocalBusinessSchema({
       name: 'Dr Rajesh Goel',
       medicalSpecialty: 'Nephrology',
     },
+  };
+
+  return <JsonLd data={schema} />;
+}
+
+export function HowToSchema() {
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to Book an Online Kidney Consultation with Dr Rajesh Goel',
+    description: 'Steps to book an online video consultation with Dr Rajesh Goel, Senior Nephrologist & Kidney Transplant Physician in Delhi.',
+    step: [
+      {
+        '@type': 'HowToStep',
+        position: 1,
+        name: 'Book Appointment',
+        text: 'Click on "Book Appointment" on the website or send a message on WhatsApp at +91 9818235613. Choose online video consultation.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 2,
+        name: 'Share Medical Reports',
+        text: 'Upload or WhatsApp your recent blood tests, urine tests, kidney function reports, and current medication list.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 3,
+        name: 'Confirm Your Slot',
+        text: 'Choose a convenient time slot. Pay the consultation fee online. You will receive a confirmation with video call link.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 4,
+        name: 'Video Consultation',
+        text: 'Join the video call at the scheduled time. Dr Goel will review your reports, discuss your condition, and provide a treatment plan.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 5,
+        name: 'Receive Prescription',
+        text: 'After consultation, you will receive a detailed digital prescription and treatment plan via WhatsApp and email.',
+      },
+    ],
   };
 
   return <JsonLd data={schema} />;

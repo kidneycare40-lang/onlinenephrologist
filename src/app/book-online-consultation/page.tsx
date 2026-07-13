@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { SITE_CONFIG } from '@/lib/constants';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { BreadcrumbSchema, HowToSchema } from '@/components/seo/JsonLd';
 import { loadBookingSettings } from '@/components/emr/BookingSettings';
 
 export default function BookOnlineConsultationPage() {
@@ -213,6 +214,13 @@ export default function BookOnlineConsultationPage() {
         </div>
       </section>
 
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: SITE_CONFIG.url },
+          { name: 'Book Online Consultation', url: `${SITE_CONFIG.url}/book-online-consultation` },
+        ]}
+      />
+      <HowToSchema />
       <Footer />
     </>
   );

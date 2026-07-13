@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { BreadcrumbSchema, WebPageSchema } from '@/components/seo/JsonLd';
+import { SITE_CONFIG } from '@/lib/constants';
 import { Search, ChevronDown, ChevronRight, AlertTriangle, Info } from 'lucide-react';
 import { abbreviationCategories, abbreviations, getAbbreviationsByCategory, searchAbbreviations, type Abbreviation } from '@/lib/medical-abbreviations';
 
@@ -197,6 +199,17 @@ export default function MedicalAbbreviationsPage() {
         </div>
       </section>
 
+      <BreadcrumbSchema
+        items={[
+          { name: 'Home', url: SITE_CONFIG.url },
+          { name: 'Medical Abbreviations', url: `${SITE_CONFIG.url}/medical-abbreviations` },
+        ]}
+      />
+      <WebPageSchema
+        title="Medical Abbreviations: OD, BD, SOS Explained | Dr Goel"
+        description="What do OD, BD, TDS, SOS, HS, AC, PC mean on your prescription? Complete guide to medical abbreviations used in prescriptions."
+        url={`${SITE_CONFIG.url}/medical-abbreviations`}
+      />
       <Footer />
     </>
   );

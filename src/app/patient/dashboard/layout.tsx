@@ -1,4 +1,12 @@
 import type { Metadata } from 'next';
+import { SITE_CONFIG } from '@/lib/constants';
+
+const ogImage = {
+  url: `${SITE_CONFIG.url}${SITE_CONFIG.ogImage}`,
+  width: 1200,
+  height: 630,
+  alt: 'Patient Dashboard - Online Nephrologist',
+};
 
 export const metadata: Metadata = {
   title: 'Patient Dashboard | Online Nephrologist — Dr Rajesh Goel',
@@ -7,17 +15,20 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Patient Dashboard | Online Nephrologist — Dr Rajesh Goel',
     description: 'Manage your appointments and track kidney health consultations.',
-    url: 'https://onlinenephrologist.com/patient/dashboard',
-    siteName: 'Online Nephrologist',
+    url: `${SITE_CONFIG.url}/patient/dashboard`,
+    siteName: SITE_CONFIG.name,
     type: 'website',
+    locale: 'en_IN',
+    images: [ogImage],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Patient Dashboard | Online Nephrologist',
     description: 'Manage your appointments and track consultations.',
+    images: [ogImage.url],
   },
   alternates: {
-    canonical: 'https://onlinenephrologist.com/patient/dashboard',
+    canonical: `${SITE_CONFIG.url}/patient/dashboard`,
   },
   robots: { index: false, follow: false },
 };

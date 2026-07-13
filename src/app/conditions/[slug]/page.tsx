@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `${SITE_CONFIG.url}/conditions/${condition.slug}`,
       type: 'article',
       siteName: SITE_CONFIG.name,
-      locale: 'en_US',
+      locale: 'en_IN',
       images: [{ url: `${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`, width: 1200, height: 630, alt: condition.title }],
     },
     twitter: {

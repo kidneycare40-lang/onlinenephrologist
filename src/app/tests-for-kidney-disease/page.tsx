@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     url: `${SITE_CONFIG.url}/tests-for-kidney-disease`,
     siteName: SITE_CONFIG.name,
     type: 'article',
-    locale: 'en_US',
+    locale: 'en_IN',
     publishedTime: '2025-01-15T00:00:00Z',
     modifiedTime: new Date().toISOString(),
     authors: ['Dr Rajesh Goel'],
