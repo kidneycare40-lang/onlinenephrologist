@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const db = getDb();
     const { data: users, error } = await db
       .from('users')
-      .select('id, email, first_name, last_name, role, password_hash, pin_hash, is_active')
+      .select('id, email, first_name, last_name, role, password_hash, is_active')
       .eq('email', email.toLowerCase().trim())
       .limit(1);
 
@@ -41,18 +41,15 @@ export async function POST(request: NextRequest) {
     let valid = false;
 
     if (pin) {
-      if (user.pin_hash) valid = await verifyPassword(pin, user.pin_hash);
-      if (!valid && user.password_hash) valid = await verifyPassword(pin, user.password_hash);
+      if (user.password_hash) valid = await verifyPassword(pin, user.password_hash);
     } else if (password) {
-      const looksLikePin = /^\d{4,6}$/.test(password) && user.pin_hash;
-      if (looksLikePin) valid = await verifyPassword(password, user.pin_hash);
-      if (!valid && user.password_hash) valid = await verifyPassword(password, user.password_hash);
+      if (user.password_hash) valid = await verifyPassword(password, user.password_hash);
     }
 
     if (!valid) {
       logAudit({ userId: user.id, action: 'LOGIN', entityType: 'user_login', entityId: user.id, newValues: { status: 'failed' } });
-      if (!user.password_hash && !user.pin_hash) {
-        return NextResponse.json({ error: 'Account has no credentials configured yet. Ask an admin to run the initial setup in Settings > Users & Roles, or use the /emr/setup page.', needsSetup: true }, { status: 403 });
+      if (!user.password_hash) {
+        return NextResponse.json({ error: 'Account has no credentials configured yet. Go to the /emr/setup page to set your PIN.', needsSetup: true }, { status: 403 });
       }
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
