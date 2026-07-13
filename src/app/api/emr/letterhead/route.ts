@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
-import { authenticateRequest, applyRateLimit, apiError } from '@/lib/auth/middleware';
+import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
   try {
     const rlError = applyRateLimit(req, 'api'); if (rlError) return rlError;
     const { user, error: authError } = await authenticateRequest(req); if (authError) return authError;
+    const permError = requirePermission(user, 'settings', 'edit'); if (permError) return permError;
 
     const { clinicId, type, data } = await req.json();
     if (!clinicId || !type) return apiError('clinicId and type required', 400);

@@ -247,6 +247,8 @@ CREATE POLICY activity_logs_insert ON activity_logs FOR INSERT
 -- ============================================================
 -- EMR_STORE (app-level settings, sensitive)
 -- ============================================================
+-- Drop the permissive policy from supabase-schema.sql that allows anonymous access
+DROP POLICY IF EXISTS "Allow all access" ON emr_store;
 CREATE POLICY emr_store_select ON emr_store FOR SELECT
   USING (auth.role() = 'authenticated');
 CREATE POLICY emr_store_insert ON emr_store FOR INSERT

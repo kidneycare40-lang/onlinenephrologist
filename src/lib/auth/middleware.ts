@@ -39,7 +39,9 @@ export function requirePermission(user: TokenPayload | null, section: keyof Role
 }
 
 export function applyRateLimit(request: NextRequest, endpoint: string): NextResponse | null {
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
+  // Use the platform-verified connection IP. On Vercel this is `request.ip`.
+  // Do NOT trust client-supplied X-Forwarded-For unless a trusted proxy rewrites it.
+  const ip = request.ip || request.headers.get('x-real-ip') || request.headers.get('x-forwarded-for') || '127.0.0.1';
   const { allowed } = checkRateLimit(ip, endpoint);
   if (!allowed) {
     return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429, headers: getRateLimitHeaders(ip, endpoint) as HeadersInit });
