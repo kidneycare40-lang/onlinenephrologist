@@ -34,7 +34,7 @@ export default function UsersRolesSettings() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', role: 'receptionist', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', role: 'receptionist', pin: '', password: '' });
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -45,17 +45,17 @@ export default function UsersRolesSettings() {
   }
 
   async function handleAdd() {
-    if (!form.name || !form.email || !form.password) return;
+    if (!form.name || !form.email || (!form.pin && !form.password)) return;
     const nameParts = form.name.trim().split(/\s+/);
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ') || firstName;
-    try { await authApi.createUser({ firstName, lastName, email: form.email, role: form.role, password: form.password }); await loadUsers(); }
+    try { await authApi.createUser({ firstName, lastName, email: form.email, role: form.role, pin: form.pin || undefined, password: form.password || 'changeme123' }); await loadUsers(); }
     catch (e: any) { alert(e?.message || 'Failed to create user'); }
-    setForm({ name: '', email: '', role: 'receptionist', password: '' });
+    setForm({ name: '', email: '', role: 'receptionist', pin: '', password: '' });
     setShowAdd(false);
   }
 
-  function cancelEdit() { setEditingId(null); setShowAdd(false); setForm({ name: '', email: '', role: 'receptionist', password: '' }); }
+  function cancelEdit() { setEditingId(null); setShowAdd(false); setForm({ name: '', email: '', role: 'receptionist', pin: '', password: '' }); }
 
   return (
     <div className="space-y-6">
@@ -65,7 +65,7 @@ export default function UsersRolesSettings() {
             <h2 className="font-semibold text-gray-900">Users & Roles</h2>
             <p className="text-xs text-gray-500 mt-0.5">Manage who can access the EMR and what they can do</p>
           </div>
-          <button onClick={() => { setShowAdd(true); setEditingId(null); setForm({ name: '', email: '', role: 'receptionist', password: '' }); }}
+          <button onClick={() => { setShowAdd(true); setEditingId(null); setForm({ name: '', email: '', role: 'receptionist', pin: '', password: '' }); }}
             className="flex items-center gap-1.5 px-3 py-2 bg-[#0A75BB] text-white rounded-lg text-sm font-medium hover:bg-[#085a94] transition-colors"
           ><Plus className="h-4 w-4" /> Add User</button>
         </div>
@@ -158,13 +158,19 @@ export default function UsersRolesSettings() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Set initial password" className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB]" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">PIN (4-6 digits)</label>
+                <input type="password" inputMode="numeric" maxLength={6} value={form.pin}
+                  onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                  placeholder="Login PIN" className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] tracking-widest text-center font-mono" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password (optional)</label>
+                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Leave blank for auto-generated" className="w-full h-10 px-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB]" />
               </div>
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
               <button onClick={cancelEdit} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-              <button onClick={handleAdd} disabled={!form.name || !form.email || !form.password}
+              <button onClick={handleAdd} disabled={!form.name || !form.email || (!form.pin && !form.password)}
                 className="px-4 py-2 bg-[#0A75BB] text-white text-sm font-medium rounded-lg hover:bg-[#085a94] transition-colors disabled:opacity-50">Add User</button>
             </div>
           </div>

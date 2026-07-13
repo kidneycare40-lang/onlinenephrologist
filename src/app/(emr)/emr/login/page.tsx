@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Mail,
   Lock,
+  KeyRound,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -12,7 +13,6 @@ import {
   Phone,
   Shield,
   UserCog,
-  BadgeCheck,
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -36,21 +36,28 @@ const features = [
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [usePassword, setUsePassword] = useState(false);
+  const [email, setEmail] = useState('2311.rajesh@gmail.com');
+  const [pin, setPin] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (!email || !password) { setError('Please enter email and password'); return; }
+    if (!email) { setError('Please enter your email'); return; }
+    if (!usePassword && (!pin || pin.length < 4)) { setError('Please enter your PIN'); return; }
+    if (usePassword && !password) { setError('Please enter your password'); return; }
     setIsSubmitting(true);
-    const result = await login(email, password);
+    const result = usePassword
+      ? await login(email, password)
+      : await login(email, pin);
     setIsSubmitting(false);
     if (result.success) { router.push('/emr/dashboard'); }
-    else { setError(result.error || 'Invalid email or password'); }
+    else { setError(result.error || 'Invalid credentials'); }
   }
 
   return (
@@ -102,7 +109,7 @@ export default function LoginPage() {
           </div>
 
           <h2 className="text-2xl font-bold text-gray-900">Sign in to EMR</h2>
-          <p className="text-sm text-gray-500 mt-1.5 mb-8">Enter your email and password to continue.</p>
+          <p className="text-sm text-gray-500 mt-1.5 mb-8">Enter your email and {usePassword ? 'password' : 'PIN'} to continue.</p>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3.5 py-2.5 mb-4">{error}</div>
@@ -116,22 +123,45 @@ export default function LoginPage() {
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" className="w-full h-11 pl-10 pr-4 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] transition-all" required />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-gray-400 pointer-events-none" />
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" className="w-full h-11 pl-10 pr-11 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] transition-all" required />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" tabIndex={-1}>
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+
+            {usePassword ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-gray-400 pointer-events-none" />
+                  <input type={showSecret ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" className="w-full h-11 pl-10 pr-11 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] transition-all" />
+                  <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" tabIndex={-1}>
+                    {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
-            <button type="submit" disabled={isSubmitting || !email || !password} className="w-full h-11 rounded-lg text-sm font-semibold text-white transition-all mt-2 bg-gradient-to-r from-[#0A75BB] to-[#085D94] hover:from-[#085D94] hover:to-[#074D7A] focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/40 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-[#0A75BB]/25 hover:shadow-lg hover:shadow-[#0A75BB]/30">
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">PIN</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-gray-400 pointer-events-none" />
+                  <input type="password" inputMode="numeric" maxLength={6}
+                    value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter your PIN" autoFocus
+                    className="w-full h-11 pl-10 pr-4 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] transition-all tracking-[0.3em] text-center font-mono" />
+                </div>
+              </div>
+            )}
+
+            <button type="submit" disabled={isSubmitting || !email || (usePassword ? !password : pin.length < 4)}
+              className="w-full h-11 rounded-lg text-sm font-semibold text-white transition-all mt-2 bg-gradient-to-r from-[#0A75BB] to-[#085D94] hover:from-[#085D94] hover:to-[#074D7A] focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/40 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-[#0A75BB]/25 hover:shadow-lg hover:shadow-[#0A75BB]/30">
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</span>
-              ) : 'Sign in'}
+              ) : `Sign in with ${usePassword ? 'Password' : 'PIN'}`}
             </button>
           </form>
+
+          <div className="text-center mt-4">
+            <button type="button" onClick={() => { setUsePassword(!usePassword); setPin(''); setPassword(''); setError(''); }}
+              className="text-sm text-[#0A75BB] hover:text-[#085D94] font-medium transition-colors">
+              {usePassword ? 'Use PIN instead' : 'Use password instead'}
+            </button>
+          </div>
 
           <p className="text-xs text-gray-400 text-center mt-5 leading-relaxed">By signing in, you agree to the EMR terms of use and data policy.</p>
         </div>

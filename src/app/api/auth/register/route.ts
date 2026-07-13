@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (permError) return permError;
 
     const body = await request.json();
-    const { email, password, firstName, lastName, role, qualification, registrationNumber, specialization, experienceYears, consultationFee } = body;
+    const { email, password, firstName, lastName, role, qualification, registrationNumber, specialization, experienceYears, consultationFee, pin } = body;
 
     if (!email || !password || !firstName || !lastName || !role) {
       return NextResponse.json({ error: 'Email, password, name, and role are required' }, { status: 400 });
@@ -37,12 +37,15 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
+    const pinHash = pin ? await hashPassword(pin) : null;
+
     const { data: newUser, error: createError } = await db.from('users').insert({
       email: email.toLowerCase().trim(),
       first_name: firstName,
       last_name: lastName,
       role,
       password_hash: passwordHash,
+      pin_hash: pinHash,
       qualification: qualification || null,
       registration_number: registrationNumber || null,
       specialization: specialization || null,
