@@ -3,7 +3,9 @@ import type { NextRequest } from 'next/server';
 
 const publicPaths = [
   '/emr/login',
+  '/emr/setup',
   '/api/auth/login',
+  '/api/auth/init',
   '/api/auth/register',
   '/_next',
   '/favicon',
