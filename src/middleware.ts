@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
 
 const publicPaths = [
   '/emr/login',
@@ -30,8 +29,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const payload = await verifyToken(token);
-  if (!payload) {
+  try {
+    const { jwtVerify } = await import('jose');
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return NextResponse.redirect(new URL('/emr/login', request.url));
+    }
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(secret));
+    const response = NextResponse.next();
+    response.headers.set('X-EMR-User', (payload as any).userId as string);
+    response.headers.set('X-EMR-Role', (payload as any).role as string);
+    return response;
+  } catch {
     const loginUrl = new URL('/emr/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     const response = NextResponse.redirect(loginUrl);
@@ -39,11 +48,6 @@ export async function middleware(request: NextRequest) {
     response.cookies.set('emr_refresh_token', '', { maxAge: 0, path: '/' });
     return response;
   }
-
-  const response = NextResponse.next();
-  response.headers.set('X-EMR-User', payload.userId);
-  response.headers.set('X-EMR-Role', payload.role);
-  return response;
 }
 
 export const config = {
