@@ -8,13 +8,13 @@ import { ClinicProvider } from '@/lib/emr-clinic-context';
 import { AuthProvider, useAuth } from '@/lib/emr-auth-context';
 import { initEmrSync } from '@/lib/emr-sync';
 
-const publicPaths = ['/emr/login', '/emr', '/emr/clinic-selection'];
+const publicPaths = ['/emr/login', '/emr/setup', '/emr/clinic-selection'];
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
+  const isPublic = pathname === '/emr' || publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
 
   useEffect(() => {
     if (!isPublic && !isAuthenticated) {
