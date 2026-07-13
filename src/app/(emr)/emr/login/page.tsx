@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
+  ChevronRight,
   Stethoscope,
   Phone,
   Shield,
@@ -19,9 +20,9 @@ import { cn } from '@/lib/utils';
 import { useAuth, type EMRRole } from '@/lib/emr-auth-context';
 
 const roleProfiles = [
-  { role: 'doctor' as EMRRole, label: 'Doctor', description: 'Patients, consultations, prescriptions, reports', icon: Stethoscope, color: 'text-[#0A75BB]', bg: 'bg-blue-50', border: 'border-blue-200' },
-  { role: 'receptionist' as EMRRole, label: 'Receptionist', description: 'Appointments, patients, billing', icon: UserCog, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-  { role: 'super_admin' as EMRRole, label: 'Admin', description: 'Full access — settings, users, billing, everything', icon: Shield, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
+  { role: 'doctor' as EMRRole, label: 'Doctor', description: 'Patients, consultations, prescriptions, reports', icon: Stethoscope, color: 'text-[#0A75BB]', bg: 'bg-blue-50', border: 'border-blue-200', email: '2311.rajesh@gmail.com' },
+  { role: 'super_admin' as EMRRole, label: 'Admin', description: 'Full access — settings, users, billing, everything', icon: Shield, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', email: '2311.rajesh@gmail.com' },
+  { role: 'receptionist' as EMRRole, label: 'Reception', description: 'Appointments, patients, billing', icon: UserCog, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', email: '2311.rajesh@gmail.com' },
 ];
 
 const features = [
@@ -36,26 +37,36 @@ const features = [
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [usePassword, setUsePassword] = useState(false);
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
-  const [password, setPassword] = useState('');
-  const [showSecret, setShowSecret] = useState(false);
   const [error, setError] = useState('');
   const [needsSetup, setNeedsSetup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
+  function selectRole(profile: typeof roleProfiles[0]) {
+    setSelectedProfile(profile.label);
+    setEmail(profile.email);
+    setError('');
+    setNeedsSetup(false);
+    setPin('');
+  }
+
+  function clearSelection() {
+    setSelectedProfile(null);
+    setEmail('');
+    setError('');
+    setNeedsSetup(false);
+    setPin('');
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     if (!email) { setError('Please enter your email'); return; }
-    if (!usePassword && (!pin || pin.length < 4)) { setError('Please enter your PIN'); return; }
-    if (usePassword && !password) { setError('Please enter your password'); return; }
+    if (!pin || pin.length < 4) { setError('Please enter your PIN'); return; }
     setIsSubmitting(true);
-    const result = usePassword
-      ? await login(email, password)
-      : await login(email, pin);
+    const result = await login(email, pin);
     setIsSubmitting(false);
     if (result.success) { router.push('/emr/dashboard'); }
     else if (result.needsSetup) { setNeedsSetup(true); setError(result.error || ''); }
@@ -111,7 +122,39 @@ export default function LoginPage() {
           </div>
 
           <h2 className="text-2xl font-bold text-gray-900">Sign in to EMR</h2>
-          <p className="text-sm text-gray-500 mt-1.5 mb-8">Enter your email and {usePassword ? 'password' : 'PIN'} to continue.</p>
+          <p className="text-sm text-gray-500 mt-1.5 mb-6">Select your role to continue.</p>
+
+          {!selectedProfile ? (
+            <div className="space-y-2.5 mb-6">
+              {roleProfiles.map((profile) => {
+                const Icon = profile.icon;
+                const isSelected = selectedProfile === profile.label;
+                return (
+                  <button key={profile.role} type="button" onClick={() => selectRole(profile)}
+                    className={cn(
+                      'w-full text-left flex items-center gap-3.5 p-3.5 rounded-xl border-2 transition-all',
+                      isSelected
+                        ? 'border-[#0A75BB] bg-blue-50/50 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    )}>
+                    <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center shrink-0', profile.bg)}>
+                      <Icon className={cn('h-5 w-5', profile.color)} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-gray-900">{profile.label}</div>
+                      <div className="text-xs text-gray-500 truncate">{profile.description}</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
+                  </button>
+                );
+              })}
+
+              <button type="button" onClick={() => setSelectedProfile('other')}
+                className="w-full text-center p-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all">
+                Other user
+              </button>
+            </div>
+          ) : null}
 
           {error && !needsSetup && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3.5 py-2.5 mb-4">{error}</div>
@@ -123,27 +166,19 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-gray-400 pointer-events-none" />
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" className="w-full h-11 pl-10 pr-4 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] transition-all" required />
-              </div>
-            </div>
-
-            {usePassword ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-gray-400 pointer-events-none" />
-                  <input type={showSecret ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" className="w-full h-11 pl-10 pr-11 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] transition-all" />
-                  <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" tabIndex={-1}>
-                    {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+          {selectedProfile ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3.5 py-2.5 border border-gray-200">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <span>{email}</span>
                 </div>
+                <button type="button" onClick={clearSelection}
+                  className="text-xs text-[#0A75BB] hover:text-[#085D94] font-medium transition-colors">
+                  Change
+                </button>
               </div>
-            ) : (
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">PIN</label>
                 <div className="relative">
@@ -154,22 +189,15 @@ export default function LoginPage() {
                     className="w-full h-11 pl-10 pr-4 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/30 focus:border-[#0A75BB] transition-all tracking-[0.3em] text-center font-mono" />
                 </div>
               </div>
-            )}
 
-            <button type="submit" disabled={isSubmitting || !email || (usePassword ? !password : pin.length < 4)}
-              className="w-full h-11 rounded-lg text-sm font-semibold text-white transition-all mt-2 bg-gradient-to-r from-[#0A75BB] to-[#085D94] hover:from-[#085D94] hover:to-[#074D7A] focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/40 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-[#0A75BB]/25 hover:shadow-lg hover:shadow-[#0A75BB]/30">
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</span>
-              ) : `Sign in with ${usePassword ? 'Password' : 'PIN'}`}
-            </button>
-          </form>
-
-          <div className="text-center mt-4">
-            <button type="button" onClick={() => { setUsePassword(!usePassword); setPin(''); setPassword(''); setError(''); }}
-              className="text-sm text-[#0A75BB] hover:text-[#085D94] font-medium transition-colors">
-              {usePassword ? 'Use PIN instead' : 'Use password instead'}
-            </button>
-          </div>
+              <button type="submit" disabled={isSubmitting || pin.length < 4}
+                className="w-full h-11 rounded-lg text-sm font-semibold text-white transition-all mt-2 bg-gradient-to-r from-[#0A75BB] to-[#085D94] hover:from-[#085D94] hover:to-[#074D7A] focus:outline-none focus:ring-2 focus:ring-[#0A75BB]/40 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-[#0A75BB]/25 hover:shadow-lg hover:shadow-[#0A75BB]/30">
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</span>
+                ) : 'Sign in'}
+              </button>
+            </form>
+          ) : null}
 
           <div className="text-center mt-2">
             <a href="/emr/setup" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
