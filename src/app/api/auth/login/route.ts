@@ -83,9 +83,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('LOGIN error:', error);
-    const msg = error instanceof Error && error.message.includes('not configured')
-      ? 'Server not configured. Set SUPABASE_SERVICE_ROLE_KEY in Vercel environment variables.'
-      : 'Internal server error';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const detail = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: detail }, { status: 500 });
   }
 }
