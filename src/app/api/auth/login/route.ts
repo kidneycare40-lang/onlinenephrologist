@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
 
     if (pin) {
       if (user.pin_hash) valid = await verifyPassword(pin, user.pin_hash);
+      if (!valid && user.password_hash) valid = await verifyPassword(pin, user.password_hash);
     } else if (password) {
       const looksLikePin = /^\d{4,6}$/.test(password) && user.pin_hash;
       if (looksLikePin) valid = await verifyPassword(password, user.pin_hash);
@@ -50,17 +51,10 @@ export async function POST(request: NextRequest) {
 
     if (!valid) {
       logAudit({ userId: user.id, action: 'LOGIN', entityType: 'user_login', entityId: user.id, newValues: { status: 'failed' } });
-      // No credentials configured at all — needs initial setup
       if (!user.password_hash && !user.pin_hash) {
         return NextResponse.json({ error: 'Account has no credentials configured yet. Ask an admin to run the initial setup in Settings > Users & Roles, or use the /emr/setup page.', needsSetup: true }, { status: 403 });
       }
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
-    }
-
-    // Auto-set password_hash from pin_hash if user only has PIN (legacy migration)
-    if (!user.password_hash && user.pin_hash && password) {
-      const newHash = await hashPassword(password);
-      await db.from('users').update({ password_hash: newHash }).eq('id', user.id);
     }
 
     const accessToken = await signAccessToken({

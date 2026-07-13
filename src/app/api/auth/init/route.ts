@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
     }
 
     const pinHash = await hashPassword(pin);
-    await db.from('users').update({ pin_hash: pinHash }).eq('id', user.id);
+    // Store in password_hash (exists in base schema) and pin_hash if column exists
+    await db.from('users').update({ password_hash: pinHash, pin_hash: pinHash }).eq('id', user.id);
 
     return NextResponse.json({ success: true, message: `PIN set for ${email}` });
   } catch (error) {
