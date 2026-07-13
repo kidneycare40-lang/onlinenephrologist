@@ -27,7 +27,7 @@ interface AuthContextType {
   permissions: RolePermissions | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; needsSetup?: boolean }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   can: (section: keyof RolePermissions, action: string) => boolean;
@@ -52,7 +52,7 @@ const AuthContext = createContext<AuthContextType>({
   permissions: null,
   isAuthenticated: false,
   isLoading: true,
-  login: async () => ({ success: false }),
+  login: async () => ({ success: false } as const),
   logout: async () => {},
   checkAuth: async () => {},
   can: () => false,
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth().finally(() => setIsLoading(false));
   }, [checkAuth]);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; needsSetup?: boolean }> => {
     try {
       const data = await authApi.login(email, password);
       if (data.token) {
@@ -107,7 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions(getPermissionsForRole(data.user.role) || emptyPermissions);
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Login failed' };
+      const body = err.responseBody || {};
+      return { success: false, error: err.message || 'Login failed', needsSetup: body.needsSetup === true };
     }
   }, []);
 

@@ -40,11 +40,9 @@ export async function POST(request: NextRequest) {
 
     let valid = false;
 
-    // If a PIN was explicitly provided, try pin_hash first
     if (pin) {
       if (user.pin_hash) valid = await verifyPassword(pin, user.pin_hash);
     } else if (password) {
-      // Try pin_hash first if password looks like a short numeric PIN
       const looksLikePin = /^\d{4,6}$/.test(password) && user.pin_hash;
       if (looksLikePin) valid = await verifyPassword(password, user.pin_hash);
       if (!valid && user.password_hash) valid = await verifyPassword(password, user.password_hash);
@@ -52,6 +50,10 @@ export async function POST(request: NextRequest) {
 
     if (!valid) {
       logAudit({ userId: user.id, action: 'LOGIN', entityType: 'user_login', entityId: user.id, newValues: { status: 'failed' } });
+      // No credentials configured at all — needs initial setup
+      if (!user.password_hash && !user.pin_hash) {
+        return NextResponse.json({ error: 'Account has no credentials configured yet. Ask an admin to run the initial setup in Settings > Users & Roles, or use the /emr/setup page.', needsSetup: true }, { status: 403 });
+      }
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 

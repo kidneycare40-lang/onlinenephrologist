@@ -37,11 +37,12 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [usePassword, setUsePassword] = useState(false);
-  const [email, setEmail] = useState('2311.rajesh@gmail.com');
+  const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [password, setPassword] = useState('');
   const [showSecret, setShowSecret] = useState(false);
   const [error, setError] = useState('');
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
@@ -57,6 +58,7 @@ export default function LoginPage() {
       : await login(email, pin);
     setIsSubmitting(false);
     if (result.success) { router.push('/emr/dashboard'); }
+    else if (result.needsSetup) { setNeedsSetup(true); setError(result.error || ''); }
     else { setError(result.error || 'Invalid credentials'); }
   }
 
@@ -111,8 +113,14 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold text-gray-900">Sign in to EMR</h2>
           <p className="text-sm text-gray-500 mt-1.5 mb-8">Enter your email and {usePassword ? 'password' : 'PIN'} to continue.</p>
 
-          {error && (
+          {error && !needsSetup && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3.5 py-2.5 mb-4">{error}</div>
+          )}
+          {needsSetup && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-3.5 py-3 mb-4 space-y-1.5">
+              <p className="font-medium">Account not configured</p>
+              <p>This account has no credentials set up. Ask an admin to assign a PIN/password in Settings &rarr; Users & Roles, or go to the <a href="/emr/setup" className="underline font-medium hover:text-amber-900">initial setup page</a>.</p>
+            </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -161,6 +169,12 @@ export default function LoginPage() {
               className="text-sm text-[#0A75BB] hover:text-[#085D94] font-medium transition-colors">
               {usePassword ? 'Use PIN instead' : 'Use password instead'}
             </button>
+          </div>
+
+          <div className="text-center mt-2">
+            <a href="/emr/setup" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              First time? <span className="underline">Set up your account</span>
+            </a>
           </div>
 
           <p className="text-xs text-gray-400 text-center mt-5 leading-relaxed">By signing in, you agree to the EMR terms of use and data policy.</p>
