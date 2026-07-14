@@ -487,7 +487,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden md:flex">
             <div className="md:w-1/3">
-              <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation" className="w-full h-64 md:h-full object-cover" loading="lazy" />
+              <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel - Online Nephrologist Consultation" className="w-full h-64 md:h-full object-cover object-top" loading="lazy" />
             </div>
             <div className="md:w-2/3 p-8">
               <div className="text-sm text-[#0A75BB] font-semibold mb-1">Senior Nephrologist & Kidney Transplant Physician</div>
