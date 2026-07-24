@@ -10,6 +10,7 @@ import {
   Stethoscope,
   Phone,
   Building2,
+  Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
@@ -32,6 +33,14 @@ const clinics = [
       { id: 'psri-delhi', name: 'PSRI Hospital Delhi', address: 'Press Enclave Marg, Sheikh Sarai - II, New Delhi - 110017' },
     ],
   },
+  {
+    id: 'online',
+    name: 'Online Consultation',
+    color: '#16a34a',
+    locations: [
+      { id: 'online', name: 'Online Consultation', address: 'Virtual / Teleconsultation' },
+    ],
+  },
 ];
 
 const features = [
@@ -52,7 +61,12 @@ export default function ClinicSelectionPage() {
   const activeClinic = clinics.find((c) => c.id === selectedClinic);
 
   function handleClinicSelect(clinicId: string) {
-    setSelectedClinic(clinicId);
+    const clinic = clinics.find((c) => c.id === clinicId);
+    if (clinic && clinic.locations.length === 1) {
+      handleLocationSelect(clinic.locations[0].id);
+    } else {
+      setSelectedClinic(clinicId);
+    }
   }
 
   function handleLocationSelect(locationId: string) {
@@ -159,7 +173,7 @@ export default function ClinicSelectionPage() {
                         ? 'bg-[#0A75BB] text-white'
                         : 'bg-[#0A75BB]/10 text-[#0A75BB]'
                     )}>
-                      <Building2 className="h-5 w-5" />
+                      {clinic.id === 'online' ? <Video className="h-5 w-5" /> : <Building2 className="h-5 w-5" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">{clinic.name}</p>

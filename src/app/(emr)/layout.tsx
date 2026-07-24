@@ -13,16 +13,17 @@ const publicPaths = ['/emr/login', '/emr/setup', '/emr/clinic-selection'];
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const isPublic = pathname === '/emr' || publicPaths.some(p => pathname === p || pathname.startsWith(p + '/'));
 
   useEffect(() => {
-    if (!isPublic && !isAuthenticated) {
+    if (!isPublic && !isAuthenticated && !isLoading) {
       router.replace('/emr/login');
     }
-  }, [isPublic, isAuthenticated, router]);
+  }, [isPublic, isAuthenticated, isLoading, router]);
 
-  if (!isPublic && !isAuthenticated) return null;
+  if (!isPublic && !isAuthenticated && !isLoading) return null;
+  if (!isPublic && isLoading) return null;
   return <>{children}</>;
 }
 
