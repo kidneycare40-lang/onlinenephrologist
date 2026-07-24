@@ -68,7 +68,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     const result = await login(email, pin);
     setIsSubmitting(false);
-    if (result.success) { router.push('/emr/dashboard'); }
+    if (result.success) { router.push('/emr/clinic-selection'); }
     else if (result.needsSetup) { setNeedsSetup(true); setError(result.error || ''); }
     else { setError(result.error || 'Invalid credentials'); }
   }
