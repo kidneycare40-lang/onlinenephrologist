@@ -191,7 +191,7 @@ export default function ConsultationPage() {
 
         // Try loading patient by ID directly
         if (!apiConsult) {
-          const directPatient = await loadPatientFromApi(id, clinicId || undefined);
+          const directPatient = await loadPatientFromApi(patientId, clinicId || undefined);
           if (cancelled) return;
 
           if (directPatient) {
@@ -268,7 +268,7 @@ export default function ConsultationPage() {
         const patientConsults = storedConsultations
           .filter((c) => {
             if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
-            return c.patientId === id;
+            return c.patientId === patientId;
           })
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         storedConsult = patientConsults[0];

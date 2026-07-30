@@ -1,6 +1,6 @@
 // Consultation data mapper - bridges EMRConsultation format to/from API format
 
-import { consultationsApi, patientsApi, prescriptionsApi } from '@/lib/api-client';
+import { consultationsApi, patientsApi } from '@/lib/api-client';
 import type { EMRConsultation, EMRPatient } from '@/types/emr';
 
 // Map API consultation response to EMRConsultation format
@@ -147,11 +147,32 @@ export async function saveConsultationToApi(
 
   if (!hasContent) return { success: false };
 
+  const validMeds = consultation.prescriptions.filter(p => p.name);
+  const prescriptionMeds = validMeds.map((m, i) => ({
+    medicine_name: m.name,
+    generic_name: m.genericName || m.name,
+    strength: m.strength || '',
+    dosage: m.dosage || '1-0-1',
+    frequency: m.frequency || 'Once daily',
+    duration: m.duration || '30 days',
+    when_to_take: m.when || '',
+    route: m.route || 'oral',
+    instructions: m.instructions || '',
+    sort_order: i,
+  }));
+
+  const diagnosesPayload = consultation.diagnoses.map((d) => ({
+    name: d.name,
+    icd_code: d.icdCode,
+    is_primary: d.isPrimary,
+    notes: d.notes,
+  }));
+
   try {
     let dbConsultationId = consultation.id;
 
     if (consultation.id && !consultation.id.startsWith('consult-')) {
-      // Existing consultation - update
+      // Existing consultation - update with prescriptions
       await consultationsApi.update(consultation.id, {
         chief_complaint: consultation.chiefComplaint,
         hpi: consultation.hpi,
@@ -159,15 +180,12 @@ export async function saveConsultationToApi(
         notes: consultation.advice || consultation.notes,
         follow_up_date: consultation.followUpDate,
         status: consultation.status,
-        diagnoses: consultation.diagnoses.map((d) => ({
-          name: d.name,
-          icd_code: d.icdCode,
-          is_primary: d.isPrimary,
-          notes: d.notes,
-        })),
+        diagnoses: diagnosesPayload,
+        prescriptions: prescriptionMeds,
+        investigations: consultation.investigations || [],
       });
     } else {
-      // New consultation - create
+      // New consultation - create with prescriptions
       const created = await consultationsApi.create({
         patient_id: patientId,
         doctor_id: '00000000-0000-0000-0000-000000000001',
@@ -179,50 +197,17 @@ export async function saveConsultationToApi(
         notes: consultation.advice || consultation.notes,
         follow_up_date: consultation.followUpDate,
         status: consultation.status || 'IN_PROGRESS',
-        diagnoses: consultation.diagnoses.map((d) => ({
-          name: d.name,
-          icd_code: d.icdCode,
-          is_primary: d.isPrimary,
-          notes: d.notes,
-        })),
+        diagnoses: diagnosesPayload,
+        prescriptions: prescriptionMeds,
+        investigations: consultation.investigations || [],
       });
       if (created && created.id) {
         dbConsultationId = created.id;
       }
     }
 
-    // Save prescriptions via prescriptionsApi
-    if (consultation.prescriptions.length > 0) {
-      const validMeds = consultation.prescriptions.filter(p => p.name);
-      if (validMeds.length > 0) {
-        await prescriptionsApi.create({
-          patient_id: patientId,
-          doctor_id: '00000000-0000-0000-0000-000000000001',
-          clinic_id: clinicId,
-          consultation_id: dbConsultationId && !dbConsultationId.startsWith('consult-') ? dbConsultationId : undefined,
-          prescription_date: consultation.date || new Date().toISOString().split('T')[0],
-          diagnosis: consultation.diagnoses.map(d => d.name).join(', '),
-          advice: consultation.advice,
-          follow_up_date: consultation.followUpDate,
-          medicines: validMeds.map((m, i) => ({
-            medicine_name: m.name,
-            generic_name: m.genericName || m.name,
-            strength: m.strength || '',
-            dosage: m.dosage || '1-0-1',
-            frequency: m.frequency || 'Once daily',
-            duration: m.duration || '30 days',
-            when_to_take: m.when || '',
-            route: m.route || 'oral',
-            instructions: m.instructions || '',
-            sort_order: i,
-          })),
-          investigations: consultation.investigations || [],
-        });
-      }
-    }
-
-    // Also save to localStorage as backup
-    saveConsultationToLocalStorage({ ...consultation, id: dbConsultationId || consultation.id });
+    // Also save to localStorage as backup — keep the original ID so URL-based lookups work
+    saveConsultationToLocalStorage({ ...consultation, id: consultation.id });
     return { success: true, newId: dbConsultationId !== consultation.id ? dbConsultationId : undefined };
   } catch {
     // Fallback: save to localStorage only
