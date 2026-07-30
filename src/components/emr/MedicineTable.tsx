@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
-import { X, Plus, Search, RotateCcw, FileText, Save, Trash2, Pencil, ChevronDown, Check, ChevronRight } from 'lucide-react';
+import { X, Plus, Search, RotateCcw, FileText, Save, Trash2, Pencil, ChevronDown, Check, ChevronRight, Type } from 'lucide-react';
 import { commonMedicines, recentFrequentMedicines, prescriptionTemplates } from '@/lib/data/emr-mock';
 import { medTemplateStorage } from '@/lib/template-storage';
 import type { PrescriptionItem, PrescriptionTemplate, Medication } from '@/types/emr';
@@ -212,7 +212,85 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
   const editInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [showFreeText, setShowFreeText] = useState(false);
+  const [freeTextValue, setFreeTextValue] = useState('');
+  const [parsedMeds, setParsedMeds] = useState<{ name: string; strength: string; dosage: string; when: string; frequency: string; duration: string; notes: string }[]>([]);
+
   const dosagePatternRe = /^\d-\d-\d$|^SOS$/;
+
+  const parseFreeText = (text: string) => {
+    const lines = text.split('\n').filter(l => l.trim());
+    const meds: { name: string; strength: string; dosage: string; when: string; frequency: string; duration: string; notes: string }[] = [];
+    const strengthRe = /\b(\d+\s*(?:mg|g|mcg|iu|ml|units?)\b)/i;
+    const dosageRe = /\b(\d-\d-\d|SOS)\b/i;
+    const whenRe = /\b(After\s+Food|Before\s+Food|Empty\s+Stomach|With\s+Food|Any\s+Time|BF|AF|Bed\s*Time)\b/i;
+    const freqRe = /\b(Once\s+daily|Twice\s+daily|Thrice\s+daily|Once\s+weekly|Twice\s+weekly|Alternate\s+day|Monthly|As\s+needed|STAT|\d+\s*times\/day|\d+\s*times\/week)\b/i;
+    const durationRe = /\b(\d+\s*(?:days?|weeks?|months?|years?))\b/i;
+    const tabRe = /\b(Tab\.?|Cap\.?|Syrup|Suspension|Inj\.?|Drops?|Ointment|Cream|Gel|Spray|Solution)\b/i;
+
+    for (const line of lines) {
+      let remaining = line.trim();
+      let name = '';
+      let strength = '';
+      let dosage = '';
+      let when = '';
+      let frequency = '';
+      let duration = '';
+      let notes = '';
+
+      // Extract strength
+      const strengthMatch = remaining.match(strengthRe);
+      if (strengthMatch) {
+        strength = strengthMatch[1].trim();
+        remaining = remaining.replace(strengthMatch[0], ' ').trim();
+      }
+
+      // Extract dosage
+      const dosageMatch = remaining.match(dosageRe);
+      if (dosageMatch) {
+        dosage = dosageMatch[1];
+        remaining = remaining.replace(dosageMatch[0], ' ').trim();
+      }
+
+      // Extract when
+      const whenMatch = remaining.match(whenRe);
+      if (whenMatch) {
+        when = whenMatch[1];
+        remaining = remaining.replace(whenMatch[0], ' ').trim();
+      }
+
+      // Extract frequency
+      const freqMatch = remaining.match(freqRe);
+      if (freqMatch) {
+        frequency = freqMatch[1];
+        remaining = remaining.replace(freqMatch[0], ' ').trim();
+      }
+
+      // Extract duration
+      const durationMatch = remaining.match(durationRe);
+      if (durationMatch) {
+        duration = durationMatch[1];
+        remaining = remaining.replace(durationMatch[0], ' ').trim();
+      }
+
+      // Extract notes (anything in parentheses)
+      const notesMatch = remaining.match(/\(([^)]+)\)/);
+      if (notesMatch) {
+        notes = notesMatch[1];
+        remaining = remaining.replace(notesMatch[0], ' ').trim();
+      }
+
+      // Remove tab/cap prefix from name
+      remaining = remaining.replace(tabRe, '').trim();
+
+      // Clean up remaining text as medicine name
+      name = remaining.replace(/\s+/g, ' ').trim();
+      if (!name) continue;
+
+      meds.push({ name, strength, dosage, when, frequency, duration, notes });
+    }
+    return meds;
+  };
 
   useEffect(() => {
     let changed = false;
@@ -520,6 +598,39 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
     medTemplateStorage.save(updated);
     setConfirmDeleteId(null);
     if (activeTemplateId === id) setActiveTemplateId(null);
+  };
+
+  const addAllParsedMeds = () => {
+    const newMeds = parsedMeds.filter(m => {
+      const key = m.name.toLowerCase().trim();
+      return !existingMedicineKeys.has(key);
+    });
+    if (newMeds.length === 0) {
+      setDuplicateWarning('All medicines already added');
+      setTimeout(() => setDuplicateWarning(null), 3000);
+      return;
+    }
+    const rxItems: PrescriptionItem[] = newMeds.map(m => ({
+      id: generateId(),
+      name: m.name,
+      genericName: m.name,
+      strength: m.strength,
+      dosage: m.dosage || '1-0-1',
+      when: m.when,
+      frequency: m.frequency || 'Once daily',
+      duration: m.duration || '30 days',
+      route: 'Oral',
+      instructions: m.notes,
+    }));
+    onChange([...prescriptions, ...rxItems]);
+    setShowFreeText(false);
+    setFreeTextValue('');
+    setParsedMeds([]);
+  };
+
+  const handleFreeTextChange = (val: string) => {
+    setFreeTextValue(val);
+    setParsedMeds(parseFreeText(val));
   };
 
   const renderMedicineDropdown = () => {
@@ -854,6 +965,10 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
 
       {/* Bottom Action Bar */}
       <div className="px-3 py-2 border-t border-slate-200 flex items-center justify-end gap-2">
+        <button onClick={() => setShowFreeText(true)}
+          className="flex items-center gap-1.5 px-3 h-10 text-xs font-medium text-[#0A75BB] hover:text-[#085a94] transition-colors rounded hover:bg-[#0A75BB]/5">
+          <Type className="h-3.5 w-3.5" /> Type All
+        </button>
         <button onClick={() => setShowLoadPrev(true)}
           className="flex items-center gap-1.5 px-3 h-10 text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors rounded hover:bg-slate-50">
           <RotateCcw className="h-3.5 w-3.5" /> Load Prev
@@ -950,6 +1065,72 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
           <button onClick={() => setDuplicateWarning(null)} className="p-0.5 hover:bg-amber-100 rounded">
             <X className="h-3.5 w-3.5 text-amber-500" />
           </button>
+        </div>
+      )}
+
+      {/* Free Text Entry Modal */}
+      {showFreeText && (
+        <div className="fixed inset-0 z-[150] flex items-start justify-center bg-black/50 pt-[5vh] overflow-y-auto" onClick={() => setShowFreeText(false)}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 my-4" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-800">Type All Medicines</h3>
+                <p className="text-xs text-slate-400 mt-0.5">One medicine per line — we'll parse name, strength, dosage, etc.</p>
+              </div>
+              <button onClick={() => { setShowFreeText(false); setFreeTextValue(''); setParsedMeds([]); }} className="p-1 hover:bg-slate-100 rounded">
+                <X className="h-4 w-4 text-slate-500" />
+              </button>
+            </div>
+            <div className="p-4">
+              <textarea
+                value={freeTextValue}
+                onChange={(e) => handleFreeTextChange(e.target.value)}
+                className="w-full h-48 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB] resize-none font-mono"
+                placeholder={`Enter medicines, one per line:\n\nExample:\nTelmisartan 40mg 1-0-1 After Food Once daily 30 days\nAmlodipine 5mg 1-0-0 Once daily 30 days\nEpoetin Alfa 4000 IU 0-0-0 3 times/week 4 weeks\nSevelamer 800mg 1-1-1 After Food 3 times/day 30 days\nCalcium Carbonate 500mg 1-0-1 Twice daily 30 days`}
+                autoFocus
+              />
+              {parsedMeds.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-slate-500 mb-2">Preview — {parsedMeds.length} medicine{parsedMeds.length > 1 ? 's' : ''} detected:</p>
+                  <div className="max-h-48 overflow-y-auto border border-slate-100 rounded-lg divide-y divide-slate-50">
+                    {parsedMeds.map((m, i) => {
+                      const isDuplicate = existingMedicineKeys.has(m.name.toLowerCase().trim());
+                      return (
+                        <div key={i} className={cn("px-3 py-2 flex items-center justify-between", isDuplicate && "opacity-50 bg-amber-50")}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-slate-800 uppercase">{m.name}</span>
+                              {isDuplicate && (
+                                <span className="px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 bg-amber-100 rounded-full">Already added</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-400 flex flex-wrap gap-x-2">
+                              {m.strength && <span>{m.strength}</span>}
+                              {m.dosage && <span>{m.dosage}</span>}
+                              {m.when && <span>{m.when}</span>}
+                              {m.frequency && <span>{m.frequency}</span>}
+                              {m.duration && <span>{m.duration}</span>}
+                              {m.notes && <span>({m.notes})</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button onClick={() => { setShowFreeText(false); setFreeTextValue(''); setParsedMeds([]); }}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                  Cancel
+                </button>
+                <button onClick={addAllParsedMeds} disabled={parsedMeds.length === 0}
+                  className="px-4 py-2 text-sm font-medium text-white bg-[#0A75BB] rounded-lg hover:bg-[#085a94] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  Add {parsedMeds.length > 0 ? parsedMeds.length : ''} Medicine{parsedMeds.length !== 1 ? 's' : ''}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

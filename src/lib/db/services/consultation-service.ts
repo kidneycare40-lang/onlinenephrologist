@@ -430,6 +430,8 @@ export class ConsultationService {
     notes?: string;
     follow_up_date?: string;
     diagnoses?: DiagnosisCreate[];
+    prescriptions?: PrescriptionMedicineCreate[];
+    investigations?: string[];
     vitals?: VitalsCreate;
     kidney_parameters?: KidneyParameterCreate;
     createdBy?: string;
@@ -454,6 +456,22 @@ export class ConsultationService {
     // Add diagnoses
     if (data.diagnoses && data.diagnoses.length > 0) {
       await this.diagnosisRepo.createManyForConsultation(consultation.id, data.diagnoses);
+    }
+
+    // Add prescriptions with medicines
+    if (data.prescriptions && data.prescriptions.length > 0) {
+      await this.prescriptionRepo.createWithMedicines(
+        {
+          patient_id: data.patient_id,
+          doctor_id: data.doctor_id,
+          clinic_id: data.clinic_id,
+          consultation_id: consultation.id,
+          prescription_date: new Date().toISOString().split('T')[0],
+          status: 'Active',
+        },
+        data.prescriptions,
+        data.investigations
+      );
     }
 
     // Add vitals
@@ -485,6 +503,8 @@ export class ConsultationService {
     follow_up_date?: string;
     status?: string;
     diagnoses?: DiagnosisCreate[];
+    prescriptions?: PrescriptionMedicineCreate[];
+    investigations?: string[];
   }): Promise<ConsultationWithRelations | null> {
     await this.consultationRepo.update(id, {
       chief_complaint: data.chief_complaint,
@@ -500,6 +520,44 @@ export class ConsultationService {
       await this.diagnosisRepo.deleteByConsultationId(id);
       if (data.diagnoses.length > 0) {
         await this.diagnosisRepo.createManyForConsultation(id, data.diagnoses);
+      }
+    }
+
+    // Replace prescriptions if provided
+    if (data.prescriptions) {
+      const db = getDb();
+      // Delete existing prescriptions for this consultation
+      const { data: existingRx } = await db
+        .from('prescriptions')
+        .select('id')
+        .eq('consultation_id', id)
+        .eq('is_deleted', false);
+
+      if (existingRx && existingRx.length > 0) {
+        for (const rx of existingRx) {
+          await db.from('prescription_medicines').delete().eq('prescription_id', rx.id);
+          await db.from('prescription_investigations').delete().eq('prescription_id', rx.id);
+        }
+        await db.from('prescriptions').delete().eq('consultation_id', id);
+      }
+
+      // Create new prescriptions
+      if (data.prescriptions.length > 0) {
+        const { data: consult } = await db.from('consultations').select('patient_id, doctor_id, clinic_id').eq('id', id).single();
+        if (consult) {
+          await this.prescriptionRepo.createWithMedicines(
+            {
+              patient_id: consult.patient_id,
+              doctor_id: consult.doctor_id,
+              clinic_id: consult.clinic_id,
+              consultation_id: id,
+              prescription_date: new Date().toISOString().split('T')[0],
+              status: 'Active',
+            },
+            data.prescriptions,
+            data.investigations
+          );
+        }
       }
     }
 
