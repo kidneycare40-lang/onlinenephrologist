@@ -131,6 +131,8 @@ export interface EMRConsultation {
   notes: string;
   followUpDate?: string;
   followUpText?: string;
+  testsPrescribed?: string[];
+  testRequestByWhen?: string;
   tokenId?: string;
   updatedAt?: string;
   bookingReportFiles?: string[];

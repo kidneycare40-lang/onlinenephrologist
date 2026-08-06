@@ -481,6 +481,17 @@ export default function ConsultationPage() {
     return () => { cancelled = true; };
   }, [id, clinicId, onlineBookings]);
 
+  useEffect(() => {
+    if (consultation?.testsPrescribed && consultation.testsPrescribed.length > 0 && !isLoadingData) {
+      const current = JSON.stringify(testRequests);
+      const saved = JSON.stringify(consultation.testsPrescribed);
+      if (current !== saved) {
+        setTestRequests(consultation.testsPrescribed);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consultation?.id]);
+
   const calculateBMI = useCallback((weight: string, height: string) => {
     const w = parseFloat(weight);
     const h = parseFloat(height);
@@ -915,6 +926,13 @@ export default function ConsultationPage() {
   const removeTestRequest = (test: string) => {
     setTestRequests(testRequests.filter((t) => t !== test));
   };
+
+  useEffect(() => {
+    if (consultation && JSON.stringify(consultation.testsPrescribed || []) !== JSON.stringify(testRequests)) {
+      setConsultation({ ...consultation, testsPrescribed: [...testRequests] });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testRequests]);
 
   const loadAdviceTemplate = (tpl: AdviceTemplate) => {
     if (!consultation) return;
