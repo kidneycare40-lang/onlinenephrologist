@@ -100,6 +100,7 @@ export default function ReportUploadOCR({
           file_name: files.length > 0 ? files[0].name : null,
           mime_type: files.length > 0 ? files[0].type : null,
           labValues: result.labValues,
+          report_date: result.reportDate || new Date().toISOString().split('T')[0],
         }),
       });
       if (res.ok) {

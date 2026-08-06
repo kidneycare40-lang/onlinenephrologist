@@ -34,6 +34,7 @@ export interface OCRResult {
   medicines: string[];
   structuredMedicines: ExtractedMedicine[];
   complaints: string[];
+  reportDate?: string;
 }
 
 const LAB_PATTERNS: { pattern: RegExp; testName: string; unit: string }[] = [
@@ -113,6 +114,60 @@ const LAB_PATTERNS: { pattern: RegExp; testName: string; unit: string }[] = [
   { pattern: /(?:chloride|Cl-?)\s*[:\-]?\s*([\d.]+)/i, testName: 'Serum Chloride', unit: 'mEq/L' },
   { pattern: /(?:bicarbonate|HCO3|CO2)\s*[:\-]?\s*([\d.]+)/i, testName: 'Bicarbonate (HCO3)', unit: 'mEq/L' },
 ];
+
+const DATE_PATTERNS: { pattern: RegExp; format: 'DD/MM/YYYY' | 'DD-MM-YYYY' | 'DD-Mon-YYYY' | 'YYYY-MM-DD' | 'MM/DD/YYYY' }[] = [
+  // Collection/Report date patterns (common in Indian lab reports)
+  { pattern: /(?:COL\.?\s*Date|Collection\s*Date|Report\s*Date|Lab\s*Date|Sample\s*Date|Date\s*of\s*Report|Reported\s*on|Date)\s*[:\-]?\s*(\d{1,2})[\/\-\.](\w+)[\/\-\.](\d{2,4})/i, format: 'DD-Mon-YYYY' },
+  // DD/MM/YYYY or DD-MM-YYYY
+  { pattern: /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/, format: 'DD/MM/YYYY' },
+  // DD/MM/YY
+  { pattern: /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})\b/, format: 'DD/MM/YYYY' },
+  // YYYY-MM-DD
+  { pattern: /(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/, format: 'YYYY-MM-DD' },
+];
+
+const MONTH_MAP: Record<string, string> = {
+  jan: '01', january: '01', feb: '02', february: '02', mar: '03', march: '03',
+  apr: '04', april: '04', may: '05', jun: '06', june: '06',
+  jul: '07', july: '07', aug: '08', august: '08', sep: '09', september: '09',
+  oct: '10', october: '10', nov: '11', november: '11', dec: '12', december: '12',
+};
+
+function extractReportDate(text: string): string | undefined {
+  for (const { pattern, format } of DATE_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      try {
+        if (format === 'DD-Mon-YYYY') {
+          const day = match[1].padStart(2, '0');
+          const monthStr = match[2].toLowerCase();
+          const month = MONTH_MAP[monthStr];
+          if (!month) continue;
+          let year = match[3];
+          if (year.length === 2) year = '20' + year;
+          return `${year}-${month}-${day}`;
+        }
+        if (format === 'DD/MM/YYYY') {
+          const day = match[1].padStart(2, '0');
+          const month = match[2].padStart(2, '0');
+          let year = match[3];
+          if (year.length === 2) year = '20' + year;
+          if (parseInt(month) > 12) continue;
+          return `${year}-${month}-${day}`;
+        }
+        if (format === 'YYYY-MM-DD') {
+          const year = match[1];
+          const month = match[2].padStart(2, '0');
+          const day = match[3].padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  return undefined;
+}
 
 const VITAL_PATTERNS = [
   { pattern: /(?:bp|blood\s+pressure)\s*[:\-]?\s*(\d{2,3})\s*[\/xX]\s*(\d{2,3})/i, fields: ['systolic', 'diastolic'] as const },
@@ -642,7 +697,9 @@ function parseExtractedText(text: string): OCRResult {
     }
   }
 
-  return { rawText: text, labValues, vitals, diagnoses, medicines, structuredMedicines, complaints };
+  const reportDate = extractReportDate(text);
+
+  return { rawText: text, labValues, vitals, diagnoses, medicines, structuredMedicines, complaints, reportDate };
 }
 
 async function preprocessImage(file: File): Promise<Blob> {
@@ -759,15 +816,20 @@ export async function extractWithOpenAI(file: File): Promise<OCRResult | null> {
         messages: [
           {
             role: 'system',
-            content: `You are a medical lab report OCR assistant. Extract ALL lab test values from this medical report image. Return a JSON object with:
+            content: `You are a medical lab report OCR assistant. Extract lab test values from this medical report image. 
+
+IMPORTANT: Only extract values that are HIGHLIGHTED (yellow/orange background), BOLD, or shown in RED/abnormal color. Ignore normal/unhighlighted values.
+
+Return a JSON object with:
 - "rawText": the full text you can read from the image
-- "labValues": array of { "testName": "...", "value": "...", "unit": "...", "normalRange": "..." }
+- "labValues": array of { "testName": "...", "value": "...", "unit": "...", "normalRange": "..." } - ONLY for highlighted/bold/abnormal values
 - "vitals": { "systolic": "...", "diastolic": "...", "pulse": "...", "temperature": "...", "spo2": "...", "weight": "...", "height": "..." }
 - "diagnoses": array of diagnosis strings found
 - "medicines": array of medicine name strings found
 - "complaints": array of complaint strings found
+- "reportDate": the report/collection date in YYYY-MM-DD format (look for "COL.Date", "Report Date", "Collection Date", "Sample Date", etc.)
 
-Focus on extracting: Serum Creatinine, eGFR, Blood Urea, BUN, Sodium, Potassium, Calcium, Phosphorus, Hemoglobin, Albumin, HbA1c, Blood Sugar, Lipid Profile, Vitamin D, PTH, Ferritin, Urine Protein, and any other lab values.
+Focus on extracting ONLY the highlighted/bold/abnormal values from the report.
 
 Return ONLY valid JSON, no markdown formatting.`
           },
@@ -783,7 +845,7 @@ Return ONLY valid JSON, no markdown formatting.`
               },
               {
                 type: 'text',
-                text: 'Extract all lab values, vitals, diagnoses, and medicines from this medical report.',
+                text: 'Extract ONLY the highlighted, bold, or abnormal (red-colored) lab values from this medical report. Ignore normal/unhighlighted values.',
               },
             ],
           },
@@ -819,6 +881,7 @@ Return ONLY valid JSON, no markdown formatting.`
       medicines: parsed.medicines || [],
       structuredMedicines: [],
       complaints: parsed.complaints || [],
+      reportDate: parsed.reportDate || undefined,
     };
   } catch (err) {
     console.error('OpenAI Vision extraction failed:', err);

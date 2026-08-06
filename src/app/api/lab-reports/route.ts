@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       clinic_id: body.clinic_id || 'kcc-faridabad',
       labValues,
       reportTitle: title || 'Lab Report',
+      report_date: report_date || new Date().toISOString().split('T')[0],
     });
 
     return NextResponse.json({

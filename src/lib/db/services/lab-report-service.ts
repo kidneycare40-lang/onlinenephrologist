@@ -201,10 +201,12 @@ export class LabReportService {
     clinic_id?: string;
     labValues: { testName: string; value: string; unit: string; normalRange?: string }[];
     reportTitle?: string;
+    report_date?: string;
   }): Promise<{ investigationOrderId: string | null; kidneyParamsSaved: boolean }> {
     const db = getDb();
     let investigationOrderId: string | null = null;
     let kidneyParamsSaved = false;
+    const reportDate = data.report_date || new Date().toISOString().split('T')[0];
 
     // 1. Create investigation order
     if (data.labValues.length > 0) {
@@ -215,7 +217,7 @@ export class LabReportService {
           doctor_id: data.doctor_id || 'doctor-default',
           clinic_id: data.clinic_id || 'kcc-faridabad',
           consultation_id: data.consultation_id || null,
-          order_date: new Date().toISOString().split('T')[0],
+          order_date: reportDate,
           status: 'COMPLETED',
           notes: data.reportTitle || 'Lab values from uploaded report',
         } as any)
@@ -235,7 +237,7 @@ export class LabReportService {
           normal_range: v.normalRange || null,
           is_abnormal: isAbnormal(v.testName, v.value),
           status: 'Completed' as const,
-          result_date: new Date().toISOString().split('T')[0],
+          result_date: reportDate,
         }));
 
         await this.itemRepo.createMany(items);
@@ -258,7 +260,7 @@ export class LabReportService {
     }
 
     if (hasKidneyData) {
-      kidneyData.recorded_at = new Date().toISOString();
+      kidneyData.recorded_at = new Date(reportDate + 'T00:00:00').toISOString();
       if (data.consultation_id) kidneyData.consultation_id = data.consultation_id;
       const result = await this.kidneyRepo.create(kidneyData as any);
       kidneyParamsSaved = !!result;
