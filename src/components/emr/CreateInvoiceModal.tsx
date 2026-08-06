@@ -213,7 +213,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     const pClinic = patient.clinicId || 'kcc-faridabad';
     setSelectedPatient({
       id: patient.id, name: `${patient.firstName} ${patient.lastName}`,
-      age: patient.dateOfBirth ? new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear() : undefined,
+      age: patient.age,
       gender: patient.gender, phone: patient.phone, address: patient.address, clinicId: pClinic,
     });
     setClinic(pClinic);

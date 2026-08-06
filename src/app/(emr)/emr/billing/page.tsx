@@ -184,8 +184,9 @@ export default function BillingPage() {
       }
 
       if (apiInvoices.length > 0) {
-        setInvoices(apiInvoices);
-        saveInvoicesToStorage(apiInvoices);
+        const enriched = await enrichInvoicesWithAge(apiInvoices);
+        setInvoices(enriched);
+        saveInvoicesToStorage(enriched);
       } else {
         const storageInvoices = loadInvoicesFromStorage();
         const enriched = await enrichInvoicesWithAge(storageInvoices);

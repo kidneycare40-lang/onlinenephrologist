@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import {
@@ -110,12 +110,62 @@ const initialFormData: FormData = {
 
 export default function AddPatientPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+  const isEditMode = !!editId;
   const { clinicId } = useClinic();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<FormData>({ ...initialFormData, uhid: generateUhid(clinicId) });
   const [errors, setErrors] = useState<FormErrors>({});
   const [allergyInput, setAllergyInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingPatient, setLoadingPatient] = useState(!!editId);
+
+  useEffect(() => {
+    if (!editId) return;
+    (async () => {
+      try {
+        const patient = await patientsApi.get(editId);
+        if (patient) {
+          let age = '';
+          if (patient.date_of_birth) {
+            const dob = new Date(patient.date_of_birth);
+            const today = new Date();
+            let a = today.getFullYear() - dob.getFullYear();
+            const m = today.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) a--;
+            age = String(a);
+          }
+          setFormData({
+            firstName: patient.first_name || '',
+            lastName: patient.last_name || '',
+            age,
+            gender: patient.gender || '',
+            bloodGroup: patient.blood_group || '',
+            phone: patient.phone || '',
+            email: patient.email || '',
+            uhid: patient.uhid || generateUhid(clinicId),
+            abhaNumber: patient.abha_number || '',
+            aadhaar: patient.aadhaar || '',
+            address: patient.address || '',
+            city: patient.city || '',
+            state: patient.state || '',
+            pincode: patient.pincode || '',
+            emergencyContactName: patient.emergency_contact_name || '',
+            emergencyContactPhone: patient.emergency_contact_phone || '',
+            emergencyContactRelation: patient.emergency_contact_relation || '',
+            allergies: patient.allergies || [],
+            medicalHistory: patient.medical_history || '',
+            insuranceProvider: patient.insurance_provider || '',
+            insuranceNumber: patient.insurance_number || '',
+            referralDoctor: patient.referral_doctor || '',
+            familyMembers: patient.family_members || [],
+          });
+        }
+      } catch {}
+      setLoadingPatient(false);
+    })();
+  }, [editId, clinicId]);
 
   const updateField = useCallback((field: keyof FormData, value: string | string[] | FamilyMemberForm[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -203,6 +253,43 @@ export default function AddPatientPage() {
     const now = new Date();
     const birthYear = now.getFullYear() - parseInt(formData.age);
     const dob = `${birthYear}-01-01`;
+
+    if (isEditMode && editId) {
+      // Update existing patient
+      try {
+        await patientsApi.update(editId, {
+          first_name: formData.firstName.trim(),
+          last_name: formData.lastName.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim() || undefined,
+          date_of_birth: dob || undefined,
+          gender: formData.gender as 'male' | 'female' | 'other',
+          blood_group: formData.bloodGroup || undefined,
+          abha_number: formData.abhaNumber || undefined,
+          medical_history: formData.medicalHistory || undefined,
+          insurance_provider: formData.insuranceProvider || undefined,
+          insurance_number: formData.insuranceNumber || undefined,
+          address: (formData.address || formData.city || formData.state || formData.pincode) ? {
+            address_line_1: formData.address || '',
+            city: formData.city || '',
+            state: formData.state || '',
+            pincode: formData.pincode || '',
+            country: 'India',
+          } : undefined,
+          emergency_contact: (formData.emergencyContactName || formData.emergencyContactPhone) ? {
+            contact_name: formData.emergencyContactName || '',
+            phone: formData.emergencyContactPhone || '',
+            relationship: formData.emergencyContactRelation || '',
+          } : undefined,
+        });
+        toast.success('Patient updated successfully!');
+        router.push(`/emr/patients/${editId}`);
+      } catch {
+        toast.error('Failed to update patient');
+      }
+      setIsSubmitting(false);
+      return;
+    }
 
     const newPatient = {
       id: `p-${Date.now()}`,
@@ -342,7 +429,7 @@ export default function AddPatientPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to Patients
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Add New Patient</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Patient' : 'Add New Patient'}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Fill in the patient details below
           {clinicId && <span className="ml-2 text-[#0A75BB] font-medium">• {clinicId === 'psri-delhi' ? 'PSRI Hospital Delhi' : clinicId === 'kcc-saket' ? 'KCC Saket' : 'KCC Faridabad'}</span>}
@@ -382,6 +469,13 @@ export default function AddPatientPage() {
 
       {/* Form Card */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
+        {loadingPatient ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-[#0A75BB]" />
+            <span className="ml-2 text-sm text-gray-500">Loading patient data...</span>
+          </div>
+        ) : (
+          <>
         <h2 className="text-lg font-semibold text-gray-900 mb-5">{steps[step].label} Details</h2>
 
         {/* Step 0: Personal */}
@@ -601,6 +695,8 @@ export default function AddPatientPage() {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
