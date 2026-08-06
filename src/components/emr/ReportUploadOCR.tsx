@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { processUploadedFiles, type OCRResult, type ExtractedLabValue, type ExtractedMedicine } from '@/lib/ocr-utils';
 
 interface ReportUploadOCRProps {
+  patientId?: string;
+  consultationId?: string;
   onApplyLabValues: (values: ExtractedLabValue[]) => void;
   onApplyVitals: (vitals: OCRResult['vitals']) => void;
   onApplyDiagnoses: (diagnoses: string[]) => void;
@@ -15,6 +17,8 @@ interface ReportUploadOCRProps {
 }
 
 export default function ReportUploadOCR({
+  patientId,
+  consultationId,
   onApplyLabValues,
   onApplyVitals,
   onApplyDiagnoses,
@@ -32,6 +36,8 @@ export default function ReportUploadOCR({
   const [pasteText, setPasteText] = useState('');
   const [parsedMeds, setParsedMeds] = useState<ExtractedMedicine[]>([]);
   const [activeTab, setActiveTab] = useState<'upload' | 'paste'>('upload');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
@@ -75,6 +81,37 @@ export default function ReportUploadOCR({
 
   const markApplied = (field: string) => {
     setAppliedFields((prev) => new Set(prev).add(field));
+  };
+
+  const saveToEMR = async () => {
+    if (!result || !patientId || result.labValues.length === 0) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      const res = await fetch('/api/lab-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: patientId,
+          consultation_id: consultationId || null,
+          title: files.length > 0 ? files[0].name : 'Pasted Lab Report',
+          category: 'lab_report',
+          file_url: '',
+          file_name: files.length > 0 ? files[0].name : null,
+          mime_type: files.length > 0 ? files[0].type : null,
+          labValues: result.labValues,
+        }),
+      });
+      if (res.ok) {
+        setSaveSuccess(true);
+        // Also apply to consultation
+        onApplyLabValues(result.labValues);
+        markApplied('labValues');
+      }
+    } catch {
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const parsePasteText = useCallback(() => {
@@ -542,6 +579,29 @@ export default function ReportUploadOCR({
                 {result.rawText}
               </pre>
             </details>
+
+            {/* Save to EMR Button */}
+            {patientId && result.labValues.length > 0 && (
+              <div className="pt-2 border-t border-slate-100">
+                {saveSuccess ? (
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-medium py-2">
+                    <Check className="h-4 w-4" /> Saved to EMR — values added to investigations & kidney charts
+                  </div>
+                ) : (
+                  <button
+                    onClick={saveToEMR}
+                    disabled={isSaving}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                  >
+                    {isSaving ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Saving to EMR...</>
+                    ) : (
+                      <>Save {result.labValues.length} Lab Values to EMR</>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

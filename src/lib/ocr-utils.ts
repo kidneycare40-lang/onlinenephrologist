@@ -726,3 +726,121 @@ export async function processUploadedFiles(files: File[]): Promise<OCRResult> {
   }
   return parseExtractedText(allText);
 }
+
+// ============================================================
+// OpenAI GPT-4 Vision fallback for complex reports
+// ============================================================
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function extractWithOpenAI(file: File): Promise<OCRResult | null> {
+  try {
+    const base64 = await fileToBase64(file);
+    const mimeType = file.type || 'image/jpeg';
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('openai_api_key') || '' : process.env.OPENAI_API_KEY || ''}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a medical lab report OCR assistant. Extract ALL lab test values from this medical report image. Return a JSON object with:
+- "rawText": the full text you can read from the image
+- "labValues": array of { "testName": "...", "value": "...", "unit": "...", "normalRange": "..." }
+- "vitals": { "systolic": "...", "diastolic": "...", "pulse": "...", "temperature": "...", "spo2": "...", "weight": "...", "height": "..." }
+- "diagnoses": array of diagnosis strings found
+- "medicines": array of medicine name strings found
+- "complaints": array of complaint strings found
+
+Focus on extracting: Serum Creatinine, eGFR, Blood Urea, BUN, Sodium, Potassium, Calcium, Phosphorus, Hemoglobin, Albumin, HbA1c, Blood Sugar, Lipid Profile, Vitamin D, PTH, Ferritin, Urine Protein, and any other lab values.
+
+Return ONLY valid JSON, no markdown formatting.`
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64}`,
+                  detail: 'high',
+                },
+              },
+              {
+                type: 'text',
+                text: 'Extract all lab values, vitals, diagnoses, and medicines from this medical report.',
+              },
+            ],
+          },
+        ],
+        max_tokens: 4000,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    // Parse JSON from response (handle markdown code blocks)
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+    const parsed = JSON.parse(jsonMatch[1] || content);
+
+    return {
+      rawText: parsed.rawText || '',
+      labValues: (parsed.labValues || []).map((v: any) => ({
+        testName: v.testName || '',
+        value: String(v.value || ''),
+        unit: v.unit || '',
+        normalRange: v.normalRange || undefined,
+      })),
+      vitals: parsed.vitals || {},
+      diagnoses: parsed.diagnoses || [],
+      medicines: parsed.medicines || [],
+      structuredMedicines: [],
+      complaints: parsed.complaints || [],
+    };
+  } catch (err) {
+    console.error('OpenAI Vision extraction failed:', err);
+    return null;
+  }
+}
+
+export async function processUploadedFilesWithAIFallback(files: File[]): Promise<OCRResult> {
+  // First try Tesseract
+  const tesseractResult = await processUploadedFiles(files);
+
+  // If Tesseract found very few lab values, try OpenAI
+  if (tesseractResult.labValues.length < 3 && files.length > 0) {
+    for (const file of files) {
+      if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+        const aiResult = await extractWithOpenAI(file);
+        if (aiResult && aiResult.labValues.length > tesseractResult.labValues.length) {
+          return aiResult;
+        }
+      }
+    }
+  }
+
+  return tesseractResult;
+}

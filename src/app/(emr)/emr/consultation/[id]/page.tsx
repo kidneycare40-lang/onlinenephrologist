@@ -1172,6 +1172,8 @@ export default function ConsultationPage() {
             <div className="max-w-5xl mx-auto p-4 space-y-4">
               <ErrorBoundary>
                 <ReportUploadOCR
+                  patientId={patient?.id}
+                  consultationId={consultation?.id}
                   onApplyLabValues={handleApplyLabValues}
                   onApplyVitals={handleApplyVitals}
                   onApplyDiagnoses={handleApplyDiagnoses}
