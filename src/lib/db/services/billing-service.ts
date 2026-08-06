@@ -160,7 +160,8 @@ export class BillingService {
     const { sortBy = 'created_at', sortOrder = 'desc' } = sort;
     const offset = (page - 1) * limit;
 
-    let query = this.db
+    const db = getDb();
+    let query = db
       .from('invoices')
       .select(`
         *,
