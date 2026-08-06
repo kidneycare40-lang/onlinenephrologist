@@ -304,16 +304,23 @@ export class PatientService {
   async update(id: string, data: Partial<PatientCreate>, updatedBy?: string): Promise<PatientWithRelations | null> {
     const { address, emergency_contact, ...patientData } = data;
 
-    await this.patientRepo.update(id, {
+    const updated = await this.patientRepo.update(id, {
       ...patientData,
       updated_by: updatedBy,
     } as Partial<Patient>);
+
+    if (!updated) return null;
 
     if (address) {
       await this.addressRepo.upsert(id, address);
     }
 
-    return this.patientRepo.findByIdWithRelations(id);
+    // Try to return with relations, fall back to basic patient if joins fail
+    const withRelations = await this.patientRepo.findByIdWithRelations(id);
+    if (withRelations) return withRelations;
+
+    // Return the basic patient data we already have from the update
+    return updated as unknown as PatientWithRelations;
   }
 
   async delete(id: string): Promise<boolean> {
