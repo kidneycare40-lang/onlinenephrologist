@@ -124,6 +124,71 @@ export default function AddPatientPage() {
   useEffect(() => {
     if (!editId) return;
     (async () => {
+      // Try localStorage first (consistent with patient detail page)
+      try {
+        const localPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        const localBookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        // Also search consultation/appointment localStorage
+        const consultPatients = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+        const apptPatients = JSON.parse(localStorage.getItem('emr_appointments') || '[]');
+
+        // Try to find patient in localStorage by ID
+        let local = localPatients.find((p: any) => p.id === editId);
+        if (!local) {
+          // Try bookings
+          local = localBookings.find((b: any) => b.bookingId === editId);
+          if (local) {
+            local = {
+              first_name: local.firstName || '', last_name: local.lastName || '',
+              phone: local.phone || '', email: local.email || '',
+              date_of_birth: local.age ? `${new Date().getFullYear() - parseInt(local.age)}-01-01` : '',
+              gender: local.gender || '', blood_group: '',
+            };
+          }
+        }
+
+        if (local) {
+          let age = '';
+          const dob = local.date_of_birth || local.dateOfBirth;
+          if (dob) {
+            const d = new Date(dob);
+            const today = new Date();
+            let a = today.getFullYear() - d.getFullYear();
+            const m = today.getMonth() - d.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < d.getDate())) a--;
+            age = String(a);
+          }
+          setFormData({
+            firstName: local.first_name || local.firstName || '',
+            lastName: local.last_name || local.lastName || '',
+            age,
+            gender: local.gender || '',
+            bloodGroup: local.blood_group || local.bloodGroup || '',
+            phone: local.phone || '',
+            email: local.email || '',
+            uhid: local.uhid || generateUhid(clinicId),
+            abhaNumber: local.abha_number || local.abhaNumber || '',
+            aadhaar: local.aadhaar || '',
+            address: local.address || '',
+            city: local.city || '',
+            state: local.state || '',
+            pincode: local.pincode || '',
+            emergencyContactName: local.emergency_contact_name || local.emergencyContactName || '',
+            emergencyContactPhone: local.emergency_contact_phone || local.emergencyContactPhone || '',
+            emergencyContactRelation: local.emergency_contact_relation || local.emergencyContactRelation || '',
+            allergies: local.allergies || [],
+            medicalHistory: local.medical_history || local.medicalHistory || '',
+            insuranceProvider: local.insurance_provider || local.insuranceProvider || '',
+            insuranceNumber: local.insurance_number || local.insuranceNumber || '',
+            referralDoctor: local.referral_doctor || local.referralDoctor || '',
+            familyMembers: local.family_members || local.familyMembers || [],
+          });
+          setLoadingPatient(false);
+          return;
+        }
+      } catch {}
+
+      // Fallback: try API
       try {
         const patient = await patientsApi.get(editId);
         if (patient) {

@@ -119,41 +119,70 @@ async function enrichInvoicesWithAge(invoices: EMRInvoice[]): Promise<EMRInvoice
   const missingAge = invoices.filter(inv => !inv.patientAge && inv.patientId);
   if (missingAge.length === 0) return invoices;
 
-  try {
-    const { patientsApi } = await import('@/lib/api-client');
-    const patientIds = [...new Set(missingAge.map(inv => inv.patientId))];
-    const enriched = await Promise.allSettled(
-      patientIds.map(id => patientsApi.get(id))
+  const ageMap = new Map<string, { age?: number; gender?: string }>();
+
+  // Build a lookup from localStorage patient data
+  const localPatients: any[] = [];
+  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_added_patients') || '[]')); } catch {}
+  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_bookings') || '[]')); } catch {}
+  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_consultations') || '[]')); } catch {}
+  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_appointments') || '[]')); } catch {}
+
+  for (const inv of missingAge) {
+    const lp = localPatients.find((p: any) =>
+      p.id === inv.patientId || p.patientId === inv.patientId || p.bookingId === inv.patientId
     );
-
-    const ageMap = new Map<string, { age?: number; gender?: string }>();
-    enriched.forEach((result, i) => {
-      if (result.status === 'fulfilled' && result.value) {
-        const p = result.value as any;
-        const dob = p.date_of_birth || p.dob;
-        if (dob) {
-          const d = new Date(dob);
-          const today = new Date();
-          let age = today.getFullYear() - d.getFullYear();
-          const m = today.getMonth() - d.getMonth();
-          if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
-          ageMap.set(patientIds[i], { age, gender: p.gender || undefined });
-        }
+    if (lp) {
+      const dob = lp.date_of_birth || lp.dateOfBirth || lp.dob;
+      if (dob) {
+        const d = new Date(dob);
+        const today = new Date();
+        let age = today.getFullYear() - d.getFullYear();
+        const m = today.getMonth() - d.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+        ageMap.set(inv.patientId, { age, gender: lp.gender || undefined });
+      } else if (lp.age) {
+        ageMap.set(inv.patientId, { age: parseInt(lp.age), gender: lp.gender || undefined });
       }
-    });
-
-    return invoices.map(inv => {
-      if (!inv.patientAge && inv.patientId) {
-        const data = ageMap.get(inv.patientId);
-        if (data) {
-          return { ...inv, patientAge: data.age, patientGender: (data.gender as EMRInvoice['patientGender']) || inv.patientGender };
-        }
-      }
-      return inv;
-    }) as EMRInvoice[];
-  } catch {
-    return invoices;
+    }
   }
+
+  // For patients not found in localStorage, try API
+  const stillMissing = missingAge.filter(inv => !ageMap.has(inv.patientId));
+  if (stillMissing.length > 0) {
+    try {
+      const { patientsApi } = await import('@/lib/api-client');
+      const patientIds = [...new Set(stillMissing.map(inv => inv.patientId))];
+      const enriched = await Promise.allSettled(
+        patientIds.map(id => patientsApi.get(id))
+      );
+
+      enriched.forEach((result, i) => {
+        if (result.status === 'fulfilled' && result.value) {
+          const p = result.value as any;
+          const dob = p.date_of_birth || p.dob;
+          if (dob) {
+            const d = new Date(dob);
+            const today = new Date();
+            let age = today.getFullYear() - d.getFullYear();
+            const m = today.getMonth() - d.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+            ageMap.set(patientIds[i], { age, gender: p.gender || undefined });
+          }
+        }
+      });
+    } catch {}
+  }
+
+  return invoices.map(inv => {
+    if (!inv.patientAge && inv.patientId) {
+      const data = ageMap.get(inv.patientId);
+      if (data) {
+        return { ...inv, patientAge: data.age, patientGender: (data.gender as EMRInvoice['patientGender']) || inv.patientGender };
+      }
+    }
+    return inv;
+  }) as EMRInvoice[];
 }
 
 export default function BillingPage() {
