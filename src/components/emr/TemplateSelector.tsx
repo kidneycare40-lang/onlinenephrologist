@@ -125,7 +125,7 @@ export default function TemplateSelector({
       form: medicine.form,
       strength: medicine.strength,
       dosage: '1 tablet',
-      frequency: 'Once daily',
+      frequency: 'daily',
       timing: 'Morning',
       duration: '30 days',
       is_nephrotoxic: medicine.is_nephrotoxic,

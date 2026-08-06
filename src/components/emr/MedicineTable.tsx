@@ -55,7 +55,7 @@ function generateId() {
 const strengthOptions = ['5mg', '10mg', '20mg', '25mg', '30mg', '40mg', '50mg', '60mg', '75mg', '100mg', '120mg', '200mg', '250mg', '500mg', '1g', '60000 IU', '10 ML', '15 ML', '30 ML'];
 const dosageOptions = ['1-0-0', '0-1-0', '0-0-1', '1-0-1', '1-1-1', '1-1-0', '0-1-1', 'SOS'];
 const whenOptions = ['After Food', 'Before Food', 'Empty Stomach', 'With Food', 'Any Time', 'BF', 'AF', 'Bed Time'];
-const frequencyOptions = ['Once daily', 'Twice daily', 'Thrice daily', 'Once weekly', 'Twice weekly', 'Alternate day', 'Monthly', 'As needed', 'STAT'];
+const frequencyOptions = ['daily', 'alternate day', 'weekly', 'fort night', 'monthly'];
 const durationOptions = ['3 days', '5 days', '7 days', '10 days', '2 weeks', '1 month', '2 months', '3 months', '6 months', '1 year'];
 
 function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
@@ -424,7 +424,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
         genericName: med.genericName,
         strength: med.dosage,
         dosage: '1-0-1',
-        frequency: med.frequency || 'Once daily',
+        frequency: med.frequency || 'daily',
         duration: '1 month',
         route: med.route,
         instructions: '',
@@ -617,7 +617,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
       strength: m.strength,
       dosage: m.dosage || '1-0-1',
       when: m.when,
-      frequency: m.frequency || 'Once daily',
+      frequency: m.frequency || 'daily',
       duration: m.duration || '30 days',
       route: 'Oral',
       instructions: m.notes,
@@ -1086,7 +1086,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
                 value={freeTextValue}
                 onChange={(e) => handleFreeTextChange(e.target.value)}
                 className="w-full h-48 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A75BB] resize-none font-mono"
-                placeholder={`Enter medicines, one per line:\n\nExample:\nTelmisartan 40mg 1-0-1 After Food Once daily 30 days\nAmlodipine 5mg 1-0-0 Once daily 30 days\nEpoetin Alfa 4000 IU 0-0-0 3 times/week 4 weeks\nSevelamer 800mg 1-1-1 After Food 3 times/day 30 days\nCalcium Carbonate 500mg 1-0-1 Twice daily 30 days`}
+                placeholder={`Enter medicines, one per line:\n\nExample:\nTelmisartan 40mg 1-0-1 After Food daily 30 days\nAmlodipine 5mg 1-0-0 daily 30 days\nEpoetin Alfa 4000 IU 0-0-0 3 times/week 4 weeks\nSevelamer 800mg 1-1-1 After Food 3 times/day 30 days\nCalcium Carbonate 500mg 1-0-1 daily 30 days`}
                 autoFocus
               />
               {parsedMeds.length > 0 && (

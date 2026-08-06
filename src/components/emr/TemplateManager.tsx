@@ -357,7 +357,7 @@ export default function TemplateManager({ clinicId, onClose }: TemplateManagerPr
                       medicine_id: med.id,
                       medicine_name: med.name,
                       dosage: '1 tablet',
-                      frequency: 'Once daily',
+                      frequency: 'daily',
                       timing: 'Morning',
                       duration: '30 days',
                     };

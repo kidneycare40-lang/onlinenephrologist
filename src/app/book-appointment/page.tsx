@@ -1468,7 +1468,7 @@ function BookingForm() {
                             className="w-28 px-1 py-1.5 text-xs border border-slate-200 rounded bg-white focus:outline-none"
                           >
                             <option value="">Frequency</option>
-                            {['Once daily','Twice daily','Thrice daily','Once weekly','Alternate day','As needed'].map(f => <option key={f} value={f}>{f}</option>)}
+                            {['daily','alternate day','weekly','fort night','monthly'].map(f => <option key={f} value={f}>{f}</option>)}
                           </select>
                           <select
                             value={med.duration}
