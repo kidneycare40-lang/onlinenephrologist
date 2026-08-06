@@ -424,7 +424,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
         genericName: med.genericName,
         strength: med.dosage,
         dosage: '1-0-1',
-        frequency: med.frequency || 'daily',
+        frequency: med.frequency || '',
         duration: '1 month',
         route: med.route,
         instructions: '',
@@ -442,7 +442,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
       setTimeout(() => setDuplicateWarning(null), 3000);
       return;
     }
-    const newMed: MasterMedicine = { name: name.trim(), genericName: name.trim(), dosage: '10mg', frequency: 'daily', route: 'Oral' };
+    const newMed: MasterMedicine = { name: name.trim(), genericName: name.trim(), dosage: '10mg', frequency: '', route: 'Oral' };
     const updated = [...masterList, newMed];
     setMasterList(updated);
     saveMasterList(updated);
@@ -617,7 +617,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
       strength: m.strength,
       dosage: m.dosage || '1-0-1',
       when: m.when,
-      frequency: m.frequency || 'daily',
+      frequency: m.frequency || '',
       duration: m.duration || '30 days',
       route: 'Oral',
       instructions: m.notes,
