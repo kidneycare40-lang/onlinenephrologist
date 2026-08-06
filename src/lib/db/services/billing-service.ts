@@ -27,7 +27,7 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
       .from('invoices')
       .select(`
         *,
-        patient:patients(id, first_name, last_name, phone, uhid),
+        patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
         doctor:users(id, first_name, last_name),
         clinic:clinics(id, name, short_name),
         items:invoice_items(*),
@@ -64,7 +64,7 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
       .from('invoices')
       .select(`
         *,
-        patient:patients(id, first_name, last_name, phone, uhid),
+        patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
         doctor:users(id, first_name, last_name),
         items:invoice_items(item_name, quantity, unit_price, total_price),
         payments:payments(amount, payment_method, payment_date)
@@ -155,8 +155,43 @@ export class BillingService {
     pagination?: PaginationParams;
     sort?: SortParams;
   } = {}): Promise<PaginatedResult<InvoiceWithRelations>> {
-    const result = await this.invoiceRepo.findMany(params);
-    return result as PaginatedResult<InvoiceWithRelations>;
+    const { filters = {}, pagination = {}, sort = {} } = params;
+    const { page = 1, limit = 50 } = pagination;
+    const { sortBy = 'created_at', sortOrder = 'desc' } = sort;
+    const offset = (page - 1) * limit;
+
+    let query = this.db
+      .from('invoices')
+      .select(`
+        *,
+        patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
+        doctor:users(id, first_name, last_name),
+        items:invoice_items(*),
+        payments:payments(amount, payment_method, payment_date, reference_number, status)
+      `, { count: 'exact' })
+      .eq('is_deleted', false);
+
+    if (filters.clinicId) query = query.eq('clinic_id', filters.clinicId);
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.dateFrom) query = query.gte('created_at', filters.dateFrom);
+    if (filters.dateTo) query = query.lte('created_at', filters.dateTo);
+
+    query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+    if (error) {
+      console.error('Error fetching invoices:', error);
+      return { data: [], total: 0, page, limit, totalPages: 0 };
+    }
+
+    return {
+      data: (data || []) as InvoiceWithRelations[],
+      total: count || 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count || 0) / limit),
+    };
   }
 
   async getPatientInvoices(patientId: string): Promise<InvoiceWithRelations[]> {

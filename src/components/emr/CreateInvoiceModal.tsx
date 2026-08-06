@@ -115,12 +115,23 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     try {
       const res = await patientsApi.list();
       if (res?.data?.length) {
-        apiPatients = res.data.map((p: any) => ({
-          id: p.id, firstName: p.first_name, lastName: p.last_name,
-          phone: p.phone || '', uhid: p.uhid || '',
-          gender: p.gender === 'female' ? 'Female' : p.gender === 'other' ? 'Other' : 'Male',
-          clinicId: p.clinic_id || 'kcc-faridabad',
-        }));
+        apiPatients = res.data.map((p: any) => {
+          let age: number | undefined;
+          if (p.date_of_birth) {
+            const dob = new Date(p.date_of_birth);
+            const today = new Date();
+            age = today.getFullYear() - dob.getFullYear();
+            const m = today.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+          }
+          return {
+            id: p.id, firstName: p.first_name, lastName: p.last_name,
+            phone: p.phone || '', uhid: p.uhid || '',
+            gender: p.gender === 'female' ? 'Female' : p.gender === 'other' ? 'Other' : 'Male',
+            clinicId: p.clinic_id || 'kcc-faridabad',
+            age,
+          };
+        });
       }
     } catch {}
     try {

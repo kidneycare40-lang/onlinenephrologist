@@ -33,6 +33,15 @@ const statusConfig: Record<InvoiceStatus, { label: string; color: string; bg: st
 function apiInvoiceToEMR(apiInv: any): EMRInvoice {
   const patient = apiInv.patient || {};
   const items = apiInv.items || apiInv.invoice_items || [];
+
+  let patientAge: number | undefined;
+  if (patient.date_of_birth) {
+    const dob = new Date(patient.date_of_birth);
+    const today = new Date();
+    patientAge = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) patientAge--;
+  }
   const payments = apiInv.payments || [];
 
   const totalAmount = apiInv.total_amount || apiInv.grandTotal || 0;
@@ -43,6 +52,8 @@ function apiInvoiceToEMR(apiInv: any): EMRInvoice {
     invoiceNumber: apiInv.invoice_number || apiInv.invoiceNumber || `INV-${apiInv.id?.slice(-8)?.toUpperCase() || 'UNKNOWN'}`,
     patientId: apiInv.patient_id || '',
     patientName: patient.first_name ? `${patient.first_name} ${patient.last_name}` : '—',
+    patientAge,
+    patientGender: patient.gender || '',
     patientPhone: patient.phone || '',
     clinicId: apiInv.clinic_id || '',
     doctorName: '',
@@ -643,6 +654,13 @@ export default function BillingPage() {
                         </td>
                         <td className="px-4 py-3.5">
                           <span className="text-sm font-medium text-gray-900">{inv.patientName}</span>
+                          {(inv.patientAge || inv.patientGender) && (
+                            <p className="text-xs text-gray-500">
+                              {inv.patientAge && `${inv.patientAge} yrs`}
+                              {inv.patientAge && inv.patientGender && ' · '}
+                              {inv.patientGender}
+                            </p>
+                          )}
                           {inv.patientPhone && (
                             <p className="text-xs text-gray-500">{inv.patientPhone}</p>
                           )}
@@ -728,6 +746,13 @@ export default function BillingPage() {
                     <div>
                       <span className="text-sm font-mono font-medium text-[#0A75BB]">{inv.invoiceNumber}</span>
                       <p className="text-sm font-medium text-gray-900 mt-0.5">{inv.patientName}</p>
+                      {(inv.patientAge || inv.patientGender) && (
+                        <p className="text-xs text-gray-500">
+                          {inv.patientAge && `${inv.patientAge} yrs`}
+                          {inv.patientAge && inv.patientGender && ' · '}
+                          {inv.patientGender}
+                        </p>
+                      )}
                       {inv.patientPhone && <p className="text-xs text-gray-500">{inv.patientPhone}</p>}
                     </div>
                     <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0', sc.bg, sc.color)}>
