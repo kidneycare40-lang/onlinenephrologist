@@ -115,6 +115,47 @@ function saveInvoicesToStorage(invoices: EMRInvoice[]) {
   } catch {}
 }
 
+async function enrichInvoicesWithAge(invoices: EMRInvoice[]): Promise<EMRInvoice[]> {
+  const missingAge = invoices.filter(inv => !inv.patientAge && inv.patientId);
+  if (missingAge.length === 0) return invoices;
+
+  try {
+    const { patientsApi } = await import('@/lib/api-client');
+    const patientIds = [...new Set(missingAge.map(inv => inv.patientId))];
+    const enriched = await Promise.allSettled(
+      patientIds.map(id => patientsApi.get(id))
+    );
+
+    const ageMap = new Map<string, { age?: number; gender?: string }>();
+    enriched.forEach((result, i) => {
+      if (result.status === 'fulfilled' && result.value) {
+        const p = result.value as any;
+        const dob = p.date_of_birth || p.dob;
+        if (dob) {
+          const d = new Date(dob);
+          const today = new Date();
+          let age = today.getFullYear() - d.getFullYear();
+          const m = today.getMonth() - d.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+          ageMap.set(patientIds[i], { age, gender: p.gender || undefined });
+        }
+      }
+    });
+
+    return invoices.map(inv => {
+      if (!inv.patientAge && inv.patientId) {
+        const data = ageMap.get(inv.patientId);
+        if (data) {
+          return { ...inv, patientAge: data.age, patientGender: data.gender || inv.patientGender };
+        }
+      }
+      return inv;
+    });
+  } catch {
+    return invoices;
+  }
+}
+
 export default function BillingPage() {
   const [invoices, setInvoices] = useState<EMRInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,8 +188,10 @@ export default function BillingPage() {
         saveInvoicesToStorage(apiInvoices);
       } else {
         const storageInvoices = loadInvoicesFromStorage();
-        if (storageInvoices.length > 0) {
-          setInvoices(storageInvoices);
+        const enriched = await enrichInvoicesWithAge(storageInvoices);
+        if (enriched.length > 0) {
+          setInvoices(enriched);
+          saveInvoicesToStorage(enriched);
         } else {
           setInvoices(mockInvoices);
           saveInvoicesToStorage(mockInvoices);
@@ -156,7 +199,8 @@ export default function BillingPage() {
       }
     } catch {
       const storageInvoices = loadInvoicesFromStorage();
-      setInvoices(storageInvoices.length > 0 ? storageInvoices : mockInvoices);
+      const enriched = await enrichInvoicesWithAge(storageInvoices);
+      setInvoices(enriched.length > 0 ? enriched : mockInvoices);
     } finally {
       setLoading(false);
     }
