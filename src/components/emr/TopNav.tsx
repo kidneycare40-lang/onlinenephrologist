@@ -45,6 +45,10 @@ export default function TopNav() {
   const profileRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const [searchResults, setSearchResults] = useState<{ id: string; name: string; phone: string; uhid: string }[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [appsOpen, setAppsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const appsRef = useRef<HTMLDivElement>(null);
 
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [patientPrefix, setPatientPrefix] = useState('Mr');
@@ -131,6 +135,12 @@ export default function TopNav() {
       }
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setSearchFocused(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target as Node)) {
+        setNotificationsOpen(false);
+      }
+      if (appsRef.current && !appsRef.current.contains(e.target as Node)) {
+        setAppsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -401,14 +411,64 @@ export default function TopNav() {
             )}
           </div>
 
-          <button className="relative p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Notifications">
-            <Bell className="h-4.5 w-4.5 text-white/70" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-[1.5px] ring-[#095187]" />
-          </button>
+          <div ref={notificationsRef} className="relative">
+            <button onClick={() => { setNotificationsOpen(!notificationsOpen); setAppsOpen(false); }} className="relative p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Notifications">
+              <Bell className="h-4.5 w-4.5 text-white/70" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-[1.5px] ring-[#095187]" />
+            </button>
+            {notificationsOpen && (
+              <div className="absolute top-full right-0 mt-1.5 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                  <button className="text-xs text-[#0A75BB] hover:underline">Mark all read</button>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  <div className="px-4 py-6 text-center">
+                    <Bell className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No new notifications</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
-          <button className="hidden sm:flex p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Apps">
-            <Grid3X3 className="h-4.5 w-4.5 text-white/70" />
-          </button>
+          <div ref={appsRef} className="relative">
+            <button onClick={() => { setAppsOpen(!appsOpen); setNotificationsOpen(false); }} className="hidden sm:flex p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Apps">
+              <Grid3X3 className="h-4.5 w-4.5 text-white/70" />
+            </button>
+            {appsOpen && (
+              <div className="absolute top-full right-0 mt-1.5 w-72 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900">Apps</h3>
+                </div>
+                <div className="p-3 grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'Dashboard', href: '/emr/dashboard', icon: LayoutDashboard },
+                    { label: 'Appointments', href: '/emr/appointments', icon: Calendar },
+                    { label: 'Patients', href: '/emr/patients', icon: Users },
+                    { label: 'Consultation', href: '/emr/consultation', icon: Stethoscope },
+                    { label: 'Telemedicine', href: '/emr/telemedicine', icon: Video },
+                    { label: 'Billing', href: '/emr/billing', icon: Receipt },
+                    { label: 'Kidney Charts', href: '/emr/kidney-charts', icon: TrendingUp },
+                    { label: 'Reports', href: '/emr/reports', icon: TrendingUp },
+                    { label: 'Settings', href: '/emr/settings', icon: Settings },
+                  ].map((app) => (
+                    <Link
+                      key={app.href}
+                      href={app.href}
+                      onClick={() => setAppsOpen(false)}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-[#0A75BB]/10 flex items-center justify-center">
+                        <app.icon className="h-5 w-5 text-[#0A75BB]" />
+                      </div>
+                      <span className="text-[10px] font-medium text-gray-700 text-center leading-tight">{app.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div ref={profileRef} className="relative">
             <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors">
