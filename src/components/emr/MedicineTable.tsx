@@ -72,14 +72,6 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
   const dropRef = useRef<HTMLDivElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
-
-  const updatePosition = useCallback(() => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + 2, left: rect.left, width: rect.width });
-    }
-  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent | TouchEvent) {
@@ -135,21 +127,18 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
       ) : (
         <button
           ref={btnRef}
-          onClick={() => {
-            if (!open) updatePosition();
-            setOpen(!open);
-          }}
+          onClick={() => setOpen(!open)}
           className="w-full flex items-center justify-between px-2 py-1.5 text-[12px] text-left border border-slate-200 rounded bg-white hover:border-slate-300 transition-colors cursor-pointer group/d"
         >
           <span className={cn('truncate', !value && 'text-slate-400')}>{value || placeholder || 'Select'}</span>
           <ChevronDown className="h-3 w-3 text-slate-400 shrink-0 ml-1 group-hover/d:text-slate-600" />
         </button>
       )}
-      {open && !showCustom && createPortal(
+      {open && !showCustom && (
         <div
           ref={dropRef}
-          className="fixed bg-white border border-slate-200 rounded-lg shadow-xl z-[250] max-h-60 overflow-y-auto"
-          style={{ top: dropPos.top, left: dropPos.left, width: Math.max(dropPos.width, 140) }}
+          className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto min-w-[140px]"
+          style={{ zIndex: 250 }}
         >
           {placeholder && (
             <button
@@ -182,8 +171,7 @@ function HpDropdown({ value, options, onChange, placeholder, allowCustom }: {
               </button>
             </>
           )}
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
@@ -807,7 +795,7 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden" id="section-medicine">
+    <div className="bg-white border border-slate-200 rounded-lg" id="section-medicine">
       <div className="overflow-x-auto">
         <table className="w-full text-sm" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
