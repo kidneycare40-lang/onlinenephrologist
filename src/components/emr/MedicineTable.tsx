@@ -292,18 +292,38 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
     return meds;
   };
 
+  const FREQ_MAP: Record<string, string> = {
+    'once daily': 'daily', 'twice daily': 'daily', 'thrice daily': 'daily',
+    'once weekly': 'weekly', 'twice weekly': 'weekly',
+    'alternate day': 'alternate day', 'monthly': 'monthly',
+    'as needed': '', 'stat': '',
+  };
+
   useEffect(() => {
     let changed = false;
     const fixed = prescriptions.map((rx) => {
-      const freqIsDosage = rx.frequency && dosagePatternRe.test(rx.frequency) && !rx.dosage;
-      const doseIsFreq = rx.dosage && !dosagePatternRe.test(rx.dosage) && frequencyOptions.includes(rx.dosage);
+      let { frequency, dosage } = rx;
+
+      if (frequency) {
+        const normalized = FREQ_MAP[frequency.toLowerCase()];
+        if (normalized !== undefined && normalized !== frequency) {
+          frequency = normalized;
+          changed = true;
+        }
+      }
+
+      const freqIsDosage = frequency && dosagePatternRe.test(frequency) && !dosage;
+      const doseIsFreq = dosage && !dosagePatternRe.test(dosage) && frequencyOptions.includes(dosage);
       if (freqIsDosage) {
         changed = true;
-        return { ...rx, dosage: rx.frequency, frequency: '' };
+        return { ...rx, dosage: frequency, frequency: '' };
       }
       if (doseIsFreq) {
         changed = true;
-        return { ...rx, frequency: rx.dosage, dosage: '' };
+        return { ...rx, frequency: dosage, dosage: '' };
+      }
+      if (frequency !== rx.frequency) {
+        return { ...rx, frequency };
       }
       return rx;
     });
