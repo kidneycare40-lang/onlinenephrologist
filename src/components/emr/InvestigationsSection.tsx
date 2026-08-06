@@ -116,6 +116,37 @@ export function InvestigationsTable({
     return base;
   });
 
+  // Sync entries when consultationInvestigations changes (e.g., after OCR apply)
+  React.useEffect(() => {
+    setEntries((prev) => {
+      const existingNames = new Set(prev.map((e) => e.testName));
+      const updated = [...prev];
+      let changed = false;
+      for (const inv of consultationInvestigations) {
+        if (inv.testName && !existingNames.has(inv.testName)) {
+          updated.push({
+            testName: inv.testName,
+            value: inv.result || '',
+            unit: inv.unit || '',
+            date: formatDisplayDate(normalizeDate(inv.date || todayISO)),
+            dateISO: normalizeDate(inv.date || todayISO),
+            isAbnormal: inv.isAbnormal || false,
+          });
+          existingNames.add(inv.testName);
+          changed = true;
+        } else if (inv.testName && inv.result) {
+          // Update existing entry with new value
+          const idx = updated.findIndex((e) => e.testName === inv.testName);
+          if (idx >= 0 && (!updated[idx].value || updated[idx].value === '')) {
+            updated[idx] = { ...updated[idx], value: inv.result, isAbnormal: inv.isAbnormal || false };
+            changed = true;
+          }
+        }
+      }
+      return changed ? updated : prev;
+    });
+  }, [consultationInvestigations, todayISO]);
+
   const [extraDates, setExtraDates] = useState<string[]>([]);
 
   const allTestNames = useMemo(() => {
