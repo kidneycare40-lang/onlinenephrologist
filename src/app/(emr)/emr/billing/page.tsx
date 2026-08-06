@@ -146,11 +146,11 @@ async function enrichInvoicesWithAge(invoices: EMRInvoice[]): Promise<EMRInvoice
       if (!inv.patientAge && inv.patientId) {
         const data = ageMap.get(inv.patientId);
         if (data) {
-          return { ...inv, patientAge: data.age, patientGender: data.gender || inv.patientGender };
+          return { ...inv, patientAge: data.age, patientGender: (data.gender as EMRInvoice['patientGender']) || inv.patientGender };
         }
       }
       return inv;
-    });
+    }) as EMRInvoice[];
   } catch {
     return invoices;
   }
