@@ -129,33 +129,34 @@ export default function BillingPage() {
 
   const refreshData = useCallback(async () => {
     setLoading(true);
-    const storageInvoices = loadInvoicesFromStorage();
 
     try {
       const params: Record<string, string> = {};
       if (statusFilter !== 'ALL') params.status = statusFilter;
       const result = await billingApi.list(params).catch(() => null);
 
+      let apiInvoices: EMRInvoice[] = [];
       if (result && Array.isArray(result.data) && result.data.length > 0) {
-        const apiInvoices = result.data.map(apiInvoiceToEMR);
-        setInvoices(apiInvoices);
-        saveInvoicesToStorage(apiInvoices);
+        apiInvoices = result.data.map(apiInvoiceToEMR);
       } else if (result && Array.isArray(result) && result.length > 0) {
-        const apiInvoices = result.map(apiInvoiceToEMR);
+        apiInvoices = result.map(apiInvoiceToEMR);
+      }
+
+      if (apiInvoices.length > 0) {
         setInvoices(apiInvoices);
         saveInvoicesToStorage(apiInvoices);
-      } else if (storageInvoices.length > 0) {
-        setInvoices(storageInvoices);
       } else {
-        setInvoices(mockInvoices);
-        saveInvoicesToStorage(mockInvoices);
+        const storageInvoices = loadInvoicesFromStorage();
+        if (storageInvoices.length > 0) {
+          setInvoices(storageInvoices);
+        } else {
+          setInvoices(mockInvoices);
+          saveInvoicesToStorage(mockInvoices);
+        }
       }
     } catch {
-      if (storageInvoices.length > 0) {
-        setInvoices(storageInvoices);
-      } else {
-        setInvoices(mockInvoices);
-      }
+      const storageInvoices = loadInvoicesFromStorage();
+      setInvoices(storageInvoices.length > 0 ? storageInvoices : mockInvoices);
     } finally {
       setLoading(false);
     }
