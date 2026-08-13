@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Upload, FileText, Loader2, Check, AlertCircle, X, Sparkles, ClipboardPaste, Pill } from 'lucide-react';
+import { Upload, FileText, Loader2, Check, AlertCircle, X, Sparkles, ClipboardPaste, Pill, CheckSquare, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { processUploadedFiles, type OCRResult, type ExtractedLabValue, type ExtractedMedicine } from '@/lib/ocr-utils';
 
@@ -38,6 +38,7 @@ export default function ReportUploadOCR({
   const [activeTab, setActiveTab] = useState<'upload' | 'paste'>('upload');
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [selectedLabIndices, setSelectedLabIndices] = useState<Set<number>>(new Set());
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
@@ -72,6 +73,7 @@ export default function ReportUploadOCR({
     try {
       const ocrResult = await processUploadedFiles(files);
       setResult(ocrResult);
+      setSelectedLabIndices(new Set(ocrResult.labValues.map((_, i) => i)));
     } catch (err) {
       console.error('OCR processing failed:', err);
       const message = err instanceof Error ? err.message : String(err);
@@ -87,6 +89,10 @@ export default function ReportUploadOCR({
 
   const saveToEMR = async () => {
     if (!result || !patientId || result.labValues.length === 0) return;
+    const labsToApply = selectedLabIndices.size > 0
+      ? result.labValues.filter((_, i) => selectedLabIndices.has(i))
+      : result.labValues;
+    if (labsToApply.length === 0) return;
     setIsSaving(true);
     setSaveSuccess(false);
     try {
@@ -101,20 +107,28 @@ export default function ReportUploadOCR({
           file_url: '',
           file_name: files.length > 0 ? files[0].name : null,
           mime_type: files.length > 0 ? files[0].type : null,
-          labValues: result.labValues,
+          labValues: labsToApply,
           report_date: result.reportDate || new Date().toISOString().split('T')[0],
         }),
       });
       if (res.ok) {
         setSaveSuccess(true);
-        // Also apply to consultation
-        onApplyLabValues(result.labValues);
-        markApplied('labValues');
+        onApplyLabValues(labsToApply);
+        markApplied('labs');
       }
     } catch {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const toggleLabSelection = (index: number) => {
+    setSelectedLabIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
   };
 
   const parsePasteText = useCallback(() => {
@@ -426,25 +440,63 @@ export default function ReportUploadOCR({
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <h4 className="text-xs font-semibold text-slate-700">Lab Values Found ({result.labValues.length})</h4>
-                  <button
-                    onClick={() => { onApplyLabValues(result.labValues); markApplied('labs'); }}
-                    className={cn(
-                      'text-[10px] font-semibold px-2 py-0.5 rounded transition-colors',
-                      appliedFields.has('labs')
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-[#0A75BB]/10 text-[#0A75BB] hover:bg-[#0A75BB]/20'
+                  <div className="flex items-center gap-1.5">
+                    {selectedLabIndices.size < result.labValues.length && (
+                      <button
+                        onClick={() => setSelectedLabIndices(new Set(result.labValues.map((_, i) => i)))}
+                        className="text-[10px] font-semibold text-slate-400 hover:text-slate-600"
+                      >
+                        Select All
+                      </button>
                     )}
-                  >
-                    {appliedFields.has('labs') ? <><Check className="h-3 w-3 inline mr-0.5" /> Applied</> : 'Apply All'}
-                  </button>
+                    <button
+                      onClick={() => {
+                        const labsToApply = selectedLabIndices.size > 0
+                          ? result.labValues.filter((_, i) => selectedLabIndices.has(i))
+                          : result.labValues;
+                        onApplyLabValues(labsToApply);
+                        markApplied('labs');
+                      }}
+                      disabled={selectedLabIndices.size === 0}
+                      className={cn(
+                        'text-[10px] font-semibold px-2 py-0.5 rounded transition-colors',
+                        appliedFields.has('labs')
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-[#0A75BB]/10 text-[#0A75BB] hover:bg-[#0A75BB]/20',
+                        selectedLabIndices.size === 0 && 'opacity-40 cursor-not-allowed'
+                      )}
+                    >
+                      {appliedFields.has('labs') ? <><Check className="h-3 w-3 inline mr-0.5" /> Applied</> : (
+                        selectedLabIndices.size === result.labValues.length
+                          ? `Apply All (${result.labValues.length})`
+                          : `Apply Selected (${selectedLabIndices.size})`
+                      )}
+                    </button>
+                  </div>
                 </div>
+                <p className="text-[10px] text-slate-400 mb-1">Tick the parameters you want to add to Investigations</p>
                 <div className="grid grid-cols-2 gap-1">
-                  {result.labValues.map((lv, i) => (
-                    <div key={i} className="bg-slate-50 rounded px-2 py-1">
-                      <span className="text-[10px] text-slate-500">{lv.testName}</span>
-                      <p className="text-xs font-semibold text-slate-800">{lv.value} <span className="font-normal text-slate-500">{lv.unit}</span></p>
-                    </div>
-                  ))}
+                  {result.labValues.map((lv, i) => {
+                    const selected = selectedLabIndices.has(i);
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => toggleLabSelection(i)}
+                        className={cn(
+                          'flex items-start gap-1.5 rounded px-2 py-1 text-left transition-colors',
+                          selected ? 'bg-blue-50 border border-blue-200' : 'bg-slate-50 border border-transparent hover:bg-slate-100'
+                        )}
+                      >
+                        {selected
+                          ? <CheckSquare className="h-3.5 w-3.5 text-[#0A75BB] shrink-0 mt-0.5" />
+                          : <Square className="h-3.5 w-3.5 text-slate-300 shrink-0 mt-0.5" />}
+                        <span>
+                          <span className="block text-[10px] text-slate-500">{lv.testName}</span>
+                          <span className="block text-xs font-semibold text-slate-800">{lv.value} <span className="font-normal text-slate-500">{lv.unit}</span></span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -584,7 +636,7 @@ export default function ReportUploadOCR({
             </details>
 
             {/* Save to EMR Button */}
-            {patientId && result.labValues.length > 0 && (
+            {patientId && result.labValues.length > 0 && selectedLabIndices.size > 0 && (
               <div className="pt-2 border-t border-slate-100">
                 {saveSuccess ? (
                   <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-medium py-2">
