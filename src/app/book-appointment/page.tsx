@@ -79,6 +79,7 @@ const COLOR_MAP: Record<string, { bg: string; border: string; selectedBg: string
 function BookingForm() {
   const searchParams = useSearchParams();
   const initialType = searchParams.get('type') || 'online';
+  const forceInternational = initialType === 'online_intl';
 
   const [bookingSettings, setBookingSettings] = useState<BookingSettings>(() => loadBookingSettings());
   const [clinics, setClinics] = useState<ClinicSlot[]>(() => buildClinicsFromSettings(loadBookingSettings()));
@@ -89,14 +90,14 @@ function BookingForm() {
     setClinics(buildClinicsFromSettings(s));
   }, []);
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(forceInternational ? 2 : 1);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
     consultationType: initialType,
     clinicId: (initialType === 'online' || initialType === 'online_intl') ? 'online' : '',
     date: '', time: '', reason: '', previousKidneyIssue: 'no',
     currentMedications: '', notes: '', complaints: '', medicines: '',
-    isInternational: false, country: '', countryCode: '', timezone: '', passportNumber: '',
+    isInternational: forceInternational, country: '', countryCode: '', timezone: '', passportNumber: '',
     whatsappNumber: '', preferredLanguage: 'English', interpreterRequired: false,
   });
   const [reportFiles, setReportFiles] = useState<File[]>([]);
@@ -752,6 +753,33 @@ function BookingForm() {
           {/* Step 1: Consultation Type */}
           {step === 1 && (
             <div className="space-y-6">
+              {forceInternational ? (
+                <div className="border-2 border-purple-500 bg-purple-50 rounded-2xl p-6 shadow-lg shadow-purple-100">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-xl bg-purple-500 text-white flex items-center justify-center shrink-0">
+                      <Globe className="h-7 w-7" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-gray-900 text-lg">International Video Consultation</h3>
+                        <CheckCircle2 className="h-5 w-5 text-purple-500" />
+                      </div>
+                      <p className="text-sm text-slate-500 mb-3">Video consultation for patients outside India</p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium">Mon-Sun 7AM-11PM IST</span>
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium">${getConsultationPricing('online_intl').amount} USD</span>
+                      </div>
+                      <ul className="mt-3 space-y-1.5">
+                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-purple-500 shrink-0" /> Timezone-adjusted scheduling</li>
+                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-purple-500 shrink-0" /> English, Hindi, Urdu and more languages</li>
+                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-purple-500 shrink-0" /> Reports review + prescription + WhatsApp follow-up</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <input type="hidden" name="consultationType" value="online_intl" />
+                </div>
+              ) : (
+              <>
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">How would you like to consult?</h2>
                 <p className="text-sm text-slate-500">Choose the consultation type that works best for you</p>
@@ -806,6 +834,8 @@ function BookingForm() {
                   </label>
                 ))}
               </div>
+              </>
+              )}
               <div className="flex justify-end">
                 <button type="button" onClick={() => canNext() && setStep(2)} disabled={!canNext()}
                   className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
@@ -965,17 +995,23 @@ function BookingForm() {
               {(formData.consultationType === 'online_intl' || formData.consultationType === 'online') && (
                 <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Are you an international patient?</label>
-                  <div className="flex gap-3">
-                    {[{ v: 'yes', l: 'Yes — Outside India' }, { v: 'no', l: 'No — In India' }].map(o => (
-                      <label key={o.v} className={cn(
-                        'flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-medium',
-                        (formData.isInternational ? 'yes' : 'no') === o.v ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                      )}>
-                        <input type="radio" name="isInternational" value={o.v} checked={(formData.isInternational ? 'yes' : 'no') === o.v} onChange={handleChange} className="sr-only" />
-                        {o.l}
-                      </label>
-                    ))}
-                  </div>
+                  {forceInternational ? (
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-purple-500 bg-purple-50 rounded-xl text-sm font-medium text-purple-700">
+                      <Globe className="h-4 w-4" /> Yes — Outside India (locked for this booking)
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      {[{ v: 'yes', l: 'Yes — Outside India' }, { v: 'no', l: 'No — In India' }].map(o => (
+                        <label key={o.v} className={cn(
+                          'flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-medium',
+                          (formData.isInternational ? 'yes' : 'no') === o.v ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                        )}>
+                          <input type="radio" name="isInternational" value={o.v} checked={(formData.isInternational ? 'yes' : 'no') === o.v} onChange={handleChange} className="sr-only" />
+                          {o.l}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
