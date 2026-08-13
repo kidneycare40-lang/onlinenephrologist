@@ -93,7 +93,7 @@ function BookingForm() {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
     consultationType: initialType,
-    clinicId: initialType === 'online' ? 'online' : '',
+    clinicId: (initialType === 'online' || initialType === 'online_intl') ? 'online' : '',
     date: '', time: '', reason: '', previousKidneyIssue: 'no',
     currentMedications: '', notes: '', complaints: '', medicines: '',
     isInternational: false, country: '', countryCode: '', timezone: '', passportNumber: '',
