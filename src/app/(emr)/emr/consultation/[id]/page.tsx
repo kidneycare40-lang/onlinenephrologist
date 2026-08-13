@@ -179,7 +179,8 @@ export default function ConsultationPage() {
         if (cancelled) return;
 
         if (apiConsult && apiPatient) {
-          if (clinicId && apiConsult.clinicId && apiConsult.clinicId !== clinicId) {
+          const apiClinic = apiConsult.clinicId === 'online-intl' ? 'online' : apiConsult.clinicId;
+          if (clinicId && apiConsult.clinicId && apiClinic !== clinicId) {
             setIsLoadingData(false);
             return;
           }
@@ -264,14 +265,16 @@ export default function ConsultationPage() {
 
       // Check stored consultations — match by consultation ID first, then by patient ID
       let storedConsult = storedConsultations.find((c) => {
-        if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
+        const cClinic = c.clinicId === 'online-intl' ? 'online' : c.clinicId;
+        if (clinicId && c.clinicId && cClinic !== clinicId) return false;
         return c.id === id;
       });
       // If no match by ID, try finding by patient ID (most recent)
       if (!storedConsult) {
         const patientConsults = storedConsultations
           .filter((c) => {
-            if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
+            const cClinic = c.clinicId === 'online-intl' ? 'online' : c.clinicId;
+            if (clinicId && c.clinicId && cClinic !== clinicId) return false;
             return c.patientId === patientId;
           })
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -324,7 +327,8 @@ export default function ConsultationPage() {
 
       // Check mock consultations — only match by consultation ID
       let consult = consultations.find((c) => {
-        if (clinicId && c.clinicId && c.clinicId !== clinicId) return false;
+        const cClinic = c.clinicId === 'online-intl' ? 'online' : c.clinicId;
+        if (clinicId && c.clinicId && cClinic !== clinicId) return false;
         return c.id === id;
       });
       if (consult) {

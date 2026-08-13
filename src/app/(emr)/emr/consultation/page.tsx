@@ -114,8 +114,9 @@ const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
   const savedClinicConsultations = useMemo(() => {
     const byKey = new Map<string, EMRConsultation>();
     for (const sc of savedConsultations) {
-      // Clinic filter
-      if (clinicId && sc.clinicId && sc.clinicId !== clinicId) continue;
+      // Clinic filter (international bookings map to the Online clinic)
+      const scClinic = sc.clinicId === 'online-intl' ? 'online' : sc.clinicId;
+      if (clinicId && sc.clinicId && scClinic !== clinicId) continue;
       const pat = allPatients.find((p) => p.id === sc.patientId);
       const key = pat?.phone || sc.patientId;
       const existing = byKey.get(key);
