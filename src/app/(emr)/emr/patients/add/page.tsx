@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -80,6 +80,13 @@ function generateUhid(clinicId?: string | null): string {
     return `PSRI-${year}-${num.slice(0, 3)}`;
   }
   return `KCC-${year}-${num.slice(0, 3)}`;
+}
+
+function clinicLabel(clinicId?: string | null): string {
+  if (clinicId === 'online' || clinicId === 'online-intl') return 'Online Consultation';
+  if (clinicId === 'psri-delhi') return 'PSRI Hospital Delhi';
+  if (clinicId === 'kcc-saket') return 'KCC Saket';
+  return 'KCC Faridabad';
 }
 
 const initialFormData: FormData = {
@@ -232,7 +239,17 @@ export default function AddPatientPage() {
     })();
   }, [editId, clinicId]);
 
+  // The clinic context loads from localStorage asynchronously, so the UHID
+  // was generated with no clinic on first render. Regenerate it for the
+  // selected clinic (Online/PSRI/KCC) unless the user has edited it.
+  const uhidTouchedRef = useRef(false);
+  useEffect(() => {
+    if (editId || !clinicId || uhidTouchedRef.current) return;
+    setFormData((prev) => ({ ...prev, uhid: generateUhid(clinicId) }));
+  }, [clinicId, editId]);
+
   const updateField = useCallback((field: keyof FormData, value: string | string[] | FamilyMemberForm[]) => {
+    if (field === 'uhid') uhidTouchedRef.current = true;
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
       const next = { ...prev };
@@ -464,8 +481,8 @@ export default function AddPatientPage() {
 
     await new Promise((r) => setTimeout(r, 800));
     setIsSubmitting(false);
-    const clinicLabel = clinicId === 'psri-delhi' ? 'PSRI Hospital Delhi' : clinicId === 'kcc-saket' ? 'KCC Saket' : 'KCC Faridabad';
-    toast.success('Patient added successfully!', { description: `${formData.firstName} ${formData.lastName} registered at ${clinicLabel}.` });
+    const clinicLabelText = clinicLabel(clinicId);
+    toast.success('Patient added successfully!', { description: `${formData.firstName} ${formData.lastName} registered at ${clinicLabelText}.` });
     router.push('/emr/patients');
   };
 
@@ -533,7 +550,7 @@ export default function AddPatientPage() {
         <h1 className="text-2xl font-bold text-gray-900">{isEditMode ? 'Edit Patient' : 'Add New Patient'}</h1>
         <p className="text-sm text-gray-500 mt-1">
           Fill in the patient details below
-          {clinicId && <span className="ml-2 text-[#0A75BB] font-medium">• {clinicId === 'psri-delhi' ? 'PSRI Hospital Delhi' : clinicId === 'kcc-saket' ? 'KCC Saket' : 'KCC Faridabad'}</span>}
+          {clinicId && <span className="ml-2 text-[#0A75BB] font-medium">• {clinicLabel(clinicId)}</span>}
         </p>
       </div>
 
