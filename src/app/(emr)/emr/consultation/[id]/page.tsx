@@ -281,7 +281,7 @@ export default function ConsultationPage() {
         const pat = allStored.find((p) => p.id === storedConsult.patientId);
         if (pat) {
           let consultToUse = storedConsult;
-          if (booking && (!storedConsult.chiefComplaint || storedConsult.chiefComplaint === booking.reason)) {
+          if (booking) {
             const bookingNotesParts: string[] = [];
             if (booking.complaints) bookingNotesParts.push(`Complaints: ${booking.complaints}`);
             if (booking.currentMedications || booking.medicines) bookingNotesParts.push(`Current Medicines: ${booking.currentMedications || booking.medicines}`);
@@ -1299,7 +1299,7 @@ export default function ConsultationPage() {
                 </div>
               )}
 
-              {consultation?.bookingFormData && (consultation.bookingFormData.complaints || consultation.bookingFormData.currentMedications || consultation.bookingFormData.previousKidneyIssue === 'yes' || consultation.bookingFormData.notes) && (
+              {consultation?.bookingFormData && (consultation.bookingFormData.reason || consultation.bookingFormData.complaints || consultation.bookingFormData.currentMedications || consultation.bookingFormData.previousKidneyIssue === 'yes' || consultation.bookingFormData.notes) && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 space-y-2">
                   <div className="flex items-center gap-2 mb-1">
                     <FileText className="h-4 w-4 text-amber-600" />
