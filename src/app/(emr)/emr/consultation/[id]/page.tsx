@@ -1246,6 +1246,14 @@ export default function ConsultationPage() {
                       const fileName = typeof f === 'string' ? (f.split('/').pop()?.split(';')[0] || `Report ${i + 1}`) : (f.name || `Report ${i + 1}`);
                       const dataUrl = typeof f === 'string' ? f : (f.data || '');
                       const mimeType = typeof f === 'string' ? (f.match(/data:([^;]+)/)?.[1] || 'application/octet-stream') : (f.type || 'application/octet-stream');
+                      if (!dataUrl) {
+                        return (
+                          <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700">
+                            <FileText className="h-3 w-3" />
+                            {fileName}
+                          </span>
+                        );
+                      }
                       return (
                         <button key={i}
                           onClick={() => {
@@ -1273,6 +1281,14 @@ export default function ConsultationPage() {
                       const dataUrl = typeof uf === 'string' ? uf : (uf.data || '');
                       const uname = typeof uf === 'string' ? 'Ultrasound Report' : (uf.name || 'Ultrasound Report');
                       const mimeType = typeof uf === 'string' ? (uf.match(/data:([^;]+)/)?.[1] || 'application/octet-stream') : (uf.type || 'application/octet-stream');
+                      if (!dataUrl) {
+                        return (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700">
+                            <FileText className="h-3 w-3" />
+                            {uname}
+                          </span>
+                        );
+                      }
                       return (
                         <button
                           onClick={() => {

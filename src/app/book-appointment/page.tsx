@@ -281,6 +281,44 @@ function BookingForm() {
       reader.readAsDataURL(file);
     });
 
+  const compressReportFile = (file: File): Promise<{ name: string; type: string; data: string }> => {
+    if (!file.type.startsWith('image/')) {
+      return fileToBase64(file).then((b64) =>
+        b64.length > 2 * 1024 * 1024 ? { name: file.name, type: file.type, data: '' } : { name: file.name, type: file.type, data: b64 }
+      );
+    }
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const maxDim = 1400;
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('no canvas context');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(async (blob) => {
+            if (!blob) return resolve({ name: file.name, type: file.type, data: '' });
+            const b64 = await fileToBase64(new File([blob], file.name, { type: 'image/jpeg' }));
+            resolve({ name: file.name, type: 'image/jpeg', data: b64 });
+          }, 'image/jpeg', 0.75);
+        } catch {
+          URL.revokeObjectURL(url);
+          resolve({ name: file.name, type: file.type, data: '' });
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ name: file.name, type: file.type, data: '' });
+      };
+      img.src = url;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -325,11 +363,21 @@ function BookingForm() {
     let ultrasoundData: { name: string; type: string; data: string } | null = null;
 
     if (formData.consultationType === 'online' || formData.consultationType === 'online_intl') {
+      // Downscale images and cap total embedded data (~2MB) so the booking always
+      // syncs — oversized payloads silently fail on localStorage quota and the
+      // server request limit, which previously lost the entire booking.
+      const MAX_EMBEDDED = 2 * 1024 * 1024;
+      let embeddedBytes = 0;
       for (const f of reportFiles) {
-        reportFilesData.push({ name: f.name, type: f.type, data: await fileToBase64(f) });
+        const item = await compressReportFile(f);
+        if (item.data && embeddedBytes + item.data.length > MAX_EMBEDDED) item.data = '';
+        if (item.data) embeddedBytes += item.data.length;
+        reportFilesData.push(item);
       }
       if (ultrasoundFile) {
-        ultrasoundData = { name: ultrasoundFile.name, type: ultrasoundFile.type, data: await fileToBase64(ultrasoundFile) };
+        const u = await compressReportFile(ultrasoundFile);
+        if (u.data && embeddedBytes + u.data.length > MAX_EMBEDDED) u.data = '';
+        ultrasoundData = u;
       }
     }
 
@@ -347,7 +395,19 @@ function BookingForm() {
       const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
       existing.push(bookingData);
       localStorage.setItem('emr_bookings', JSON.stringify(existing));
-    } catch {}
+    } catch {
+      // Quota exceeded — retry with report file names only (no image data)
+      try {
+        const slimBooking = {
+          ...bookingData,
+          reportFiles: reportFilesData.map(({ name, type }) => ({ name, type, data: '' })),
+          ultrasoundFile: ultrasoundData ? { ...ultrasoundData, data: '' } : null,
+        };
+        const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        existing.push(slimBooking);
+        localStorage.setItem('emr_bookings', JSON.stringify(existing));
+      } catch {}
+    }
 
     // Sync the booking (patient profile + uploaded reports) to the EMR database
     // so it appears in the doctor's EMR on any device. Best-effort — the
