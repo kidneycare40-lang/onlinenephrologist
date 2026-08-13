@@ -267,7 +267,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link href="/book-online-consultation" className="inline-flex items-center gap-2 px-8 py-4 bg-[#0A75BB] text-white font-bold rounded-xl hover:bg-[#085a94] transition-all shadow-lg text-lg">
+            <Link href="/book-appointment" className="inline-flex items-center gap-2 px-8 py-4 bg-[#0A75BB] text-white font-bold rounded-xl hover:bg-[#085a94] transition-all shadow-lg text-lg">
               Book Online Consultation Now
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
             </Link>

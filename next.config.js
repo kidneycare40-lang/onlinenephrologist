@@ -10,6 +10,15 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/book-online-consultation',
+        destination: '/book-appointment?type=online_intl',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

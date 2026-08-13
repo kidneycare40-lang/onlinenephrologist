@@ -145,7 +145,7 @@ export default function MedicalTourismPage() {
                 18+ years experience treating kidney diseases with world-class care at affordable prices.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/book-online-consultation" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-lg">
+                <Link href="/book-appointment?type=online_intl" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-lg">
                   Book Online Consultation - $25 USD
                 </Link>
                 <a href={`https://wa.me/${SITE_CONFIG.whatsapp}?text=Hi%2C%20I%20am%20an%20international%20patient%20seeking%20kidney%20consultation`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all text-lg">
@@ -320,7 +320,7 @@ export default function MedicalTourismPage() {
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Get Expert Kidney Care?</h2>
           <p className="text-blue-100 text-lg mb-8">Book your online consultation with Dr Rajesh Goel today. Available for patients worldwide.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/book-online-consultation" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-lg">
+            <Link href="/book-appointment?type=online_intl" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-lg">
               Book Online Consultation
             </Link>
             <a href={`https://wa.me/${SITE_CONFIG.whatsapp}?text=Hi%2C%20I%20am%20an%20international%20patient`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all text-lg">

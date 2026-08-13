@@ -5,7 +5,6 @@ const staticPages = [
   { url: SITE_CONFIG.url, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 1.0 },
   { url: `${SITE_CONFIG.url}/dr-rajesh-goel`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.9 },
   { url: `${SITE_CONFIG.url}/book-appointment`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.9 },
-  { url: `${SITE_CONFIG.url}/book-online-consultation`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.9 },
   { url: `${SITE_CONFIG.url}/conditions`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.8 },
   { url: `${SITE_CONFIG.url}/videos`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.7 },
   { url: `${SITE_CONFIG.url}/medical-tourism`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.8 },
