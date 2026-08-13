@@ -195,6 +195,14 @@ export default function EMRDashboardPage() {
     setDeleteBookingId(null);
   };
 
+  const openPatient = (apt: any) => {
+    if (apt.isOnline) {
+      router.push(`/emr/consultation/consult-obp-${apt.id}`);
+    } else if (apt.patientId) {
+      router.push(`/emr/consultation/${apt.patientId}`);
+    }
+  };
+
   // Merge API appointments with online bookings
   const allAppointments = useMemo(() => {
     const clinicOnlineBookings = clinicId
@@ -364,7 +372,7 @@ export default function EMRDashboardPage() {
                   <tr
                     key={apt.id}
                     className="hover:bg-gray-50/60 cursor-pointer transition-colors"
-                    onClick={() => apt.patientId ? router.push(`/emr/consultation/${apt.patientId}`) : undefined}
+                    onClick={() => openPatient(apt)}
                   >
                     <td className="px-4 py-2.5 text-xs font-mono text-gray-500">{apt.tokenId}</td>
                     <td className="px-4 py-2.5">
@@ -420,7 +428,7 @@ export default function EMRDashboardPage() {
                         )}
                         {apt.status === 'IN_PROGRESS' && (
                           <Link
-                            href={apt.patientId ? `/emr/consultation/${apt.patientId}` : '#'}
+                            href={apt.isOnline ? `/emr/consultation/consult-obp-${apt.id}` : apt.patientId ? `/emr/consultation/${apt.patientId}` : '#'}
                             className="text-xs font-medium text-[#0A75BB] hover:underline flex items-center gap-1"
                           >
                             <Pill className="h-3 w-3" />
@@ -428,7 +436,7 @@ export default function EMRDashboardPage() {
                           </Link>
                         )}
                         <Link
-                          href={apt.patientId ? `/emr/consultation/${apt.patientId}` : '#'}
+                          href={apt.isOnline ? `/emr/consultation/consult-obp-${apt.id}` : apt.patientId ? `/emr/consultation/${apt.patientId}` : '#'}
                           className="text-xs font-medium text-emerald-600 hover:underline flex items-center gap-1 ml-1"
                         >
                           <Pill className="h-3 w-3" />
@@ -463,7 +471,7 @@ export default function EMRDashboardPage() {
                 <div
                   key={apt.id}
                   className="px-4 py-3 hover:bg-gray-50/60 active:bg-gray-100 transition-colors cursor-pointer"
-                  onClick={() => apt.patientId ? router.push(`/emr/consultation/${apt.patientId}`) : undefined}
+                  onClick={() => openPatient(apt)}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div className="min-w-0">
