@@ -349,6 +349,22 @@ function BookingForm() {
       localStorage.setItem('emr_bookings', JSON.stringify(existing));
     } catch {}
 
+    // Sync the booking (patient profile + uploaded reports) to the EMR database
+    // so it appears in the doctor's EMR on any device. Best-effort — the
+    // localStorage record above keeps the flow working if the sync fails.
+    try {
+      await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...bookingData,
+          patientId: `obp-${id}`,
+          paymentId: pData?.paymentId || undefined,
+          razorpayOrderId: pData?.orderId || undefined,
+        }),
+      });
+    } catch {}
+
     // Also add patient to emr_added_patients so they appear in EMR Patients list
     try {
       const BOOKING_CLINIC_MAP: Record<string, string> = {

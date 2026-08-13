@@ -136,6 +136,17 @@ export const consultationsApi = {
   delete: (id: string) => api.delete(`/api/consultations?id=${id}`),
 };
 
+export const bookingsApi = {
+  list: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<any[]>(`/api/bookings${qs}`);
+  },
+  get: (bookingId: string) => api.get<any>(`/api/bookings?id=${bookingId}`),
+  create: (data: any) => api.post<any>('/api/bookings', data),
+  updateStatus: (bookingId: string, updates: { status?: string; paymentStatus?: string; paymentId?: string }) =>
+    api.put<any>('/api/bookings', { bookingId, ...updates }),
+};
+
 export const prescriptionsApi = {
   list: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';

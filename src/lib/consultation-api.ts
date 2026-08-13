@@ -1,6 +1,6 @@
 // Consultation data mapper - bridges EMRConsultation format to/from API format
 
-import { consultationsApi, patientsApi } from '@/lib/api-client';
+import { consultationsApi, patientsApi, bookingsApi } from '@/lib/api-client';
 import type { EMRConsultation, EMRPatient } from '@/types/emr';
 
 // Map API consultation response to EMRConsultation format
@@ -239,5 +239,15 @@ export async function searchPatientsForConsultation(query: string): Promise<EMRP
     return (results || []).map(apiPatientToEMR);
   } catch {
     return [];
+  }
+}
+
+// Load an online booking from the API (falls back to null)
+export async function loadBookingFromApi(bookingId: string): Promise<any | null> {
+  if (!bookingId) return null;
+  try {
+    return await bookingsApi.get(bookingId);
+  } catch {
+    return null;
   }
 }

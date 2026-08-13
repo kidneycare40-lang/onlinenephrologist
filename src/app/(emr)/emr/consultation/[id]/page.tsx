@@ -33,7 +33,7 @@ import ReportUploadOCR from '@/components/emr/ReportUploadOCR';
 import { Plus, Search, Trash2, X, Stethoscope, Calendar, FileText, ChevronRight, ChevronDown } from 'lucide-react';
 import { type ExtractedLabValue, type ExtractedMedicine, type OCRResult } from '@/lib/ocr-utils';
 import { autoCorrect } from '@/lib/spellcheck';
-import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR } from '@/lib/consultation-api';
+import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR, loadBookingFromApi } from '@/lib/consultation-api';
 import { patientsApi } from '@/lib/api-client';
 import TemplateSelector from '@/components/emr/TemplateSelector';
 
@@ -255,8 +255,12 @@ export default function ConsultationPage() {
       setAddedPatients(storedPatients);
       const allStored = [...patients, ...storedPatients];
 
-      // Look up booking data early for backfilling existing consultations
-      const booking = onlineBookings.find((b) => b.bookingId === rawBookingId);
+      // Look up booking data early for backfilling existing consultations.
+      // Prefer the localStorage booking (has full report data), fall back to
+      // the booking synced to the database from the public booking form.
+      const localBooking = onlineBookings.find((b) => b.bookingId === rawBookingId);
+      const apiBooking = localBooking ? null : await loadBookingFromApi(rawBookingId);
+      const booking = localBooking || apiBooking;
 
       // Check stored consultations — match by consultation ID first, then by patient ID
       let storedConsult = storedConsultations.find((c) => {

@@ -9,6 +9,7 @@ import { todayAppointments, patients, consultations } from '@/lib/data/emr-mock'
 import { useClinic } from '@/lib/emr-clinic-context';
 import { EMRPatient, EMRConsultation } from '@/types/emr';
 import { deleteOnlineBooking } from '@/lib/emr-delete';
+import { bookingsApi } from '@/lib/api-client';
 
 type StatusFilter = 'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -44,15 +45,21 @@ export default function ConsultationListPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
-  const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
+const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
   const [onlineBookings, setOnlineBookings] = useState<OnlineBooking[]>([]);
+  const [apiBookings, setApiBookings] = useState<OnlineBooking[]>([]);
   const [savedConsultations, setSavedConsultations] = useState<EMRConsultation[]>([]);
   const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
-      setAddedPatients(JSON.parse(localStorage.getItem('emr_added_patients') || '[]'));
+      setOnlineBookings(JSON.parse(localStorage.getItem('emr_bookings') || '[]'));
     } catch { /* ignore */ }
+
+    // Load bookings synced from the public booking form into the database
+    bookingsApi.list()
+      .then((bookings) => setApiBookings(Array.isArray(bookings) ? bookings : []))
+      .catch(() => { /* ignore */ });
     try {
       setOnlineBookings(JSON.parse(localStorage.getItem('emr_bookings') || '[]'));
     } catch { /* ignore */ }
@@ -85,6 +92,7 @@ export default function ConsultationListPage() {
     if (!deleteBookingId) return;
     deleteOnlineBooking(deleteBookingId);
     setOnlineBookings((prev) => prev.filter((b) => b.bookingId !== deleteBookingId));
+    setApiBookings((prev) => prev.filter((b) => b.bookingId !== deleteBookingId));
     setDeleteBookingId(null);
   };
 
@@ -92,6 +100,15 @@ export default function ConsultationListPage() {
   const clinicPatients = clinicId ? allPatients.filter((p) => !p.clinicId || p.clinicId === clinicId) : allPatients;
   const clinicPatientIds = new Set(clinicPatients.map((p) => p.id));
   const clinicAppointments = clinicId ? todayAppointments.filter((a) => clinicPatientIds.has(a.patientId)) : [];
+
+  // Merge database bookings (from the public booking form) with localStorage
+  // bookings — dedupe by bookingId, database record wins on conflict
+  const mergedBookings = useMemo(() => {
+    const byKey = new Map<string, OnlineBooking>();
+    for (const b of onlineBookings) byKey.set(b.bookingId, b);
+    for (const b of apiBookings) byKey.set(b.bookingId, b);
+    return Array.from(byKey.values());
+  }, [onlineBookings, apiBookings]);
 
   // Deduplicate: keep only the latest consultation per phone (or patientId)
   const savedClinicConsultations = useMemo(() => {
@@ -117,7 +134,7 @@ export default function ConsultationListPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const filteredOnline = onlineBookings.filter((b) => {
+  const filteredOnline = mergedBookings.filter((b) => {
     // Clinic filter for online bookings
     if (clinicId) {
       const BOOKING_CLINIC_MAP: Record<string, string> = { 'online': 'online', 'online-intl': 'online', 'faridabad': 'kcc-faridabad', 'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi', 'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket' };
