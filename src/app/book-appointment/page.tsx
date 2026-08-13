@@ -284,6 +284,15 @@ function BookingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Guard: never book a past time slot (compared against device's current time)
+    if (formData.date === today) {
+      const slotMins = parseSlotMinutes(formData.time);
+      if (slotMins !== null && slotMins <= nowMinutes) {
+        alert('This time slot has already passed. Please choose a current or upcoming slot.');
+        return;
+      }
+    }
+
     // Validate for duplicates before saving
     const validation = validateBooking(formData.phone, formData.clinicId, formData.date, formData.time);
     if (!validation.allowed && validation.existing) {
@@ -434,7 +443,16 @@ function BookingForm() {
     setFormData(prev => ({ ...prev, clinicId: id, time: '' }));
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  // Patient's device (browser/phone) local date & time — used so only today's
+  // upcoming slots are bookable in THEIR local time, not UTC
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const now = new Date(nowTick);
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const selectedClinic = clinics.find(c => c.id === formData.clinicId);
   const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
   const consultPricing = getConsultationPricing(formData.consultationType === 'online_intl' ? 'online_intl' : formData.consultationType === 'hospital' ? 'hospital' : formData.consultationType === 'offline' ? 'offline' : 'online');
@@ -443,8 +461,6 @@ function BookingForm() {
   const isIntlBooking = isInternationalConsultation(formData.consultationType);
 
   const isToday = formData.date === today;
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   const holidayDates = useMemo(() => {
     if (!bookingSettings) return new Set<string>();
@@ -453,18 +469,17 @@ function BookingForm() {
 
   const maxDate = useMemo(() => {
     if (!bookingSettings) return '';
-    const d = new Date();
+    const d = new Date(nowTick);
     d.setDate(d.getDate() + bookingSettings.rules.maxAdvanceBookingDays);
-    return d.toISOString().split('T')[0];
-  }, [bookingSettings]);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, [bookingSettings, nowTick]);
 
   const isHoliday = formData.date ? holidayDates.has(formData.date) : false;
 
   const isTodayHoliday = useMemo(() => {
     if (!bookingSettings) return false;
-    const todayStr = new Date().toISOString().split('T')[0];
-    return bookingSettings.holidays.some(h => h.date === todayStr);
-  }, [bookingSettings]);
+    return bookingSettings.holidays.some(h => h.date === today);
+  }, [bookingSettings, today]);
 
   const intlTz = formData.consultationType === 'online_intl' ? formData.timezone : '';
   const intlTzOffset = intlTz ? TZ_OFFSETS[intlTz] : null;
