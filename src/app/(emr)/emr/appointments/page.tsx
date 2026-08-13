@@ -250,6 +250,13 @@ export default function AppointmentsPage() {
   const [apiAppointments, setApiAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Live clock: refresh every 30s so past slots disappear automatically
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
   const dateStr = formatDateISO(selectedDate);
 
   // Load online bookings from localStorage
@@ -411,7 +418,16 @@ export default function AppointmentsPage() {
         {/* Day View - Time Slots */}
         <div className="lg:col-span-7 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="divide-y divide-gray-100">
-            {generateTimeSlots(clinicId || 'online').map((slot) => {
+            {(() => {
+              const allSlots = generateTimeSlots(clinicId || 'online');
+              if (!isToday) return allSlots;
+              const now = new Date(nowTick);
+              const nowMinutes = now.getHours() * 60 + now.getMinutes();
+              return allSlots.filter((slot) => {
+                const [h, m] = slot.split(':').map(Number);
+                return h * 60 + m >= nowMinutes;
+              });
+            })().map((slot) => {
               const slotAppointments = appointmentsByTime[slot] || [];
               return (
                 <div key={slot} className="flex min-h-[72px]">
