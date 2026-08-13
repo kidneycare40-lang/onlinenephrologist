@@ -818,6 +818,25 @@ export interface PaymentCreate {
   createdBy?: string;
 }
 
+// Online booking payments (Razorpay)
+export interface BookingPayment {
+  id: string;
+  booking_id: string;
+  patient_name: string | null;
+  patient_phone: string | null;
+  patient_email: string | null;
+  patient_country: string | null;
+  consultation_type: string | null;
+  amount: number;
+  currency: string;
+  razorpay_order_id: string | null;
+  razorpay_payment_id: string | null;
+  razorpay_signature: string | null;
+  payment_status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Settings
 export interface Setting {
   id: string;

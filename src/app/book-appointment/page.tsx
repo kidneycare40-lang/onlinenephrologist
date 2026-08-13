@@ -15,6 +15,7 @@ import { loadAllClinics } from '@/lib/clinic-settings';
 import { validateBooking, type ExistingAppointment, getStoredBookings, isActiveStatus } from '@/lib/booking-validator';
 import { getCurrentPatient, type Patient } from '@/lib/patient-auth';
 import PaymentGateway, { type PaymentData } from '@/components/emr/PaymentGateway';
+import { getConsultationPricing, formatPricing, isInternationalConsultation } from '@/lib/pricing';
 
 type ClinicSlot = { id: string; name: string; shortName: string; address: string; timing: string; fee: number; icon: typeof Video; color: string; features: string[]; slots: string[] };
 
@@ -159,6 +160,7 @@ function BookingForm() {
         ((formData.consultationType === 'online' || formData.consultationType === 'online_intl') && pg.requirePaymentForOnline) ||
         ((formData.consultationType === 'offline' || formData.consultationType === 'hospital') && pg.requirePaymentForClinic);
       if (needsPayment) {
+        setBookingId(`KN-${Date.now().toString(36).toUpperCase()}`);
         setShowPaymentGateway(true);
         return;
       }
@@ -168,7 +170,7 @@ function BookingForm() {
   };
 
   const finalizeBooking = async (pData: PaymentData | null) => {
-    const id = `KN-${Date.now().toString(36).toUpperCase()}`;
+    const id = bookingId || `KN-${Date.now().toString(36).toUpperCase()}`;
     setBookingId(id);
 
     let reportFilesData: { name: string; type: string; data: string }[] = [];
@@ -242,13 +244,13 @@ function BookingForm() {
       const reportNames = reportFiles.map(f => f.name).join(', ') || 'None';
       const usName = ultrasoundFile?.name || 'None';
       const doctorMsg = encodeURIComponent(
-        `${formData.consultationType === 'online_intl' ? 'New International' : 'New'} Online Consultation Booking\n\nBooking ID: ${id}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${formData.phone}\nDate: ${formData.date} at ${formData.time}\nReason: ${formData.reason}\n${formData.isInternational ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: ${pData.method.toUpperCase()} - ${pData.paymentId}\n` : ''}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}`
+        `${formData.consultationType === 'online_intl' ? 'New International' : 'New'} Online Consultation Booking\n\nBooking ID: ${id}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${formData.phone}\nDate: ${formData.date} at ${formData.time}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${formData.isInternational ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}`
       );
       window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
     }
 
     const patientMsg = encodeURIComponent(
-      `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${formData.time}\nFee: ${formData.consultationType === 'online_intl' ? '$20 USD' : `₹${consultFee}`}\n${pData ? `Payment: Paid (${pData.method})\n` : ''}${formData.clinicId === 'psri' ? 'Payment: Pay at Hospital' : pData ? '' : 'Payment: Pay now or at clinic'}\n\nFor any queries, call +91 98182 35613`
+      `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${formData.time}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${pData ? `Payment: Paid (${pData.paymentId})\n` : ''}${formData.clinicId === 'psri' ? 'Payment: Pay at Hospital' : pData ? '' : 'Payment: Pay now or at clinic'}\n\nFor any queries, call +91 98182 35613`
     );
     window.open(`https://wa.me/91${formData.phone}?text=${patientMsg}`, '_blank');
 
@@ -286,7 +288,10 @@ function BookingForm() {
   const today = new Date().toISOString().split('T')[0];
   const selectedClinic = clinics.find(c => c.id === formData.clinicId);
   const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
-  const consultFee = formData.consultationType === 'online_intl' ? (selectedClinic?.fee || 20) : (selectedClinic?.fee || 500);
+  const consultPricing = getConsultationPricing(formData.consultationType === 'online_intl' ? 'online_intl' : formData.consultationType === 'hospital' ? 'hospital' : formData.consultationType === 'offline' ? 'offline' : 'online');
+  const consultFee = formData.consultationType === 'online_intl' ? consultPricing.amount : (selectedClinic?.fee || consultPricing.amount);
+  const consultCurrency = formData.consultationType === 'online_intl' ? 'USD' : 'INR';
+  const isIntlBooking = isInternationalConsultation(formData.consultationType);
 
   const isToday = formData.date === today;
   const now = new Date();
@@ -410,8 +415,19 @@ function BookingForm() {
               </div>
               <div className="space-y-0.5">
                 <p className="text-xs text-slate-500">Consultation Fee</p>
-                <p className="font-bold text-[#0A75BB] text-lg">₹{consultFee}</p>
+                <p className="font-bold text-[#0A75BB] text-lg">
+                  {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${consultFee}`}
+                </p>
               </div>
+              {paymentData && (
+                <div className="space-y-0.5">
+                  <p className="text-xs text-slate-500">Payment</p>
+                  <p className="font-semibold text-emerald-600 text-sm flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Paid
+                    <span className="text-[10px] text-slate-400 font-mono ml-1">{paymentData.paymentId}</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -424,6 +440,27 @@ function BookingForm() {
                   <p className="text-xs text-blue-600">Payment to be made at PSRI Hospital during your visit</p>
                 </div>
               </div>
+            </div>
+          ) : formData.consultationType === 'online_intl' ? (
+            <div className="bg-white rounded-2xl shadow-lg border p-6 mb-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Payment</h2>
+              {paymentData ? (
+                <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-xl">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                  <div className="text-left">
+                    <span className="font-bold text-emerald-700">Payment Received</span>
+                    <p className="text-xs text-emerald-600">${consultFee} USD · Payment ID: {paymentData.paymentId}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl">
+                  <AlertTriangle className="w-8 h-8 text-amber-600" />
+                  <div className="text-left">
+                    <span className="font-bold text-amber-700">Payment Pending</span>
+                    <p className="text-xs text-amber-600">${consultFee} USD. Our team will contact you for international payment arrangements.</p>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-lg border p-6 mb-6">
@@ -1659,11 +1696,14 @@ function BookingForm() {
             </button>
             <PaymentGateway
               amount={consultFee}
-              currency={formData.consultationType === 'online_intl' ? 'USD' : 'INR'}
-              bookingId={`KN-${Date.now().toString(36).toUpperCase()}`}
+              currency={consultCurrency}
+              bookingId={bookingId || `KN-${Date.now().toString(36).toUpperCase()}`}
               patientName={`${formData.firstName} ${formData.lastName}`}
               patientPhone={formData.phone}
-              consultationType={selectedClinic?.name || 'Consultation'}
+              patientEmail={formData.email}
+              patientCountry={formData.country}
+              consultationType={formData.consultationType}
+              isInternational={isIntlBooking}
               onPaymentSuccess={async (pd) => await finalizeBooking(pd)}
               onPaymentFailed={(reason) => { setShowPaymentGateway(false); }}
               onSkipPayment={async () => await finalizeBooking(null)}

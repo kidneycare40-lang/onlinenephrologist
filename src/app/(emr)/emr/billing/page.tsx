@@ -14,6 +14,7 @@ import CreateInvoiceModal from '@/components/emr/CreateInvoiceModal';
 import { billingApi } from '@/lib/api-client';
 import { mockInvoices } from '@/lib/data/billing-mock';
 import type { EMRInvoice, InvoiceStatus } from '@/types/emr';
+import type { BookingPayment } from '@/lib/db/types';
 
 const clinicLabels: Record<string, string> = {
   'kcc-faridabad': 'KCC Faridabad',
@@ -195,6 +196,9 @@ export default function BillingPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<EMRInvoice | null>(null);
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
+  const [onlinePayments, setOnlinePayments] = useState<BookingPayment[]>([]);
+  const [onlinePaymentsLoading, setOnlinePaymentsLoading] = useState(false);
+  const [showOnlinePayments, setShowOnlinePayments] = useState(true);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const refreshData = useCallback(async () => {
@@ -234,6 +238,16 @@ export default function BillingPage() {
     } finally {
       setLoading(false);
     }
+
+    setOnlinePaymentsLoading(true);
+    try {
+      const res = await fetch('/api/razorpay/payments');
+      if (res.ok) {
+        const data = await res.json();
+        setOnlinePayments(Array.isArray(data) ? data : data?.payments || []);
+      }
+    } catch {}
+    setOnlinePaymentsLoading(false);
   }, [statusFilter]);
 
   useEffect(() => { refreshData(); }, [refreshData]);
@@ -645,6 +659,80 @@ export default function BillingPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Online Booking Payments — collapsible */}
+      <button onClick={() => setShowOnlinePayments(!showOnlinePayments)}
+        className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+        <CreditCard className="h-4 w-4" />
+        Online Booking Payments ({onlinePayments.length})
+        <span className={cn('text-xs px-2 py-0.5 rounded-full', showOnlinePayments ? 'bg-[#0A75BB]/10 text-[#0A75BB]' : 'bg-gray-100 text-gray-500')}>
+          {showOnlinePayments ? 'Hide' : 'Show'}
+        </span>
+      </button>
+      {showOnlinePayments && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {onlinePaymentsLoading ? (
+            <div className="py-10 text-center text-gray-400 text-sm">Loading payments...</div>
+          ) : onlinePayments.length === 0 ? (
+            <div className="py-10 text-center text-gray-500">
+              <CreditCard className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-medium">No online booking payments yet</p>
+              <p className="text-xs text-gray-400 mt-1">Razorpay payments from the booking page will appear here</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Booking ID</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Country</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Type</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Razorpay ID</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {onlinePayments.map((p) => {
+                    const pStatus = (p.payment_status || '').toLowerCase();
+                    const isCaptured = pStatus === 'captured' || pStatus === 'paid' || pStatus === 'authorized';
+                    const isFailed = pStatus === 'failed' || pStatus === 'refunded';
+                    const typeLabel = p.consultation_type === 'online_intl' ? 'Intl' : p.consultation_type || 'Online';
+                    return (
+                      <tr key={p.booking_id || p.id || p.razorpay_order_id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                        <td className="px-4 py-3.5 text-sm font-mono font-medium text-[#0A75BB]">{p.booking_id}</td>
+                        <td className="px-4 py-3.5">
+                          <p className="text-sm font-medium text-gray-900">{p.patient_name}</p>
+                          <p className="text-xs text-gray-500">{p.patient_phone}</p>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600 hidden md:table-cell">{p.patient_country || '—'}</td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                          <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', typeLabel === 'Intl' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700')}>
+                            {typeLabel}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right text-sm font-semibold text-gray-900">
+                          {p.currency === 'USD' ? '$' : '₹'}{Number(p.amount || 0).toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell text-xs font-mono text-gray-400">{p.razorpay_payment_id || p.razorpay_order_id || '—'}</td>
+                        <td className="px-4 py-3.5">
+                          <span className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border', isCaptured ? 'bg-green-50 text-green-700 border-green-200' : isFailed ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200')}>
+                            {isCaptured ? <CheckCircle2 className="h-3 w-3" /> : isFailed ? <X className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                            {(p.payment_status || 'pending').toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-500 hidden md:table-cell">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
