@@ -108,6 +108,55 @@ function timezonesForCountry(country: string): string[] {
   return COUNTRY_TIMEZONES[country] || ALL_TIMEZONE_KEYS;
 }
 
+// Fixed UTC offsets (hours) for each timezone code — used to convert doctor's IST
+// working hours into the international patient's local timezone
+const TZ_OFFSETS: Record<string, number> = {
+  IST: 5.5, GST: 4, AST: 3, GMT: 0, BST: 1, CET: 1, EET: 2, WET: 0,
+  EST: -5, CST: -6, MST: -7, PST: -8, AKST: -9, HST: -10,
+  AEST: 10, ACST: 9.5, AWST: 8, NZST: 12, SGT: 8, MYT: 8, PHT: 8,
+  WIB: 7, ICT: 7, MMT: 6.5, CST_CN: 8, JST: 9, KST: 9,
+  PKT: 5, BDT: 6, SLST: 5.5, NPT: 5.75, WAT: 1, EAT: 3, SAST: 2,
+};
+
+function parseSlotMinutes(slot: string): number | null {
+  const match = slot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return null;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  if (match[3].toUpperCase() === 'PM' && h !== 12) h += 12;
+  if (match[3].toUpperCase() === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+function formatMinutes(mins: number): string {
+  const h24 = ((Math.floor(mins) % 24) + 24) % 24;
+  const m = Math.round((mins - Math.floor(mins)) * 60);
+  const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
+  const ampm = h24 >= 12 ? 'PM' : 'AM';
+  return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+// Convert an IST slot (e.g. "9:00 AM") to the patient's timezone, e.g. "9:00 PM EST"
+function convertSlotToTz(slot: string, tzCode: string): string {
+  const mins = parseSlotMinutes(slot);
+  if (mins === null) return slot;
+  const to = TZ_OFFSETS[tzCode];
+  if (to === undefined) return slot;
+  const converted = (mins + (to - 5.5) + 1440) % 1440;
+  return `${formatMinutes(converted)} ${tzCode}`;
+}
+
+// Convert a range label like "Mon to Sun 7:00 AM - 11:00 PM" into the patient's timezone
+function convertRangeToTz(timing: string, tzCode: string): string {
+  const to = TZ_OFFSETS[tzCode];
+  if (to === undefined) return timing;
+  return `${timing.replace(/(\d{1,2}:\d{2} (?:AM|PM))/gi, (t) => {
+    const mins = parseSlotMinutes(t);
+    if (mins === null) return t;
+    return formatMinutes((mins + (to - 5.5) + 1440) % 1440);
+  })} ${tzCode}`;
+}
+
 function generateSlots(schedule: BookingSettings['schedules'][0]): string[] {
   const slots: string[] = [];
   const [startH, startM] = schedule.startTime.split(':').map(Number);
@@ -371,8 +420,11 @@ function BookingForm() {
         ...prev,
         country: value,
         timezone: '',
+        time: '',
         countryCode: value === 'USA' ? '+1' : value === 'UK' ? '+44' : value === 'UAE' ? '+971' : value === 'Canada' ? '+1' : prev.countryCode,
       }));
+    } else if (name === 'timezone') {
+      setFormData(prev => ({ ...prev, timezone: value, time: '' }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -414,20 +466,23 @@ function BookingForm() {
     return bookingSettings.holidays.some(h => h.date === todayStr);
   }, [bookingSettings]);
 
+  const intlTz = formData.consultationType === 'online_intl' ? formData.timezone : '';
+  const intlTzOffset = intlTz ? TZ_OFFSETS[intlTz] : null;
+
   const availableSlots = useMemo(() => {
     if (!selectedClinic) return [];
     if (isHoliday) return [];
-    if (!isToday) return selectedClinic.slots;
-    return selectedClinic.slots.filter(slot => {
-      const match = slot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-      if (!match) return true;
-      let h = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
-      if (match[3].toUpperCase() === 'PM' && h !== 12) h += 12;
-      if (match[3].toUpperCase() === 'AM' && h === 12) h = 0;
-      return (h * 60 + m) > nowMinutes;
+    let slots = selectedClinic.slots;
+    if (intlTzOffset !== undefined && intlTzOffset !== null && intlTz) {
+      slots = slots.map(s => convertSlotToTz(s, intlTz));
+    }
+    if (!isToday) return slots;
+    return slots.filter(slot => {
+      const mins = parseSlotMinutes(slot);
+      if (mins === null) return true;
+      return mins > nowMinutes;
     });
-  }, [selectedClinic, isToday, nowMinutes]);
+  }, [selectedClinic, isToday, nowMinutes, intlTzOffset, intlTz]);
 
   // Booked slots for the selected date/clinic (for visual indicators)
   const bookedSlots = useMemo(() => {
@@ -978,7 +1033,9 @@ function BookingForm() {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">
-                          {formData.consultationType === 'online_intl' ? 'Mon-Sun 7AM-11PM IST' : (clinics.find(c => c.id === 'online')?.timing || '')}
+                          {formData.consultationType === 'online_intl'
+                            ? intlTz ? convertRangeToTz('Mon-Sun 7:00 AM - 11:00 PM', intlTz) : 'Mon-Sun 7AM-11PM IST'
+                            : (clinics.find(c => c.id === 'online')?.timing || '')}
                         </span>
                         <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">
                           {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${selectedClinic?.fee || 500}`}
@@ -1384,11 +1441,24 @@ function BookingForm() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">{selectedClinic.name}</p>
-                    <p className="text-xs text-slate-500">{selectedClinic.timing} • {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${selectedClinic.fee}`}</p>
+                    <p className="text-xs text-slate-500">{intlTz ? convertRangeToTz(selectedClinic.timing, intlTz) : selectedClinic.timing} • {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${selectedClinic.fee}`}</p>
                   </div>
                 </div>
               )}
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
+                {formData.consultationType === 'online_intl' && (
+                  intlTz ? (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-sm text-purple-700 flex items-center gap-2">
+                      <Globe className="h-4 w-4 shrink-0" />
+                      Times are shown in your local timezone: <strong>{TIMEZONES[intlTz]}</strong>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      Please select your country and timezone in the previous step to see times in your local timezone
+                    </div>
+                  )
+                )}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">Select Date *</label>
