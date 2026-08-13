@@ -19,6 +19,95 @@ import { getConsultationPricing, formatPricing, isInternationalConsultation } fr
 
 type ClinicSlot = { id: string; name: string; shortName: string; address: string; timing: string; fee: number; icon: typeof Video; color: string; features: string[]; slots: string[] };
 
+const TIMEZONES: Record<string, string> = {
+  IST: 'IST (India, UTC+5:30)',
+  GST: 'GST (UAE, UTC+4)',
+  AST: 'AST (Arabia, UTC+3)',
+  GMT: 'GMT (UK, UTC+0)',
+  BST: 'BST (UK Summer, UTC+1)',
+  CET: 'CET (Central Europe, UTC+1)',
+  EET: 'EET (Eastern Europe, UTC+2)',
+  WET: 'WET (Western Europe, UTC+0)',
+  EST: 'EST (US East, UTC-5)',
+  CST: 'CST (US Central, UTC-6)',
+  MST: 'MST (US Mountain, UTC-7)',
+  PST: 'PST (US West, UTC-8)',
+  AKST: 'AKST (Alaska, UTC-9)',
+  HST: 'HST (Hawaii, UTC-10)',
+  AEST: 'AEST (Australia East, UTC+10)',
+  ACST: 'ACST (Australia Central, UTC+9:30)',
+  AWST: 'AWST (Australia West, UTC+8)',
+  NZST: 'NZST (New Zealand, UTC+12)',
+  SGT: 'SGT (Singapore, UTC+8)',
+  MYT: 'MYT (Malaysia, UTC+8)',
+  PHT: 'PHT (Philippines, UTC+8)',
+  WIB: 'WIB (Indonesia West, UTC+7)',
+  ICT: 'ICT (Indochina, UTC+7)',
+  MMT: 'MMT (Myanmar, UTC+6:30)',
+  CST_CN: 'CST (China, UTC+8)',
+  JST: 'JST (Japan, UTC+9)',
+  KST: 'KST (Korea, UTC+9)',
+  PKT: 'PKT (Pakistan, UTC+5)',
+  BDT: 'BDT (Bangladesh, UTC+6)',
+  SLST: 'SLST (Sri Lanka, UTC+5:30)',
+  NPT: 'NPT (Nepal, UTC+5:45)',
+  WAT: 'WAT (West Africa, UTC+1)',
+  EAT: 'EAT (East Africa, UTC+3)',
+  SAST: 'SAST (South Africa, UTC+2)',
+};
+
+const COUNTRY_TIMEZONES: Record<string, string[]> = {
+  USA: ['EST', 'CST', 'MST', 'PST', 'AKST', 'HST'],
+  Canada: ['EST', 'CST', 'MST', 'PST'],
+  UK: ['GMT', 'BST'],
+  UAE: ['GST'],
+  'Saudi Arabia': ['AST'],
+  Qatar: ['AST'],
+  Bahrain: ['AST'],
+  Kuwait: ['AST'],
+  Oman: ['GST'],
+  Pakistan: ['PKT'],
+  Bangladesh: ['BDT'],
+  'Sri Lanka': ['SLST'],
+  Nepal: ['NPT'],
+  Myanmar: ['MMT'],
+  Malaysia: ['MYT'],
+  Singapore: ['SGT'],
+  Australia: ['AEST', 'ACST', 'AWST'],
+  'New Zealand': ['NZST'],
+  'South Africa': ['SAST'],
+  Nigeria: ['WAT'],
+  Kenya: ['EAT'],
+  Egypt: ['EET'],
+  Morocco: ['WET'],
+  Ethiopia: ['EAT'],
+  Uganda: ['EAT'],
+  Tanzania: ['EAT'],
+  Philippines: ['PHT'],
+  Indonesia: ['WIB'],
+  Thailand: ['ICT'],
+  Vietnam: ['ICT'],
+  Cambodia: ['ICT'],
+  Laos: ['ICT'],
+  China: ['CST_CN'],
+  Japan: ['JST'],
+  'South Korea': ['KST'],
+  Germany: ['CET'], France: ['CET'], Italy: ['CET'], Spain: ['CET'],
+  Netherlands: ['CET'], Sweden: ['CET'], Norway: ['CET'], Denmark: ['CET'],
+  Switzerland: ['CET'], Austria: ['CET'], Belgium: ['CET'], Poland: ['CET'],
+  'Czech Republic': ['CET'], Slovakia: ['CET'], Hungary: ['CET'],
+  Croatia: ['CET'], Serbia: ['CET'], 'North Macedonia': ['CET'],
+  Albania: ['CET'], Slovenia: ['CET'],
+  Finland: ['EET'], Romania: ['EET'], Bulgaria: ['EET'],
+  Lithuania: ['EET'], Latvia: ['EET'], Estonia: ['EET'],
+};
+
+const ALL_TIMEZONE_KEYS = Object.keys(TIMEZONES);
+
+function timezonesForCountry(country: string): string[] {
+  return COUNTRY_TIMEZONES[country] || ALL_TIMEZONE_KEYS;
+}
+
 function generateSlots(schedule: BookingSettings['schedules'][0]): string[] {
   const slots: string[] = [];
   const [startH, startM] = schedule.startTime.split(':').map(Number);
@@ -277,6 +366,13 @@ function BookingForm() {
       setFormData(prev => ({ ...prev, isInternational: value === 'yes' }));
     } else if (name === 'interpreterRequired') {
       setFormData(prev => ({ ...prev, interpreterRequired: value === 'yes' }));
+    } else if (name === 'country') {
+      setFormData(prev => ({
+        ...prev,
+        country: value,
+        timezone: '',
+        countryCode: value === 'USA' ? '+1' : value === 'UK' ? '+44' : value === 'UAE' ? '+971' : value === 'Canada' ? '+1' : prev.countryCode,
+      }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -1211,28 +1307,12 @@ function BookingForm() {
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">Preferred Timezone</label>
                         <select name="timezone" value={formData.timezone} onChange={handleChange}
                           className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors">
-                          <option value="">Select timezone</option>
-                          <option value="IST">IST (India, UTC+5:30)</option>
-                          <option value="GST">GST (UAE, UTC+4)</option>
-                          <option value="AST">AST (Saudi Arabia, UTC+3)</option>
-                          <option value="GMT">GMT (UK, UTC+0)</option>
-                          <option value="CET">CET (Central Europe, UTC+1)</option>
-                          <option value="EST">EST (US East, UTC-5)</option>
-                          <option value="CST">CST (US Central, UTC-6)</option>
-                          <option value="PST">PST (US West, UTC-8)</option>
-                          <option value="AEST">AEST (Australia East, UTC+10)</option>
-                          <option value="NZST">NZST (New Zealand, UTC+12)</option>
-                          <option value="SGT">SGT (Singapore, UTC+8)</option>
-                          <option value="JST">JST (Japan, UTC+9)</option>
-                          <option value="KST">KST (Korea, UTC+9)</option>
-                          <option value="PKT">PKT (Pakistan, UTC+5)</option>
-                          <option value="BDT">BDT (Bangladesh, UTC+6)</option>
-                          <option value="SLST">SLST (Sri Lanka, UTC+5:30)</option>
-                          <option value="NPT">NPT (Nepal, UTC+5:45)</option>
-                          <option value="WAT">WAT (West Africa, UTC+1)</option>
-                          <option value="EAT">EAT (East Africa, UTC+3)</option>
-                          <option value="SAST">SAST (South Africa, UTC+2)</option>
+                          <option value="">{formData.country ? `Select timezone for ${formData.country}` : 'Select country first'}</option>
+                          {timezonesForCountry(formData.country).map(tz => (
+                            <option key={tz} value={tz}>{TIMEZONES[tz]}</option>
+                          ))}
                         </select>
+                        <p className="text-xs text-slate-400 mt-1">Showing timezones for {formData.country || 'all countries'}</p>
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">Passport Number</label>
