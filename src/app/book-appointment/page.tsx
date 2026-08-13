@@ -362,23 +362,19 @@ function BookingForm() {
     let reportFilesData: { name: string; type: string; data: string }[] = [];
     let ultrasoundData: { name: string; type: string; data: string } | null = null;
 
-    if (formData.consultationType === 'online' || formData.consultationType === 'online_intl') {
-      // Downscale images and cap total embedded data (~2MB) so the booking always
-      // syncs — oversized payloads silently fail on localStorage quota and the
-      // server request limit, which previously lost the entire booking.
-      const MAX_EMBEDDED = 2 * 1024 * 1024;
-      let embeddedBytes = 0;
-      for (const f of reportFiles) {
-        const item = await compressReportFile(f);
-        if (item.data && embeddedBytes + item.data.length > MAX_EMBEDDED) item.data = '';
-        if (item.data) embeddedBytes += item.data.length;
-        reportFilesData.push(item);
-      }
-      if (ultrasoundFile) {
-        const u = await compressReportFile(ultrasoundFile);
-        if (u.data && embeddedBytes + u.data.length > MAX_EMBEDDED) u.data = '';
-        ultrasoundData = u;
-      }
+    // Process uploaded reports for every booking type (clinic, hospital, online, international)
+    const MAX_EMBEDDED = 2 * 1024 * 1024;
+    let embeddedBytes = 0;
+    for (const f of reportFiles) {
+      const item = await compressReportFile(f);
+      if (item.data && embeddedBytes + item.data.length > MAX_EMBEDDED) item.data = '';
+      if (item.data) embeddedBytes += item.data.length;
+      reportFilesData.push(item);
+    }
+    if (ultrasoundFile) {
+      const u = await compressReportFile(ultrasoundFile);
+      if (u.data && embeddedBytes + u.data.length > MAX_EMBEDDED) u.data = '';
+      ultrasoundData = u;
     }
 
     const bookingData = {
@@ -464,14 +460,39 @@ function BookingForm() {
       }
     } catch {}
 
-    if (formData.consultationType === 'online' || formData.consultationType === 'online_intl') {
-      const reportNames = reportFiles.map(f => f.name).join(', ') || 'None';
-      const usName = ultrasoundFile?.name || 'None';
-      const doctorMsg = encodeURIComponent(
-        `${formData.consultationType === 'online_intl' ? 'New International' : 'New'} Online Consultation Booking\n\nBooking ID: ${id}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${formData.phone}\nDate: ${formData.date} at ${formData.time}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${formData.isInternational ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}`
-      );
-      window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
-    }
+    // Upload report files to Supabase Storage so the doctor can open them
+    // from WhatsApp or the EMR. Best-effort — the EMR keeps the embedded copy.
+    let filesLink = '';
+    try {
+      const filesForUpload = [
+        ...reportFilesData.filter((f) => f.data),
+        ...(ultrasoundData && ultrasoundData.data ? [ultrasoundData] : []),
+      ];
+      if (filesForUpload.length > 0) {
+        const res = await fetch('/api/booking-files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: id, files: filesForUpload }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.count > 0) {
+            filesLink = `${window.location.origin}/api/booking-files?bookingId=${id}`;
+          }
+        }
+      }
+    } catch {}
+
+    // Notify the doctor on WhatsApp with all booking details (every booking type)
+    const reportNames = reportFiles.map(f => f.name).join(', ') || 'None';
+    const usName = ultrasoundFile?.name || 'None';
+    const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
+    const isIntl = formData.consultationType === 'online_intl';
+    const bookingTypeLabel = isIntl ? 'International Online Consultation' : isOnline ? 'Online Consultation' : 'Clinic/Hospital Visit';
+    const doctorMsg = encodeURIComponent(
+      `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${formData.phone}\nDate: ${formData.date} at ${formData.time}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${isIntl ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
+    );
+    window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
 
     const patientMsg = encodeURIComponent(
       `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${formData.time}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${pData ? `Payment: Paid (${pData.paymentId})\n` : ''}${formData.clinicId === 'psri' ? 'Payment: Pay at Hospital' : pData ? '' : 'Payment: Pay now or at clinic'}\n\nFor any queries, call +91 98182 35613`
@@ -1656,19 +1677,18 @@ function BookingForm() {
                 </div>
               </div>
 
-              {/* Online Extra Fields */}
-              {(formData.consultationType === 'online' || formData.consultationType === 'online_intl') && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <FileText className="h-5 w-5 text-[#0A75BB]" />
-                    <h3 className="font-bold text-gray-900">Medical Details for Online Consultation</h3>
-                  </div>
-                  <p className="text-xs text-slate-500 -mt-3">Required for video consultation — helps Dr Goel prepare</p>
+              {/* Medical Details (all booking types) */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="h-5 w-5 text-[#0A75BB]" />
+                  <h3 className="font-bold text-gray-900">Medical Details</h3>
+                </div>
+                <p className="text-xs text-slate-500 -mt-3">Helps Dr Goel prepare for your visit — reports go straight to the doctor</p>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">1. Patient&apos;s Complaints *</label>
-                    <p className="text-xs text-slate-400 mb-2">Describe symptoms, when they started, and triggers</p>
-                    <textarea name="complaints" required value={formData.complaints} onChange={handleChange} rows={4}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">1. Patient&apos;s Complaints {formData.consultationType === 'online' || formData.consultationType === 'online_intl' ? '*' : ''}</label>
+                  <p className="text-xs text-slate-400 mb-2">Describe symptoms, when they started, and triggers</p>
+                  <textarea name="complaints" required={formData.consultationType === 'online' || formData.consultationType === 'online_intl'} value={formData.complaints} onChange={handleChange} rows={4}
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors resize-none"
                       placeholder="e.g. Swelling in legs since 2 weeks, reduced urine output, fatigue..." />
                   </div>
@@ -1815,7 +1835,6 @@ function BookingForm() {
                     </div>
                   </div>
                 </div>
-              )}
 
               {/* Fee Summary */}
               <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] rounded-2xl p-5 text-white">
