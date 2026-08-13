@@ -1252,9 +1252,10 @@ export default function ConsultationPage() {
                       const mimeType = typeof f === 'string' ? (f.match(/data:([^;]+)/)?.[1] || 'application/octet-stream') : (f.type || 'application/octet-stream');
                       if (!dataUrl) {
                         return (
-                          <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700">
+                          <span key={i} title="The file was not received from the patient — only the name was captured" className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700">
                             <FileText className="h-3 w-3" />
                             {fileName}
+                            <span className="text-[9px] font-semibold text-slate-400 uppercase border-l border-blue-200 pl-1.5">not uploaded</span>
                           </span>
                         );
                       }
@@ -1287,9 +1288,10 @@ export default function ConsultationPage() {
                       const mimeType = typeof uf === 'string' ? (uf.match(/data:([^;]+)/)?.[1] || 'application/octet-stream') : (uf.type || 'application/octet-stream');
                       if (!dataUrl) {
                         return (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700">
+                          <span title="The file was not received from the patient — only the name was captured" className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-200 rounded text-[11px] font-medium text-blue-700">
                             <FileText className="h-3 w-3" />
                             {uname}
+                            <span className="text-[9px] font-semibold text-slate-400 uppercase border-l border-blue-200 pl-1.5">not uploaded</span>
                           </span>
                         );
                       }
