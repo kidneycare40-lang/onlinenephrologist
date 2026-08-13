@@ -7,6 +7,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { BreadcrumbSchema, HowToSchema } from '@/components/seo/JsonLd';
 import { loadBookingSettings } from '@/components/emr/BookingSettings';
+import { getConsultationPricing, formatPricing } from '@/lib/pricing';
 
 export default function BookOnlineConsultationPage() {
   const intlSettings = useMemo(() => loadBookingSettings().international, []);
@@ -126,8 +127,7 @@ export default function BookOnlineConsultationPage() {
           <h1 className="text-3xl md:text-4xl font-bold mb-4">Book Online Consultation</h1>
           <p className="text-blue-100 text-lg">Consult Dr Rajesh Goel from anywhere in the world via video call</p>
           <div className="mt-4 inline-flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-2">
-            <span className="text-2xl font-bold">{intlSettings.currency === 'INR' ? '₹' : intlSettings.currency === 'EUR' ? '€' : intlSettings.currency === 'GBP' ? '£' : '$'}{intlSettings.fee}</span>
-            <span className="text-blue-200">{intlSettings.currency}</span>
+            <span className="text-2xl font-bold">{formatPricing(getConsultationPricing('online_intl'))}</span>
           </div>
         </div>
       </section>

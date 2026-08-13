@@ -5,22 +5,22 @@ import Link from 'next/link';
 import { Globe, Video, Clock, Shield, Award, Heart, Phone, CheckCircle2, MapPin, FileText, ChevronRight, Star, Stethoscope, Building2 } from 'lucide-react';
 
 const countries = [
-  { name: 'United States', flag: '🇺🇸', timezone: 'EST/PST', fee: '$20 USD', lang: 'English' },
+  { name: 'United States', flag: '🇺🇸', timezone: 'EST/PST', fee: '$25 USD', lang: 'English' },
   { name: 'United Kingdom', flag: '🇬🇧', timezone: 'GMT', fee: '£18 GBP', lang: 'English' },
   { name: 'UAE', flag: '🇦🇪', timezone: 'GST', fee: 'AED 75', lang: 'English, Hindi, Urdu' },
   { name: 'Saudi Arabia', flag: '🇸🇦', timezone: 'AST', fee: 'SAR 75', lang: 'English, Hindi, Urdu' },
   { name: 'Australia', flag: '🇦🇺', timezone: 'AEST', fee: 'AUD 30', lang: 'English' },
   { name: 'Canada', flag: '🇨🇦', timezone: 'EST/PST', fee: 'CAD 28', lang: 'English' },
   { name: 'Singapore', flag: '🇸🇬', timezone: 'SGT', fee: 'SGD 28', lang: 'English, Hindi' },
-  { name: 'Pakistan', flag: '🇵🇰', timezone: 'PKT', fee: '$20 USD', lang: 'English, Hindi, Urdu' },
-  { name: 'Bangladesh', flag: '🇧🇩', timezone: 'BDT', fee: '$20 USD', lang: 'English, Hindi, Bengali' },
-  { name: 'Sri Lanka', flag: '🇱🇰', timezone: 'SLST', fee: '$20 USD', lang: 'English, Hindi, Sinhala' },
-  { name: 'Nepal', flag: '🇳🇵', timezone: 'NPT', fee: '$20 USD', lang: 'English, Hindi, Nepali' },
+  { name: 'Pakistan', flag: '🇵🇰', timezone: 'PKT', fee: '$25 USD', lang: 'English, Hindi, Urdu' },
+  { name: 'Bangladesh', flag: '🇧🇩', timezone: 'BDT', fee: '$25 USD', lang: 'English, Hindi, Bengali' },
+  { name: 'Sri Lanka', flag: '🇱🇰', timezone: 'SLST', fee: '$25 USD', lang: 'English, Hindi, Sinhala' },
+  { name: 'Nepal', flag: '🇳🇵', timezone: 'NPT', fee: '$25 USD', lang: 'English, Hindi, Nepali' },
   { name: 'South Africa', flag: '🇿🇦', timezone: 'SAST', fee: 'ZAR 380', lang: 'English' },
-  { name: 'Kenya', flag: '🇰🇪', timezone: 'EAT', fee: '$20 USD', lang: 'English' },
-  { name: 'Nigeria', flag: '🇳🇬', timezone: 'WAT', fee: '$20 USD', lang: 'English' },
+  { name: 'Kenya', flag: '🇰🇪', timezone: 'EAT', fee: '$25 USD', lang: 'English' },
+  { name: 'Nigeria', flag: '🇳🇬', timezone: 'WAT', fee: '$25 USD', lang: 'English' },
   { name: 'Germany', flag: '🇩🇪', timezone: 'CET', fee: '€18 EUR', lang: 'English' },
-  { name: 'Japan', flag: '🇯🇵', timezone: 'JST', fee: '$20 USD', lang: 'English' },
+  { name: 'Japan', flag: '🇯🇵', timezone: 'JST', fee: '$25 USD', lang: 'English' },
 ];
 
 const conditions = [
@@ -57,7 +57,7 @@ export default function InternationalPatientsPage() {
           "description": "Online nephrology consultation for international patients by Dr Rajesh Goel, Senior Nephrologist & Kidney Transplant Physician.",
           "url": "https://onlinenephrologist.com",
           "telephone": "+919818235613",
-          "priceRange": "$20 USD",
+          "priceRange": "$25 USD",
           "physician": {
             "@type": "Physician",
             "name": "Dr. Rajesh Goel",
@@ -91,7 +91,7 @@ export default function InternationalPatientsPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/book-appointment?type=online_intl" className="px-8 py-4 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 text-lg">
-                <Video className="h-5 w-5" /> Book International Consultation — $20 USD
+                <Video className="h-5 w-5" /> Book International Consultation — $25 USD
               </Link>
               <a href="https://wa.me/919818235613?text=Hi%2C%20I%27m%20an%20international%20patient%20and%20would%20like%20to%20book%20a%20kidney%20consultation." target="_blank" rel="noopener noreferrer" className="px-8 py-4 bg-white/15 backdrop-blur-sm text-white font-semibold rounded-xl hover:bg-white/25 transition-colors border border-white/30 flex items-center justify-center gap-2">
                 <Phone className="h-5 w-5" /> WhatsApp Us
@@ -215,8 +215,8 @@ export default function InternationalPatientsPage() {
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">International Consultation Fee</h2>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8">
-                <p className="text-5xl font-bold mb-2">$20 USD</p>
-                <p className="text-white/70">approximately ₹1,500 INR | AED 75 | SAR 75 | £18 GBP | €18 EUR</p>
+                <p className="text-5xl font-bold mb-2">$25 USD</p>
+                <p className="text-white/70">approximately ₹2,000 INR | AED 95 | SAR 95 | £20 GBP | €23 EUR</p>
                 <p className="text-sm text-white/60 mt-3">Includes: Video consultation, written treatment plan, prescription, and follow-up guidance</p>
               </div>
               <div className="grid sm:grid-cols-3 gap-4 mb-8 text-left">
@@ -232,7 +232,7 @@ export default function InternationalPatientsPage() {
                 ))}
               </div>
               <Link href="/book-appointment?type=online_intl" className="px-10 py-4 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 inline-flex items-center gap-2 text-lg">
-                Book Now — $20 USD <ChevronRight className="h-5 w-5" />
+                Book Now — $25 USD <ChevronRight className="h-5 w-5" />
               </Link>
             </div>
           </div>
@@ -326,14 +326,14 @@ export default function InternationalPatientsPage() {
           </div>
           <div className="max-w-3xl mx-auto space-y-4">
             {[
-              { q: 'How do I book an international nephrology consultation?', a: 'Click "Book International Consultation" above, select your preferred date and time slot (adjusted to your timezone), upload your medical reports, and pay the $20 USD fee. Dr Goel will send you a video call link via WhatsApp.' },
-              { q: 'What payment methods do you accept for international patients?', a: 'We accept international bank transfers, PayPal, and credit/debit cards. The consultation fee is $20 USD (approximately ₹1,500 INR). Payment details are provided after booking.' },
+              { q: 'How do I book an international nephrology consultation?', a: 'Click "Book International Consultation" above, select your preferred date and time slot (adjusted to your timezone), upload your medical reports, and pay the $25 USD fee. Dr Goel will send you a video call link via WhatsApp.' },
+              { q: 'What payment methods do you accept for international patients?', a: 'We accept international bank transfers, PayPal, and credit/debit cards. The consultation fee is $25 USD (approximately ₹2,000 INR). Payment details are provided after booking.' },
               { q: 'What timezones do you offer consultations for?', a: 'Dr Goel is available Mon-Sun from 7 AM to 11 PM IST. This covers most timezones: morning in the US/Canada, afternoon in UK/Europe/UAE, and evening in Australia/Singapore/Japan.' },
               { q: 'Can I get a prescription after the consultation?', a: 'Yes. After the video consultation, Dr Goel will provide a detailed treatment plan and prescription via WhatsApp or email. You can share this with your local pharmacy or doctor.' },
               { q: 'Do you offer interpreter services?', a: 'Yes. Dr Goel and his team can provide consultations in English, Hindi, Urdu, Bengali, Tamil, Telugu, Nepali, Sinhala, and Arabic. Please mention your language preference when booking.' },
               { q: 'Is my medical data secure?', a: 'Absolutely. We use HIPAA-compliant video platforms and store all medical records securely. Your data is never shared with third parties and is used only for your medical care.' },
               { q: 'Can you help with kidney transplant evaluation?', a: 'Yes. Dr Goel can conduct an initial evaluation via video consultation, review your reports, and advise on whether you are a candidate for kidney transplant. He can also coordinate with transplant centers in India if needed.' },
-              { q: 'What if I need a follow-up consultation?', a: 'After your initial consultation, you get 7 days of free WhatsApp follow-up. Additional video consultations can be booked at the same $20 USD fee.' },
+              { q: 'What if I need a follow-up consultation?', a: 'After your initial consultation, you get 7 days of free WhatsApp follow-up. Additional video consultations can be booked at the same $25 USD fee.' },
             ].map((faq, i) => (
               <details key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden group">
                 <summary className="p-5 cursor-pointer font-semibold text-gray-900 flex items-center justify-between hover:bg-slate-50 transition-colors">
@@ -354,8 +354,8 @@ export default function InternationalPatientsPage() {
               "@type": "FAQPage",
               "mainEntity": [
                 ...[
-                  { q: 'How do I book an international nephrology consultation?', a: 'Click "Book International Consultation", select your preferred date and time slot, upload your medical reports, and pay the $20 USD fee.' },
-                  { q: 'What payment methods do you accept for international patients?', a: 'We accept international bank transfers, PayPal, and credit/debit cards. The consultation fee is $20 USD.' },
+                  { q: 'How do I book an international nephrology consultation?', a: 'Click "Book International Consultation", select your preferred date and time slot, upload your medical reports, and pay the $25 USD fee.' },
+                  { q: 'What payment methods do you accept for international patients?', a: 'We accept international bank transfers, PayPal, and credit/debit cards. The consultation fee is $25 USD.' },
                   { q: 'What timezones do you offer consultations for?', a: 'Dr Goel is available Mon-Sun 7 AM to 11 PM IST, covering most global timezones.' },
                   { q: 'Can I get a prescription after the consultation?', a: 'Yes. Dr Goel provides a detailed treatment plan and prescription via WhatsApp or email.' },
                   { q: 'Do you offer interpreter services?', a: 'Yes. Consultations available in English, Hindi, Urdu, Bengali, Tamil, Telugu, Nepali, Sinhala, and Arabic.' },

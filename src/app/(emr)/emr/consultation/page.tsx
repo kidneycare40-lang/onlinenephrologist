@@ -35,6 +35,7 @@ interface OnlineBooking {
   createdAt: string;
   status: string;
   consultationFee: number;
+  consultationFeeCurrency?: string;
   paymentStatus?: string;
 }
 
@@ -358,7 +359,7 @@ export default function ConsultationListPage() {
                       b.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                     )}>
                       <CreditCard className="h-3 w-3" />
-                      ₹{b.consultationFee} {b.paymentStatus === 'paid' ? '' : '(Unpaid)'}
+                      {b.consultationFeeCurrency === 'USD' ? `$${b.consultationFee}` : `₹${b.consultationFee}`} {b.paymentStatus === 'paid' ? '' : '(Unpaid)'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -537,7 +538,7 @@ export default function ConsultationListPage() {
                          'Web'}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'} · ₹{b.consultationFee}</p>
+                    <p className="text-xs text-gray-500">{b.age}Y, {b.gender?.[0] || '?'} · {b.consultationFeeCurrency === 'USD' ? `$${b.consultationFee}` : `₹${b.consultationFee}`}</p>
                   </div>
                 </div>
                 <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full', status.color)}>

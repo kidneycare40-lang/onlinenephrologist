@@ -78,7 +78,7 @@ export default function TermsPage() {
           <h2>4. Appointment Booking</h2>
           <ul>
             <li>Appointments are subject to availability</li>
-            <li>Consultation fee: ₹1000 (domestic), ₹1500 / $20 USD (international patients)</li>
+            <li>Consultation fee: ₹1000 (domestic), ₹1500 / $25 USD (international patients)</li>
             <li>Cancellation must be done at least 24 hours before the appointment</li>
             <li>No-shows may result in forfeiture of consultation fee</li>
           </ul>
