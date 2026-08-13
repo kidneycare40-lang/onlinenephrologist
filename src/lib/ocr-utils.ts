@@ -1,5 +1,22 @@
 import Tesseract from 'tesseract.js';
 
+const TESSERACT_OPTIONS = {
+  workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@v7.0.0/dist/worker.min.js',
+  corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@v7.0.0',
+  langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int',
+};
+
+let pdfWorkerUrl: string | null = null;
+
+async function getPdfWorkerUrl(): Promise<string> {
+  if (pdfWorkerUrl) return pdfWorkerUrl;
+  const workerModule = await import('pdfjs-dist/build/pdf.worker.min.mjs');
+  pdfWorkerUrl = URL.createObjectURL(
+    new Blob([workerModule.default], { type: 'text/javascript' })
+  );
+  return pdfWorkerUrl;
+}
+
 export interface ExtractedLabValue {
   testName: string;
   value: string;
@@ -743,7 +760,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
   if (file.type === 'application/pdf') {
     const arrayBuffer = await file.arrayBuffer();
     const pdfjsLib = await import('pdfjs-dist');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = await getPdfWorkerUrl();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, useSystemFonts: true }).promise;
     let fullText = '';
     for (let i = 1; i <= pdf.numPages; i++) {
@@ -753,7 +770,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
       fullText += pageText + '\n';
     }
     if (fullText.trim().length < 20) {
-      const result = await Tesseract.recognize(file, 'eng', {});
+      const result = await Tesseract.recognize(file, 'eng', TESSERACT_OPTIONS);
       return result.data.text;
     }
     return fullText;
@@ -761,14 +778,14 @@ export async function extractTextFromFile(file: File): Promise<string> {
 
   if (file.type.startsWith('image/')) {
     const preprocessed = await preprocessImage(file);
-    const result1 = await Tesseract.recognize(preprocessed, 'eng', {});
+    const result1 = await Tesseract.recognize(preprocessed, 'eng', TESSERACT_OPTIONS);
     const text1 = result1.data.text;
 
     if (text1.trim().length > 50) {
       return text1;
     }
 
-    const result2 = await Tesseract.recognize(file, 'eng', {});
+    const result2 = await Tesseract.recognize(file, 'eng', TESSERACT_OPTIONS);
     return result2.data.text.length > text1.length ? result2.data.text : text1;
   }
 

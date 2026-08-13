@@ -73,7 +73,9 @@ export default function ReportUploadOCR({
       const ocrResult = await processUploadedFiles(files);
       setResult(ocrResult);
     } catch (err) {
-      setError('Failed to process files. Please try again.');
+      console.error('OCR processing failed:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Failed to process files: ${message.slice(0, 200)}`);
     } finally {
       setIsProcessing(false);
     }
