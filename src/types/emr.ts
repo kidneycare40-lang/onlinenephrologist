@@ -137,6 +137,16 @@ export interface EMRConsultation {
   updatedAt?: string;
   bookingReportFiles?: string[];
   bookingUltrasoundFile?: string;
+  bookingFormData?: {
+    reason?: string;
+    complaints?: string;
+    currentMedications?: string;
+    previousKidneyIssue?: string;
+    notes?: string;
+    country?: string;
+    timezone?: string;
+    preferredLanguage?: string;
+  };
 }
 
 export interface EMRPrescription {

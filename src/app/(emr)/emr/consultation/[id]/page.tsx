@@ -298,6 +298,16 @@ export default function ConsultationPage() {
               prescriptions: bookingPrescriptions.length > 0 ? bookingPrescriptions : storedConsult.prescriptions,
               bookingReportFiles: booking.reportFiles || storedConsult.bookingReportFiles,
               bookingUltrasoundFile: booking.ultrasoundFile || storedConsult.bookingUltrasoundFile,
+              bookingFormData: {
+                reason: booking.reason || '',
+                complaints: booking.complaints || '',
+                currentMedications: booking.currentMedications || booking.medicines || '',
+                previousKidneyIssue: booking.previousKidneyIssue || '',
+                notes: booking.notes || '',
+                country: booking.country || '',
+                timezone: booking.timezone || '',
+                preferredLanguage: booking.preferredLanguage || '',
+              },
             };
             const idx = storedConsultations.findIndex((c) => c.id === consultToUse.id);
             if (idx >= 0) {
@@ -359,6 +369,16 @@ export default function ConsultationPage() {
           followUpDate: '',
           bookingReportFiles: booking?.reportFiles || [],
           bookingUltrasoundFile: booking?.ultrasoundFile || '',
+          bookingFormData: {
+            reason: booking?.reason || '',
+            complaints: booking?.complaints || '',
+            currentMedications: booking?.currentMedications || booking?.medicines || '',
+            previousKidneyIssue: booking?.previousKidneyIssue || '',
+            notes: booking?.notes || '',
+            country: booking?.country || '',
+            timezone: booking?.timezone || '',
+            preferredLanguage: booking?.preferredLanguage || '',
+          },
         };
         storedConsultations.push(newConsult);
         localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
@@ -442,6 +462,16 @@ export default function ConsultationPage() {
           followUpDate: '',
           bookingReportFiles: booking.reportFiles || [],
           bookingUltrasoundFile: booking.ultrasoundFile || '',
+          bookingFormData: {
+            reason: booking.reason || '',
+            complaints: booking.complaints || '',
+            currentMedications: booking.currentMedications || booking.medicines || '',
+            previousKidneyIssue: booking.previousKidneyIssue || '',
+            notes: booking.notes || '',
+            country: booking.country || '',
+            timezone: booking.timezone || '',
+            preferredLanguage: booking.preferredLanguage || '',
+          },
         };
 
         storedConsultations.push(newConsult);
@@ -1266,6 +1296,67 @@ export default function ConsultationPage() {
                       );
                     })()}
                   </div>
+                </div>
+              )}
+
+              {consultation?.bookingFormData && (consultation.bookingFormData.complaints || consultation.bookingFormData.currentMedications || consultation.bookingFormData.previousKidneyIssue === 'yes' || consultation.bookingFormData.notes) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="h-4 w-4 text-amber-600" />
+                    <span className="text-xs font-semibold text-amber-800">Patient Submission (from booking form)</span>
+                  </div>
+                  {consultation.bookingFormData.reason && (
+                    <div>
+                      <span className="text-[11px] font-medium text-amber-700 uppercase">Reason</span>
+                      <p className="text-sm text-gray-800">{consultation.bookingFormData.reason}</p>
+                    </div>
+                  )}
+                  {consultation.bookingFormData.complaints && (
+                    <div>
+                      <span className="text-[11px] font-medium text-amber-700 uppercase">Complaints</span>
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{consultation.bookingFormData.complaints}</p>
+                    </div>
+                  )}
+                  {consultation.bookingFormData.currentMedications && (
+                    <div>
+                      <span className="text-[11px] font-medium text-amber-700 uppercase">Current Medications</span>
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{consultation.bookingFormData.currentMedications}</p>
+                    </div>
+                  )}
+                  {consultation.bookingFormData.previousKidneyIssue === 'yes' && (
+                    <div>
+                      <span className="text-[11px] font-medium text-amber-700 uppercase">Previous Kidney Issue</span>
+                      <p className="text-sm text-gray-800">Yes</p>
+                    </div>
+                  )}
+                  {consultation.bookingFormData.notes && (
+                    <div>
+                      <span className="text-[11px] font-medium text-amber-700 uppercase">Additional Notes</span>
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{consultation.bookingFormData.notes}</p>
+                    </div>
+                  )}
+                  {consultation.bookingFormData.country && (
+                    <div className="flex gap-4">
+                      {consultation.bookingFormData.country && (
+                        <div>
+                          <span className="text-[11px] font-medium text-amber-700 uppercase">Country</span>
+                          <p className="text-sm text-gray-800">{consultation.bookingFormData.country}</p>
+                        </div>
+                      )}
+                      {consultation.bookingFormData.timezone && (
+                        <div>
+                          <span className="text-[11px] font-medium text-amber-700 uppercase">Timezone</span>
+                          <p className="text-sm text-gray-800">{consultation.bookingFormData.timezone}</p>
+                        </div>
+                      )}
+                      {consultation.bookingFormData.preferredLanguage && (
+                        <div>
+                          <span className="text-[11px] font-medium text-amber-700 uppercase">Language</span>
+                          <p className="text-sm text-gray-800">{consultation.bookingFormData.preferredLanguage}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
