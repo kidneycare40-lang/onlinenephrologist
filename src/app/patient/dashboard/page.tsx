@@ -7,7 +7,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import {
   User, Calendar, LogOut, Clock, MapPin, Video, Globe,
-  ChevronRight, Plus, Filter,
+  ChevronRight, Plus,
 } from 'lucide-react';
 
 interface Patient {
@@ -22,20 +22,23 @@ interface Patient {
   isInternational: boolean;
 }
 
-interface Appointment {
+interface Booking {
   id: string;
-  appointment_number: string;
-  doctor_name: string;
-  clinic_id: string;
-  clinic_name: string | null;
-  appointment_type: string;
-  appointment_date: string;
-  appointment_time: string;
+  booking_id: string;
+  first_name: string;
+  last_name: string;
+  consultation_type: string;
+  clinic_id: string | null;
+  booking_date: string | null;
+  booking_time: string | null;
   status: string;
-  consultation_fee: number | null;
-  currency: string;
   payment_status: string;
+  payment_id: string | null;
+  consultation_fee: number | null;
+  consultation_fee_currency: string;
+  doctor_name: string | null;
   reason: string | null;
+  created_at: string;
 }
 
 const typeConfig: Record<string, { label: string; icon: typeof Video; color: string }> = {
@@ -63,7 +66,7 @@ const clinicNames: Record<string, string> = {
 export default function PatientDashboardPage() {
   const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
@@ -79,7 +82,7 @@ export default function PatientDashboardPage() {
       })
       .then(r => r.json())
       .then(data => {
-        setAppointments(data.appointments || []);
+        setBookings(data.bookings || []);
         setLoading(false);
       })
       .catch(() => {
@@ -92,29 +95,29 @@ export default function PatientDashboardPage() {
     router.push('/');
   };
 
-  const handleCancel = async (aptId: string) => {
+  const handleCancel = async (bookingId: string) => {
     if (!confirm('Are you sure you want to cancel this appointment?')) return;
     const res = await fetch('/api/patient-auth/appointments', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appointmentId: aptId }),
+      body: JSON.stringify({ bookingId }),
     });
     if (res.ok) {
-      setAppointments(prev => prev.map(a => a.id === aptId ? { ...a, status: 'cancelled' } : a));
+      setBookings(prev => prev.map(b => b.booking_id === bookingId ? { ...b, status: 'cancelled' } : b));
     }
   };
 
   const now = new Date().toISOString().split('T')[0];
-  const upcoming = appointments.filter(a => a.appointment_date >= now && !['cancelled', 'completed'].includes(a.status));
-  const past = appointments.filter(a => a.appointment_date < now || ['cancelled', 'completed'].includes(a.status));
+  const upcoming = bookings.filter(b => (b.booking_date || '') >= now && !['cancelled', 'completed'].includes(b.status));
+  const past = bookings.filter(b => (b.booking_date || '') < now || ['cancelled', 'completed'].includes(b.status));
 
-  const filtered = activeFilter === 'all' ? appointments
+  const filtered = activeFilter === 'all' ? bookings
     : activeFilter === 'upcoming' ? upcoming
-    : activeFilter === 'completed' ? appointments.filter(a => a.status === 'completed')
-    : activeFilter === 'cancelled' ? appointments.filter(a => a.status === 'cancelled')
-    : activeFilter === 'online' ? appointments.filter(a => a.appointment_type === 'online' || a.appointment_type === 'online_intl')
-    : activeFilter === 'offline' ? appointments.filter(a => a.appointment_type === 'offline' || a.appointment_type === 'hospital')
-    : appointments;
+    : activeFilter === 'completed' ? bookings.filter(b => b.status === 'completed')
+    : activeFilter === 'cancelled' ? bookings.filter(b => b.status === 'cancelled')
+    : activeFilter === 'online' ? bookings.filter(b => b.consultation_type === 'online' || b.consultation_type === 'online_intl')
+    : activeFilter === 'offline' ? bookings.filter(b => b.consultation_type === 'offline' || b.consultation_type === 'hospital')
+    : bookings;
 
   if (loading) {
     return (
@@ -162,18 +165,18 @@ export default function PatientDashboardPage() {
             </div>
           </div>
 
-          {/* Quick Stats */}
+          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl p-4 border border-gray-100">
               <div className="text-2xl font-bold text-[#0A75BB]">{upcoming.length}</div>
               <div className="text-xs text-gray-500">Upcoming</div>
             </div>
             <div className="bg-white rounded-xl p-4 border border-gray-100">
-              <div className="text-2xl font-bold text-green-600">{appointments.filter(a => a.status === 'completed').length}</div>
+              <div className="text-2xl font-bold text-green-600">{bookings.filter(b => b.status === 'completed').length}</div>
               <div className="text-xs text-gray-500">Completed</div>
             </div>
             <div className="bg-white rounded-xl p-4 border border-gray-100">
-              <div className="text-2xl font-bold text-gray-900">{appointments.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{bookings.length}</div>
               <div className="text-xs text-gray-500">Total Bookings</div>
             </div>
             <div className="bg-white rounded-xl p-4 border border-gray-100">
@@ -185,10 +188,10 @@ export default function PatientDashboardPage() {
           {/* Filter Tabs */}
           <div className="flex gap-1 bg-white p-1 rounded-xl mb-6 border border-gray-100 overflow-x-auto">
             {[
-              { key: 'all', label: `All (${appointments.length})` },
+              { key: 'all', label: `All (${bookings.length})` },
               { key: 'upcoming', label: `Upcoming (${upcoming.length})` },
-              { key: 'completed', label: `Completed (${appointments.filter(a => a.status === 'completed').length})` },
-              { key: 'cancelled', label: `Cancelled (${appointments.filter(a => a.status === 'cancelled').length})` },
+              { key: 'completed', label: `Completed (${bookings.filter(b => b.status === 'completed').length})` },
+              { key: 'cancelled', label: `Cancelled (${bookings.filter(b => b.status === 'cancelled').length})` },
               { key: 'online', label: 'Online' },
               { key: 'offline', label: 'Offline' },
             ].map(tab => (
@@ -206,24 +209,24 @@ export default function PatientDashboardPage() {
             ))}
           </div>
 
-          {/* Appointments */}
+          {/* Bookings */}
           <div className="space-y-3">
             {filtered.length === 0 ? (
               <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
                 <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 mb-4">
-                  {activeFilter === 'all' ? 'No appointments yet' : 'No appointments match this filter'}
+                  {activeFilter === 'all' ? 'No bookings yet' : 'No bookings match this filter'}
                 </p>
                 <Link href="/book-appointment" className="inline-flex items-center gap-2 px-6 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-all">
                   Book Your First Appointment <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
             ) : (
-              filtered.map(apt => (
-                <AppointmentCard
-                  key={apt.id}
-                  apt={apt}
-                  onCancel={apt.status !== 'cancelled' && apt.status !== 'completed' ? () => handleCancel(apt.id) : undefined}
+              filtered.map(b => (
+                <BookingCard
+                  key={b.booking_id}
+                  booking={b}
+                  onCancel={b.status !== 'cancelled' && b.status !== 'completed' ? () => handleCancel(b.booking_id) : undefined}
                 />
               ))
             )}
@@ -235,18 +238,23 @@ export default function PatientDashboardPage() {
   );
 }
 
-function AppointmentCard({ apt, onCancel }: { apt: Appointment; onCancel?: () => void }) {
-  const typeInfo = typeConfig[apt.appointment_type] || typeConfig.offline;
+function BookingCard({ booking, onCancel }: { booking: Booking; onCancel?: () => void }) {
+  const typeInfo = typeConfig[booking.consultation_type] || typeConfig.offline;
   const Icon = typeInfo.icon;
-  const clinicLabel = clinicNames[apt.clinic_id] || apt.clinic_name || apt.clinic_id;
+  const clinicLabel = clinicNames[booking.clinic_id || ''] || booking.clinic_id || 'Online';
 
-  const formatDate = (d: string) => {
+  const formatDate = (d: string | null) => {
+    if (!d) return '';
     try {
       return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     } catch {
       return d;
     }
   };
+
+  const paymentLabel = booking.payment_status === 'paid' ? 'PAID'
+    : booking.payment_status === 'unpaid' ? 'UNPAID'
+    : booking.payment_status;
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-all">
@@ -257,8 +265,8 @@ function AppointmentCard({ apt, onCancel }: { apt: Appointment; onCancel?: () =>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <h3 className="font-semibold text-gray-900 text-sm">{clinicLabel}</h3>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColors[apt.status] || 'bg-gray-100 text-gray-600'}`}>
-              {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColors[booking.status] || 'bg-gray-100 text-gray-600'}`}>
+              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
             </span>
             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
               {typeInfo.label}
@@ -266,22 +274,25 @@ function AppointmentCard({ apt, onCancel }: { apt: Appointment; onCancel?: () =>
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />{formatDate(apt.appointment_date)}
+              <Calendar className="h-3.5 w-3.5" />{formatDate(booking.booking_date)}
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />{apt.appointment_time}
+              <Clock className="h-3.5 w-3.5" />{booking.booking_time}
             </span>
-            {apt.consultation_fee != null && (
+            {booking.consultation_fee != null && (
               <span className="font-medium text-[#0A75BB]">
-                {apt.currency === 'USD' ? `$${apt.consultation_fee}` : `₹${apt.consultation_fee}`}
+                {booking.consultation_fee_currency === 'USD' ? `$${booking.consultation_fee}` : `₹${booking.consultation_fee}`}
+                <span className={`ml-1 text-[10px] ${booking.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {paymentLabel}
+                </span>
               </span>
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
-            <span>{apt.appointment_number}</span>
-            <span>Dr. {apt.doctor_name}</span>
+            <span>{booking.booking_id}</span>
+            <span>Dr. {booking.doctor_name || 'Dr Rajesh Goel'}</span>
           </div>
-          {apt.reason && <p className="text-xs text-gray-400 mt-1">{apt.reason}</p>}
+          {booking.reason && <p className="text-xs text-gray-400 mt-1">{booking.reason}</p>}
         </div>
         {onCancel && (
           <button onClick={onCancel} className="text-xs text-red-500 hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-50 transition-all">

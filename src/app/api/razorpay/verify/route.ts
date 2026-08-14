@@ -59,6 +59,18 @@ export async function POST(request: NextRequest) {
       return apiError('Failed to store payment record', 500);
     }
 
+    // Also confirm the booking in the bookings table
+    await db
+      .from('bookings')
+      .update({
+        status: 'confirmed',
+        payment_status: 'paid',
+        payment_id: razorpayPaymentId,
+        razorpay_order_id: razorpayOrderId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('booking_id', bookingId);
+
     return NextResponse.json({ success: true, payment });
   } catch (error) {
     console.error('VERIFY error:', error);

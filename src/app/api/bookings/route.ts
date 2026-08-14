@@ -7,6 +7,7 @@ function toRow(body: any) {
   return {
     booking_id: body.bookingId,
     patient_id: body.patientId || null,
+    patient_account_id: body.patientAccountId || null,
     first_name: body.firstName,
     last_name: body.lastName,
     phone: body.phone,
@@ -98,6 +99,27 @@ export async function POST(request: NextRequest) {
       .limit(1);
     if (existing && existing.length > 0) {
       return NextResponse.json({ success: true, bookingId: body.bookingId, alreadyExists: true });
+    }
+
+    // Server-side duplicate booking prevention for logged-in patients
+    if (body.patientAccountId && body.clinicId && body.date && body.time) {
+      const { data: duplicate } = await db
+        .from('bookings')
+        .select('booking_id, first_name, last_name, booking_date, booking_time, status')
+        .eq('patient_account_id', body.patientAccountId)
+        .eq('clinic_id', body.clinicId)
+        .eq('booking_date', body.date)
+        .eq('booking_time', body.time)
+        .in('status', ['pending', 'confirmed', 'booked'])
+        .limit(1);
+
+      if (duplicate && duplicate.length > 0) {
+        return apiError(
+          'You already have an appointment booked for this date and time.',
+          409,
+          { existing: duplicate[0] }
+        );
+      }
     }
 
     const { error } = await db.from('bookings').insert(toRow(body));

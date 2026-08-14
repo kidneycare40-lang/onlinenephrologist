@@ -243,6 +243,7 @@ function BookingForm() {
   const [bookingMedicines, setBookingMedicines] = useState<{ id: string; name: string; strength: string; dosage: string; when: string; frequency: string; duration: string }[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [bookingId, setBookingId] = useState('');
+  const [patientAccountId, setPatientAccountId] = useState<string | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [duplicateAppt, setDuplicateAppt] = useState<ExistingAppointment | null>(null);
   const [duplicateType, setDuplicateType] = useState<'duplicate_patient' | 'slot_conflict' | null>(null);
@@ -256,6 +257,25 @@ function BookingForm() {
     setMounted(true);
     const pendingId = sessionStorage.getItem('pending_booking_id');
     if (pendingId) setBookingId(pendingId);
+
+    // Check server-side patient auth (JWT cookie) for logged-in patients
+    fetch('/api/patient-auth/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.patient?.patientId && data.patient.patientId !== 'pending') {
+          setPatientAccountId(data.patient.patientId);
+          // Pre-fill form from server-side patient profile
+          setFormData(prev => ({
+            ...prev,
+            firstName: data.patient.name?.split(' ')[0] || prev.firstName,
+            lastName: data.patient.name?.split(' ').slice(1).join(' ') || prev.lastName,
+            email: data.patient.email || prev.email,
+          }));
+        }
+      })
+      .catch(() => {});
+
+    // Also load legacy localStorage patient (fallback)
     const patient = getCurrentPatient();
     setCurrentPatientState(patient);
     if (patient) {
@@ -420,6 +440,7 @@ function BookingForm() {
     const bookingData = {
       ...formData,
       phone: fullPhone,
+      patientAccountId: patientAccountId || undefined,
       bookingId: id, createdAt: new Date().toISOString(),
       status: 'pending', paymentStatus: pData ? 'paid' : 'unpaid', doctorName: 'Dr Rajesh Goel',
       consultationFee: consultFee,

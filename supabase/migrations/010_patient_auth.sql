@@ -1,7 +1,7 @@
 -- ============================================================
 -- 010_patient_auth.sql
 -- Patient account system: email-based OTP authentication,
--- permanent patient accounts, server-side appointment storage.
+-- permanent patient accounts linked to existing bookings table.
 --
 -- Run this in the Supabase SQL editor (or via supabase db push)
 -- ============================================================
@@ -47,40 +47,7 @@ CREATE TABLE IF NOT EXISTS public.patient_otp (
 CREATE INDEX IF NOT EXISTS idx_patient_otp_email ON public.patient_otp (lower(email));
 CREATE INDEX IF NOT EXISTS idx_patient_otp_expires ON public.patient_otp (expires_at);
 
--- 3. Patient appointments — server-side appointment records
-CREATE TABLE IF NOT EXISTS public.patient_appointments (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  appointment_number TEXT UNIQUE NOT NULL,
-  patient_id        UUID NOT NULL REFERENCES public.patient_accounts(id) ON DELETE CASCADE,
-  doctor_name       TEXT NOT NULL DEFAULT 'Dr Rajesh Goel',
-  clinic_id         TEXT NOT NULL,
-  clinic_name       TEXT,
-  appointment_type  TEXT NOT NULL DEFAULT 'online',
-  appointment_date  DATE NOT NULL,
-  appointment_time  TEXT NOT NULL,
-  status            TEXT NOT NULL DEFAULT 'pending',
-  booking_source    TEXT NOT NULL DEFAULT 'website',
-  reason            TEXT,
-  complaints        TEXT,
-  reports           JSONB DEFAULT '[]'::jsonb,
-  consultation_fee  NUMERIC(10,2),
-  currency          TEXT NOT NULL DEFAULT 'INR',
-  payment_status    TEXT NOT NULL DEFAULT 'unpaid',
-  payment_id        TEXT,
-  doctor_whatsapp_sent BOOLEAN NOT NULL DEFAULT false,
-  patient_whatsapp_sent BOOLEAN NOT NULL DEFAULT false,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_patient_appointments_patient ON public.patient_appointments (patient_id);
-CREATE INDEX IF NOT EXISTS idx_patient_appointments_date ON public.patient_appointments (appointment_date);
-CREATE INDEX IF NOT EXISTS idx_patient_appointments_status ON public.patient_appointments (status);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_patient_appointments_no_duplicate_same_day
-  ON public.patient_appointments (patient_id, clinic_id, appointment_date, appointment_time)
-  WHERE status IN ('pending', 'confirmed', 'booked');
-
--- 4. Add patient_account_id to existing bookings table so we can link them
+-- 3. Link bookings to patient accounts
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -92,10 +59,15 @@ BEGIN
   END IF;
 END $$;
 
+-- 4. Duplicate booking prevention index on bookings table
+-- Prevents same patient + clinic + date + time with active status
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_no_duplicate_same_day
+  ON public.bookings (patient_account_id, clinic_id, booking_date, booking_time)
+  WHERE patient_account_id IS NOT NULL AND status IN ('pending', 'confirmed', 'booked');
+
 -- 5. RLS policies — service role bypasses, but enable for safety
 ALTER TABLE public.patient_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.patient_otp ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.patient_appointments ENABLE ROW LEVEL SECURITY;
 
 -- patient_accounts: service role only (API layer enforces auth)
 DROP POLICY IF EXISTS "patient_accounts_service_only" ON public.patient_accounts;
@@ -107,10 +79,4 @@ CREATE POLICY "patient_accounts_service_only"
 DROP POLICY IF EXISTS "patient_otp_service_only" ON public.patient_otp;
 CREATE POLICY "patient_otp_service_only"
   ON public.patient_otp FOR ALL
-  USING (false);
-
--- patient_appointments: service role only
-DROP POLICY IF EXISTS "patient_appointments_service_only" ON public.patient_appointments;
-CREATE POLICY "patient_appointments_service_only"
-  ON public.patient_appointments FOR ALL
   USING (false);

@@ -92,14 +92,19 @@ export async function POST(request: NextRequest) {
 
     // Keep the bookings table payment status in sync
     const bookingPaymentStatus = newStatus === 'CAPTURED' ? 'paid' : newStatus === 'FAILED' ? 'unpaid' : 'pending';
+    const bookingUpdate: any = {
+      payment_status: bookingPaymentStatus,
+      payment_id: razorpayPaymentId || null,
+      razorpay_order_id: razorpayOrderId || null,
+      updated_at: new Date().toISOString(),
+    };
+    // Auto-confirm appointment when payment is captured
+    if (newStatus === 'CAPTURED') {
+      bookingUpdate.status = 'confirmed';
+    }
     await db
       .from('bookings')
-      .update({
-        payment_status: bookingPaymentStatus,
-        payment_id: razorpayPaymentId || null,
-        razorpay_order_id: razorpayOrderId || null,
-        updated_at: new Date().toISOString(),
-      })
+      .update(bookingUpdate)
       .eq('booking_id', bookingId);
 
     return NextResponse.json({ received: true });

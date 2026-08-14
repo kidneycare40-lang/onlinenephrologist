@@ -1,11 +1,11 @@
 /**
  * Server-side patient authentication library.
- * Handles OTP generation/verification, JWT sessions, patient account CRUD.
- * All functions use the service_role Supabase client (bypasses RLS).
+ * Handles OTP generation/verification, JWT sessions, patient account CRUD,
+ * and appointment queries against the existing bookings table.
  */
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
-import { createHash, randomBytes } from 'crypto';
+import { createHash } from 'crypto';
 import { getDb } from '@/lib/db/client';
 
 // ── JWT ──────────────────────────────────────────────────────
@@ -146,31 +146,25 @@ export async function verifyOtp(
     return { success: false, error: 'No verification code found. Please request a new one.' };
   }
 
-  // Check expiry
   if (new Date(record.expires_at).getTime() < Date.now()) {
     return { success: false, error: 'This code has expired. Please request a new one.' };
   }
 
-  // Check attempts
   if (record.attempts >= record.max_attempts) {
     await db.from('patient_otp').update({ verified: true }).eq('id', record.id);
     return { success: false, error: 'Too many failed attempts. Please request a new code.' };
   }
 
-  // Increment attempts
   await db
     .from('patient_otp')
     .update({ attempts: record.attempts + 1 })
     .eq('id', record.id);
 
-  // Verify hash
   if (record.otp_hash !== hashOtp(otp)) {
     return { success: false, error: `Invalid code. ${record.max_attempts - record.attempts - 1} attempts remaining.` };
   }
 
-  // Mark as verified
   await db.from('patient_otp').update({ verified: true }).eq('id', record.id);
-
   return { success: true, email: normalised };
 }
 
@@ -199,7 +193,6 @@ export interface PatientAccount {
   last_login_at: string | null;
 }
 
-/** Find a patient account by email (case-insensitive). */
 export async function findPatientByEmail(email: string): Promise<PatientAccount | null> {
   const db = getDb();
   const { data } = await db
@@ -210,7 +203,6 @@ export async function findPatientByEmail(email: string): Promise<PatientAccount 
   return data;
 }
 
-/** Create a new patient account. */
 export async function createPatientAccount(data: {
   email: string;
   first_name: string;
@@ -249,7 +241,6 @@ export async function createPatientAccount(data: {
   return patient;
 }
 
-/** Update last login time for an existing patient. */
 export async function touchPatientLogin(patientId: string): Promise<void> {
   const db = getDb();
   await db
@@ -258,7 +249,6 @@ export async function touchPatientLogin(patientId: string): Promise<void> {
     .eq('id', patientId);
 }
 
-/** Update patient profile. */
 export async function updatePatientProfile(
   patientId: string,
   data: Partial<PatientAccount>
@@ -273,155 +263,125 @@ export async function updatePatientProfile(
   return patient;
 }
 
-// ── Appointments ─────────────────────────────────────────────
+// ── Appointments (via bookings table) ────────────────────────
 
-export interface PatientAppointment {
+export interface BookingRecord {
   id: string;
-  appointment_number: string;
-  patient_id: string;
-  doctor_name: string;
-  clinic_id: string;
-  clinic_name: string | null;
-  appointment_type: string;
-  appointment_date: string;
-  appointment_time: string;
-  status: string;
-  booking_source: string;
+  booking_id: string;
+  patient_account_id: string | null;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string | null;
+  consultation_type: string;
+  clinic_id: string | null;
+  booking_date: string | null;
+  booking_time: string | null;
   reason: string | null;
   complaints: string | null;
-  reports: any[];
-  consultation_fee: number | null;
-  currency: string;
+  status: string;
   payment_status: string;
   payment_id: string | null;
+  razorpay_order_id: string | null;
+  consultation_fee: number | null;
+  consultation_fee_currency: string;
+  doctor_name: string | null;
+  report_files: any[];
   created_at: string;
   updated_at: string;
 }
 
-function generateAppointmentNumber(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `APT-${y}${m}-${rand}`;
-}
-
-/**
- * Check if a patient already has an active appointment for the same
- * clinic + date + time (duplicate prevention).
- */
-export async function checkDuplicateAppointment(
-  patientId: string,
-  clinicId: string,
-  date: string,
-  time: string
-): Promise<PatientAppointment | null> {
-  const db = getDb();
-  const { data } = await db
-    .from('patient_appointments')
-    .select('*')
-    .eq('patient_id', patientId)
-    .eq('clinic_id', clinicId)
-    .eq('appointment_date', date)
-    .eq('appointment_time', time)
-    .in('status', ['pending', 'confirmed', 'booked'])
-    .maybeSingle();
-  return data;
-}
-
-/** Create a new appointment record. Returns existing if duplicate found. */
-export async function createAppointment(data: {
-  patient_id: string;
-  clinic_id: string;
-  clinic_name?: string;
-  appointment_type: string;
-  appointment_date: string;
-  appointment_time: string;
-  reason?: string;
-  complaints?: string;
-  reports?: any[];
-  consultation_fee?: number;
-  currency?: string;
-  payment_status?: string;
-  payment_id?: string;
-}): Promise<{ appointment: PatientAppointment; duplicate?: boolean }> {
-  // First check for duplicate
-  const existing = await checkDuplicateAppointment(
-    data.patient_id,
-    data.clinic_id,
-    data.appointment_date,
-    data.appointment_time
-  );
-
-  if (existing) {
-    return { appointment: existing, duplicate: true };
-  }
-
-  const db = getDb();
-  const appointmentNumber = generateAppointmentNumber();
-
-  const { data: appointment, error } = await db
-    .from('patient_appointments')
-    .insert({
-      appointment_number: appointmentNumber,
-      patient_id: data.patient_id,
-      clinic_id: data.clinic_id,
-      clinic_name: data.clinic_name || null,
-      appointment_type: data.appointment_type,
-      appointment_date: data.appointment_date,
-      appointment_time: data.appointment_time,
-      status: 'pending',
-      booking_source: 'website',
-      reason: data.reason || null,
-      complaints: data.complaints || null,
-      reports: data.reports || [],
-      consultation_fee: data.consultation_fee || null,
-      currency: data.currency || 'INR',
-      payment_status: data.payment_status || 'unpaid',
-      payment_id: data.payment_id || null,
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(`Failed to create appointment: ${error.message}`);
-  return { appointment };
-}
-
-/** Get all appointments for a patient, newest first. */
-export async function getPatientAppointments(
+/** Get all bookings for a patient, newest first. */
+export async function getPatientBookings(
   patientId: string,
   filters?: { status?: string; type?: string }
-): Promise<PatientAppointment[]> {
+): Promise<BookingRecord[]> {
   const db = getDb();
   let query = db
-    .from('patient_appointments')
+    .from('bookings')
     .select('*')
-    .eq('patient_id', patientId)
-    .order('appointment_date', { ascending: false })
-    .order('appointment_time', { ascending: false });
+    .eq('patient_account_id', patientId)
+    .order('booking_date', { ascending: false })
+    .order('booking_time', { ascending: false });
 
   if (filters?.status && filters.status !== 'all') {
     query = query.eq('status', filters.status);
   }
   if (filters?.type && filters.type !== 'all') {
-    query = query.eq('appointment_type', filters.type);
+    query = query.eq('consultation_type', filters.type);
   }
 
-  const { data } = await query;
+  const { data, error } = await query;
+  if (error) {
+    console.error('getPatientBookings error:', error);
+    return [];
+  }
   return data || [];
 }
 
-/** Cancel an appointment. */
-export async function cancelAppointment(
-  appointmentId: string,
+/**
+ * Check if a patient already has an active booking for the same
+ * clinic + date + time (duplicate prevention).
+ */
+export async function checkDuplicateBooking(
+  patientId: string,
+  clinicId: string,
+  date: string,
+  time: string
+): Promise<BookingRecord | null> {
+  const db = getDb();
+  const { data } = await db
+    .from('bookings')
+    .select('*')
+    .eq('patient_account_id', patientId)
+    .eq('clinic_id', clinicId)
+    .eq('booking_date', date)
+    .eq('booking_time', time)
+    .in('status', ['pending', 'confirmed', 'booked'])
+    .maybeSingle();
+  return data;
+}
+
+/** Update a booking to link it to a patient account. */
+export async function linkBookingToPatient(
+  bookingId: string,
+  patientAccountId: string
+): Promise<boolean> {
+  const db = getDb();
+  const { error } = await db
+    .from('bookings')
+    .update({ patient_account_id: patientAccountId })
+    .eq('booking_id', bookingId);
+  return !error;
+}
+
+/** Update booking status. */
+export async function updateBookingStatus(
+  bookingId: string,
+  status: string,
+  paymentStatus?: string
+): Promise<boolean> {
+  const db = getDb();
+  const update: any = { status, updated_at: new Date().toISOString() };
+  if (paymentStatus) update.payment_status = paymentStatus;
+  const { error } = await db
+    .from('bookings')
+    .update(update)
+    .eq('booking_id', bookingId);
+  return !error;
+}
+
+/** Cancel a booking (soft delete). */
+export async function cancelBooking(
+  bookingId: string,
   patientId: string
 ): Promise<boolean> {
   const db = getDb();
   const { error } = await db
-    .from('patient_appointments')
+    .from('bookings')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-    .eq('id', appointmentId)
-    .eq('patient_id', patientId)
-    .in('status', ['pending', 'confirmed']);
+    .eq('booking_id', bookingId)
+    .eq('patient_account_id', patientId)
+    .in('status', ['pending', 'confirmed', 'booked']);
   return !error;
 }
