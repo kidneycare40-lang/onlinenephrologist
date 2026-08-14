@@ -254,6 +254,8 @@ function BookingForm() {
 
   useEffect(() => {
     setMounted(true);
+    const pendingId = sessionStorage.getItem('pending_booking_id');
+    if (pendingId) setBookingId(pendingId);
     const patient = getCurrentPatient();
     setCurrentPatientState(patient);
     if (patient) {
@@ -322,17 +324,46 @@ function BookingForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Guard: never book a past time slot (compared against device's current time)
+    // Validate phone & email before anything else
+    const isIntlBooking = formData.consultationType === 'online_intl';
+    const cleanPhone = formData.phone.replace(/[\s-]/g, '');
+    if (isIntlBooking && !formData.countryCode) {
+      alert('Please select your country code for the WhatsApp number.');
+      return;
+    }
+    const phoneOk = isIntlBooking
+      ? /^\d{7,12}$/.test(cleanPhone)
+      : /^[6-9]\d{9}$/.test(cleanPhone);
+    if (!phoneOk) {
+      alert(isIntlBooking
+        ? 'Please enter a valid WhatsApp number with country code (7-15 digits, no spaces).'
+        : 'Please enter a valid 10-digit Indian mobile number (e.g. 98182 35613).');
+      return;
+    }
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      alert('Please enter a valid email address or leave the email field empty.');
+      return;
+    }
+
+    // Guard: never book a past time slot. Slots are stored in IST; compare the
+    // chosen slot against the current time in IST (converted from device time).
     if (formData.date === today) {
       const slotMins = parseSlotMinutes(formData.time);
-      if (slotMins !== null && slotMins <= nowMinutes) {
-        alert('This time slot has already passed. Please choose a current or upcoming slot.');
-        return;
+      if (slotMins !== null) {
+        let compareMinutes = nowMinutes;
+        if (isIntlBooking) {
+          const deviceOffset = new Date().getTimezoneOffset();
+          compareMinutes = ((nowMinutes + deviceOffset + 330) % 1440 + 1440) % 1440;
+        }
+        if (slotMins <= compareMinutes) {
+          alert('This time slot has already passed. Please choose a current or upcoming slot.');
+          return;
+        }
       }
     }
 
     // Validate for duplicates before saving
-    const validation = validateBooking(formData.phone, formData.clinicId, formData.date, formData.time);
+    const validation = validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time);
     if (!validation.allowed && validation.existing) {
       setDuplicateAppt(validation.existing);
       setDuplicateType(validation.reason === 'duplicate_patient' ? 'duplicate_patient' : 'slot_conflict');
@@ -346,7 +377,9 @@ function BookingForm() {
         ((formData.consultationType === 'online' || formData.consultationType === 'online_intl') && pg.requirePaymentForOnline) ||
         ((formData.consultationType === 'offline' || formData.consultationType === 'hospital') && pg.requirePaymentForClinic);
       if (needsPayment) {
-        setBookingId(`KN-${Date.now().toString(36).toUpperCase()}`);
+        const id = `KN-${Date.now().toString(36).toUpperCase()}`;
+        setBookingId(id);
+        sessionStorage.setItem('pending_booking_id', id);
         setShowPaymentGateway(true);
         return;
       }
@@ -377,8 +410,17 @@ function BookingForm() {
       ultrasoundData = u;
     }
 
+    // Normalize phone: intl bookings store full international number (country code + digits)
+    // so EMR lookup, WhatsApp links, and doctor messages all work correctly.
+    const isIntl = formData.consultationType === 'online_intl';
+    const fullPhone = isIntl && formData.countryCode
+      ? `${formData.countryCode}${formData.phone.replace(/[\s-]/g, '')}`
+      : formData.phone;
+
     const bookingData = {
-      ...formData, bookingId: id, createdAt: new Date().toISOString(),
+      ...formData,
+      phone: fullPhone,
+      bookingId: id, createdAt: new Date().toISOString(),
       status: 'pending', paymentStatus: pData ? 'paid' : 'unpaid', doctorName: 'Dr Rajesh Goel',
       consultationFee: consultFee,
       consultationFeeCurrency: formData.consultationType === 'online_intl' ? 'USD' : 'INR',
@@ -388,7 +430,7 @@ function BookingForm() {
     };
 
     try {
-      const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+      const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]').filter((b: any) => b.bookingId !== id);
       existing.push(bookingData);
       localStorage.setItem('emr_bookings', JSON.stringify(existing));
     } catch {
@@ -399,7 +441,7 @@ function BookingForm() {
           reportFiles: reportFilesData.map(({ name, type }) => ({ name, type, data: '' })),
           ultrasoundFile: ultrasoundData ? { ...ultrasoundData, data: '' } : null,
         };
-        const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]').filter((b: any) => b.bookingId !== id);
         existing.push(slimBooking);
         localStorage.setItem('emr_bookings', JSON.stringify(existing));
       } catch {}
@@ -436,7 +478,7 @@ function BookingForm() {
         id: bookingId,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        phone: formData.phone,
+        phone: fullPhone,
         email: formData.email,
         dateOfBirth: formData.age ? `${new Date().getFullYear() - parseInt(formData.age)}-01-01` : '',
         gender: formData.gender,
@@ -452,7 +494,7 @@ function BookingForm() {
       };
       const addedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
       const exists = addedPatients.some((p: any) =>
-        (p.phone && p.phone === formData.phone) || (p.email && p.email === formData.email)
+        (p.phone && p.phone === fullPhone) || (p.email && p.email === formData.email)
       );
       if (!exists) {
         addedPatients.push(patientRecord);
@@ -487,21 +529,22 @@ function BookingForm() {
     const reportNames = reportFiles.map(f => f.name).join(', ') || 'None';
     const usName = ultrasoundFile?.name || 'None';
     const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
-    const isIntl = formData.consultationType === 'online_intl';
     const bookingTypeLabel = isIntl ? 'International Online Consultation' : isOnline ? 'Online Consultation' : 'Clinic/Hospital Visit';
+    const localTimeDisplay = isIntl && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : '';
     const doctorMsg = encodeURIComponent(
-      `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${formData.phone}\nDate: ${formData.date} at ${formData.time}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${isIntl ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
+      `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${isIntl ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
     );
     window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
 
     const patientMsg = encodeURIComponent(
-      `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${formData.time}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${pData ? `Payment: Paid (${pData.paymentId})\n` : ''}${formData.clinicId === 'psri' ? 'Payment: Pay at Hospital' : pData ? '' : 'Payment: Pay now or at clinic'}\n\nFor any queries, call +91 98182 35613`
+      `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${localTimeDisplay || formData.time}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${pData ? `Payment: Paid (${pData.paymentId})\n` : ''}${formData.clinicId === 'psri' ? 'Payment: Pay at Hospital' : pData ? '' : 'Payment: Pay now or at clinic'}\n\nFor any queries, call +91 98182 35613`
     );
-    window.open(`https://wa.me/91${formData.phone}?text=${patientMsg}`, '_blank');
+    window.open(`https://wa.me/${fullPhone.replace(/[^0-9+]/g, '').replace(/^\+/, '')}?text=${patientMsg}`, '_blank');
 
     setShowPaymentGateway(false);
     setPaymentData(pData);
     setSubmitted(true);
+    sessionStorage.removeItem('pending_booking_id');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -518,7 +561,12 @@ function BookingForm() {
         setFormData(prev => ({ ...prev, [name]: value, time: '' }));
       }
     } else if (name === 'isInternational') {
-      setFormData(prev => ({ ...prev, isInternational: value === 'yes' }));
+      setFormData(prev => ({
+        ...prev,
+        isInternational: value === 'yes',
+        consultationType: value === 'yes' && prev.consultationType === 'online' ? 'online_intl' : prev.consultationType,
+        time: '',
+      }));
     } else if (name === 'interpreterRequired') {
       setFormData(prev => ({ ...prev, interpreterRequired: value === 'yes' }));
     } else if (name === 'country') {
@@ -579,22 +627,10 @@ function BookingForm() {
   }, [bookingSettings, today]);
 
   const intlTz = formData.consultationType === 'online_intl' ? formData.timezone : '';
-  const intlTzOffset = intlTz ? TZ_OFFSETS[intlTz] : null;
-
-  const availableSlots = useMemo(() => {
-    if (!selectedClinic) return [];
-    if (isHoliday) return [];
-    let slots = selectedClinic.slots;
-    if (intlTzOffset !== undefined && intlTzOffset !== null && intlTz) {
-      slots = slots.map(s => convertSlotToTz(s, intlTz));
-    }
-    if (!isToday) return slots;
-    return slots.filter(slot => {
-      const mins = parseSlotMinutes(slot);
-      if (mins === null) return true;
-      return mins > nowMinutes;
-    });
-  }, [selectedClinic, isToday, nowMinutes, intlTzOffset, intlTz]);
+  // Full phone with country code for intl patients (used by PaymentGateway, WhatsApp, EMR)
+  const fullPatientPhone = formData.consultationType === 'online_intl' && formData.countryCode
+    ? `${formData.countryCode}${formData.phone.replace(/[\s-]/g, '')}`.replace(/[^0-9]/g, '').replace(/^\+/, '')
+    : `91${formData.phone.replace(/[\s-]/g, '')}`;
 
   // Booked slots for the selected date/clinic (for visual indicators)
   const bookedSlots = useMemo(() => {
@@ -609,6 +645,29 @@ function BookingForm() {
     }
     return taken;
   }, [mounted, formData.date, formData.clinicId]);
+
+  const slotOptions = useMemo(() => {
+    if (!selectedClinic) return [];
+    if (isHoliday) return [];
+    // Slots are generated in IST and stored as IST. International patients see
+    // the same slots converted to their local timezone (label), but the stored
+    // value stays IST so slot-dedupe and the doctor's schedule stay consistent.
+    const withBooked = selectedClinic.slots.map(s => ({
+      value: s,
+      label: intlTz ? convertSlotToTz(s, intlTz) : s,
+      isBooked: bookedSlots.has(s.replace(/\s+/g, '').toUpperCase()),
+    }));
+    if (!isToday) return withBooked;
+    // For intl patients compare against current IST time (derived from device time)
+    const nowCompare = intlTz
+      ? ((nowMinutes + new Date().getTimezoneOffset() + 330) % 1440 + 1440) % 1440
+      : nowMinutes;
+    return withBooked.filter(opt => {
+      const mins = parseSlotMinutes(opt.value);
+      if (mins === null) return true;
+      return mins > nowCompare;
+    });
+  }, [selectedClinic, isToday, nowMinutes, intlTz, bookedSlots]);
   const upiId = '9818235688@pthdfc';
   const upiLink = `upi://pay?pa=${upiId}&pn=Kidney%20Care%20Centre&am=${consultFee}&cu=INR`;
 
@@ -779,8 +838,8 @@ function BookingForm() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href={`https://wa.me/91${formData.phone}?text=${encodeURIComponent(
-              `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${bookingId}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${formData.time}\nFee: ${formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${consultFee}`}\n\nFor any queries, call +91 98182 35613`
+            <a href={`https://wa.me/${fullPatientPhone}?text=${encodeURIComponent(
+              `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${bookingId}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${formData.consultationType === 'online_intl' && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : formData.time}\nFee: ${formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${consultFee}`}\n\nFor any queries, call +91 98182 35613`
             )}`} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 flex items-center justify-center gap-2">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               Send Confirmation on WhatsApp
@@ -1584,14 +1643,11 @@ function BookingForm() {
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
                       disabled={isHoliday}>
                       <option value="">{isHoliday ? 'No slots on holiday' : 'Choose time slot'}</option>
-                      {availableSlots.map((slot) => {
-                        const isBooked = bookedSlots.has(slot.replace(/\s+/g, '').toUpperCase());
-                        return (
-                          <option key={slot} value={slot} disabled={isBooked}>
-                            {slot}{isBooked ? ' — Booked' : ''}
-                          </option>
-                        );
-                      })}
+                      {slotOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value} disabled={opt.isBooked}>
+                          {opt.label}{opt.isBooked ? ' — Booked' : ''}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -1704,7 +1760,7 @@ function BookingForm() {
                           <span className="text-sm font-medium text-slate-700">
                             {reportFiles.length > 0 ? `${reportFiles.length} file(s) selected` : 'Click or drag to upload reports'}
                           </span>
-                          <p className="text-xs text-slate-400 mt-1">PDF, JPG, PNG up to 10MB each</p>
+                          <p className="text-xs text-slate-400 mt-1">Images (JPG/PNG) are auto-compressed; PDFs up to 2MB</p>
                         </label>
                       </div>
                       {reportFiles.length > 0 && (
@@ -1995,13 +2051,13 @@ function BookingForm() {
               currency={consultCurrency}
               bookingId={bookingId || `KN-${Date.now().toString(36).toUpperCase()}`}
               patientName={`${formData.firstName} ${formData.lastName}`}
-              patientPhone={formData.phone}
+              patientPhone={fullPatientPhone}
               patientEmail={formData.email}
               patientCountry={formData.country}
               consultationType={formData.consultationType}
               isInternational={isIntlBooking}
               onPaymentSuccess={async (pd) => await finalizeBooking(pd)}
-              onPaymentFailed={(reason) => { setShowPaymentGateway(false); }}
+              onPaymentFailed={(reason) => { /* keep modal open — the gateway shows the failure reason inside; user can retry or close */ }}
               onSkipPayment={async () => await finalizeBooking(null)}
             />
           </div>
