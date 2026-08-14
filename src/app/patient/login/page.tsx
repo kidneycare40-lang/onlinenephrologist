@@ -1,18 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Mail, Lock, User, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
-import {
-  sendOTP,
-  verifyOTP,
-  findPatientByEmail,
-  registerPatient,
-  loginPatient,
-} from '@/lib/patient-auth';
 
 type Step = 'email' | 'otp' | 'register';
 
@@ -21,82 +14,127 @@ export default function PatientLoginPage() {
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [generatedOTP, setGeneratedOTP] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [countdown, setCountdown] = useState(0);
 
-  const [name, setName] = useState('');
+  // Registration fields
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | 'other'>('male');
-  const [isInternational, setIsInternational] = useState(false);
+  const [gender, setGender] = useState('');
   const [country, setCountry] = useState('');
   const [timezone, setTimezone] = useState('');
+  const [isInternational, setIsInternational] = useState(false);
 
-  const handleSendOTP = () => {
+  // Check if already logged in
+  useEffect(() => {
+    fetch('/api/patient-auth/me').then(r => {
+      if (r.ok) router.push('/patient/dashboard');
+    }).catch(() => {});
+  }, [router]);
+
+  // Countdown timer for resend
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  const handleSendOTP = async () => {
     setError('');
-    if (!email || !email.includes('@') || !email.includes('.')) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Please enter a valid email address');
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const otpCode = sendOTP(email.toLowerCase().trim());
-      setGeneratedOTP(otpCode);
+    try {
+      const res = await fetch('/api/patient-auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to send code');
+        setLoading(false);
+        return;
+      }
       setLoading(false);
       setStep('otp');
-    }, 1000);
+      setCountdown(60);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
   };
 
-  const handleVerifyOTP = () => {
+  const handleVerifyOTP = async () => {
     setError('');
     if (!otp || otp.length !== 6) {
       setError('Please enter the 6-digit code');
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const valid = verifyOTP(email.toLowerCase().trim(), otp);
-      if (!valid) {
+    try {
+      const res = await fetch('/api/patient-auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.toLowerCase().trim(), otp }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Invalid code');
         setLoading(false);
-        setError('Invalid or expired code. Please try again.');
         return;
       }
-      const existing = findPatientByEmail(email.toLowerCase().trim());
-      if (existing) {
-        loginPatient(email.toLowerCase().trim());
-        setLoading(false);
-        router.push('/patient/dashboard');
-      } else {
-        setLoading(false);
+      setLoading(false);
+      if (data.isNew) {
+        // New patient — need to complete registration
         setStep('register');
+      } else {
+        // Returning patient — logged in, go to dashboard
+        router.push('/patient/dashboard');
       }
-    }, 1000);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     setError('');
-    if (!name.trim()) { setError('Please enter your name'); return; }
+    if (!firstName.trim()) {
+      setError('Please enter your first name');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      try {
-        registerPatient({
-          name: name.trim(),
-          email: email.toLowerCase().trim(),
+    try {
+      const res = await fetch('/api/patient-auth/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           phone: phone.trim() || undefined,
-          age: age ? parseInt(age) : undefined,
-          gender,
-          isInternational,
+          gender: gender || undefined,
           country: country.trim() || undefined,
           timezone: timezone.trim() || undefined,
-        });
+          isInternational,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to create account');
         setLoading(false);
-        router.push('/patient/dashboard');
-      } catch (e: any) {
-        setLoading(false);
-        setError(e.message);
+        return;
       }
-    }, 1000);
+      setLoading(false);
+      router.push('/patient/dashboard');
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -153,9 +191,10 @@ export default function PatientLoginPage() {
 
             {step === 'otp' && (
               <div className="space-y-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                  <p className="text-xs text-amber-600 mb-1">Your verification code (for testing)</p>
-                  <p className="text-2xl font-bold font-mono text-amber-700 tracking-[0.3em]">{generatedOTP}</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+                  <p className="text-sm text-blue-700">
+                    Check your email for the 6-digit verification code
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Enter Code</label>
@@ -178,49 +217,85 @@ export default function PatientLoginPage() {
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
                   {loading ? 'Verifying...' : 'Verify Code'}
                 </button>
-                <button onClick={() => { setStep('email'); setOtp(''); setError(''); }} className="w-full text-sm text-gray-500 hover:text-gray-700">
+                <button
+                  onClick={() => { setStep('email'); setOtp(''); setError(''); }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700"
+                >
                   &larr; Change email address
                 </button>
-                <button onClick={() => { handleSendOTP(); }} className="w-full text-sm text-[#0A75BB] hover:underline">
-                  Resend Code
+                <button
+                  onClick={() => { handleSendOTP(); setOtp(''); }}
+                  disabled={countdown > 0}
+                  className="w-full text-sm text-[#0A75BB] hover:underline disabled:text-gray-400 disabled:no-underline"
+                >
+                  {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend Code'}
                 </button>
               </div>
             )}
 
             {step === 'register' && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Enter your full name"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none"
-                  />
-                </div>
+                <p className="text-sm text-gray-500">
+                  Your email is verified. Please complete your profile to continue.
+                </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone (optional)</label>
-                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9818235613" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="First name"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                    <input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="45" className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Last name"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none"
+                    />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="9818235613"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                   <div className="flex gap-2">
-                    {(['male', 'female', 'other'] as const).map((g) => (
-                      <button key={g} onClick={() => setGender(g)} className={`flex-1 py-2.5 rounded-xl text-sm font-medium border ${gender === g ? 'bg-[#0A75BB] text-white border-[#0A75BB]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                    {['male', 'female', 'other'].map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setGender(g)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium border ${
+                          gender === g
+                            ? 'bg-[#0A75BB] text-white border-[#0A75BB]'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
                         {g.charAt(0).toUpperCase() + g.slice(1)}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input type="checkbox" id="international" checked={isInternational} onChange={(e) => setIsInternational(e.target.checked)} className="rounded border-gray-300 text-[#0A75BB]" />
+                  <input
+                    type="checkbox"
+                    id="international"
+                    checked={isInternational}
+                    onChange={(e) => setIsInternational(e.target.checked)}
+                    className="rounded border-gray-300 text-[#0A75BB]"
+                  />
                   <label htmlFor="international" className="text-sm text-gray-700">I am an international patient</label>
                 </div>
                 {isInternational && (
