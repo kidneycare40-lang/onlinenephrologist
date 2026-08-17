@@ -1754,7 +1754,8 @@ function BookingForm() {
                 </div>
               </div>
 
-              {/* Medical Details (all booking types) */}
+              {/* Medical Details (online consultations only — offline patients bring reports in person) */}
+              {(formData.consultationType === 'online' || formData.consultationType === 'online_intl') && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
                 <div className="flex items-center gap-2 mb-1">
                   <FileText className="h-5 w-5 text-[#0A75BB]" />
@@ -1912,6 +1913,7 @@ function BookingForm() {
                     </div>
                   </div>
                 </div>
+              )}
 
               {/* Fee Summary */}
               <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] rounded-2xl p-5 text-white">
