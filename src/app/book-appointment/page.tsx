@@ -552,6 +552,34 @@ function BookingForm() {
     const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
     const bookingTypeLabel = isIntl ? 'International Online Consultation' : isOnline ? 'Online Consultation' : 'Clinic/Hospital Visit';
     const localTimeDisplay = isIntl && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : '';
+
+    // Server-side WhatsApp notification to doctor (both numbers)
+    fetch('/api/notify/booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId: id,
+        clinicName: selectedClinic?.name || '',
+        patientName: `${formData.firstName} ${formData.lastName}`,
+        patientPhone: fullPhone,
+        ageGender: `${formData.age} / ${formData.gender}`,
+        date: formData.date,
+        time: formData.time,
+        consultationType: formData.consultationType,
+        reason: formData.reason,
+        fee: formatPricing(getConsultationPricing(formData.consultationType)),
+        paymentStatus: pData ? `PAID via Razorpay` : 'UNPAID',
+        paymentId: pData?.paymentId || undefined,
+        country: isIntl ? formData.country : undefined,
+        timezone: isIntl ? formData.timezone : undefined,
+        complaints: formData.complaints || undefined,
+        medicines: formData.medicines || formData.currentMedications || undefined,
+        notes: formData.notes || undefined,
+        localTimeDisplay: localTimeDisplay || undefined,
+      }),
+    }).catch(() => {});
+
+    // Also open WhatsApp from patient's browser as backup
     const doctorMsg = encodeURIComponent(
       `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${isIntl ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
     );

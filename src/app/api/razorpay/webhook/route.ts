@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { getDb } from '@/lib/db/client';
+import { sendBookingWhatsApp } from '@/lib/whatsapp-notify';
 
 const STATUS_MAP: Record<string, string> = {
   'order.paid': 'CAPTURED',
@@ -106,6 +107,42 @@ export async function POST(request: NextRequest) {
       .from('bookings')
       .update(bookingUpdate)
       .eq('booking_id', bookingId);
+
+    // Send WhatsApp notification to doctor when payment is captured
+    if (newStatus === 'CAPTURED') {
+      try {
+        const { data: booking } = await db
+          .from('bookings')
+          .select('*')
+          .eq('booking_id', bookingId)
+          .limit(1)
+          .single();
+
+        if (booking) {
+          await sendBookingWhatsApp({
+            bookingId: booking.booking_id || bookingId,
+            clinicName: booking.clinic_name || booking.clinic_id || '',
+            patientName: booking.patient_name || `${booking.first_name || ''} ${booking.last_name || ''}`.trim(),
+            patientPhone: booking.patient_phone || booking.phone || '',
+            ageGender: `${booking.age || ''} / ${booking.gender || ''}`,
+            date: booking.date || '',
+            time: booking.time || '',
+            consultationType: booking.consultation_type || '',
+            reason: booking.reason || '',
+            fee: booking.fee || '',
+            paymentStatus: 'PAID via Razorpay',
+            paymentId: razorpayPaymentId || undefined,
+            country: booking.country || undefined,
+            timezone: booking.timezone || undefined,
+            complaints: booking.complaints || undefined,
+            medicines: booking.medicines || booking.current_medications || undefined,
+            notes: booking.notes || undefined,
+          });
+        }
+      } catch (notifyErr) {
+        console.error('[webhook] WhatsApp notify error:', notifyErr);
+      }
+    }
 
     return NextResponse.json({ received: true });
   } catch (error) {
