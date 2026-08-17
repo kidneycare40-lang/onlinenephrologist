@@ -395,17 +395,12 @@ function BookingForm() {
       return;
     }
 
-    // Check if payment gateway requires payment
-    const pg = bookingSettings?.paymentGateway;
-    if (pg?.enabled && pg.provider !== 'manual') {
-      const id = `KN-${Date.now().toString(36).toUpperCase()}`;
-      setBookingId(id);
-      sessionStorage.setItem('pending_booking_id', id);
-      setShowPaymentGateway(true);
-      return;
-    }
-
-    await finalizeBooking(null);
+    // Always show payment gateway — payment is mandatory for all booking types
+    const id = `KN-${Date.now().toString(36).toUpperCase()}`;
+    setBookingId(id);
+    sessionStorage.setItem('pending_booking_id', id);
+    setShowPaymentGateway(true);
+    return;
   };
 
   const finalizeBooking = async (pData: PaymentData | null) => {
