@@ -1972,7 +1972,7 @@ function BookingForm() {
                 <button type="button" onClick={() => setStep(4)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
                   Back
                 </button>
-                <button type="submit" className="px-10 py-3.5 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 flex items-center gap-2 text-lg">
+                <button type="button" onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)} className="px-10 py-3.5 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 flex items-center gap-2 text-lg">
                   <CheckCircle2 className="h-5 w-5" /> Confirm Appointment
                 </button>
               </div>
