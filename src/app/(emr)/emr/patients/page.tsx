@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi, ApiError } from '@/lib/api-client';
 import { patients as mockPatients } from '@/lib/data/emr-mock';
+import { getItem, setItem } from '@/lib/client-storage';
 
 function calculateAge(dob: string): number {
   if (!dob) return 0;
@@ -79,7 +80,7 @@ export default function PatientListPage() {
 
       // Also load localStorage patients and merge (avoid duplicates by phone)
       try {
-        const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        const added = (await getItem('emr-added-patients')) as any[] || [];
         if (Array.isArray(added)) {
           const filtered = clinicFilter && clinicFilter !== 'all'
             ? added.filter((p: any) => !p.clinicId || p.clinicId === clinicFilter)
@@ -92,7 +93,7 @@ export default function PatientListPage() {
             }
           }
         }
-        const consultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+        const consultations = (await getItem('emr-consultations')) as any[] || [];
         if (Array.isArray(consultations)) {
           const allPats = [...apiPatients];
           for (const c of consultations) {
@@ -103,8 +104,7 @@ export default function PatientListPage() {
             }
           }
         }
-        // Also load booking patients from emr_bookings
-        const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        const bookings = (await getItem('emr-bookings')) as any[] || [];
         if (Array.isArray(bookings)) {
           const allPats = [...apiPatients];
           const BOOKING_CLINIC_MAP: Record<string, string> = {
@@ -144,7 +144,7 @@ export default function PatientListPage() {
         }
       } catch { /* ignore */ }
 
-      setAllPatients(filterDeletedPatients(apiPatients));
+      setAllPatients(await filterDeletedPatients(apiPatients));
     } catch (err: any) {
       setError(err.message);
       // Fallback: try loading from localStorage + mock data
@@ -157,14 +157,14 @@ export default function PatientListPage() {
           dynamicPatients.push(mp);
         }
 
-        const added = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        const added = (await getItem('emr-added-patients')) as any[] || [];
         if (Array.isArray(added)) {
           const filtered = clinicFilter && clinicFilter !== 'all'
             ? added.filter((p: any) => !p.clinicId || p.clinicId === clinicFilter)
             : added;
           dynamicPatients.push(...filtered);
         }
-        const consultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+        const consultations = (await getItem('emr-consultations')) as any[] || [];
         if (Array.isArray(consultations)) {
           for (const c of consultations) {
             if (clinicFilter && clinicFilter !== 'all' && c.clinicId && c.clinicId !== clinicFilter) continue;
@@ -174,7 +174,7 @@ export default function PatientListPage() {
           }
         }
         // Also load booking patients
-        const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        const bookings = (await getItem('emr-bookings')) as any[] || [];
         if (Array.isArray(bookings)) {
           const BOOKING_CLINIC_MAP: Record<string, string> = {
             'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
@@ -205,7 +205,7 @@ export default function PatientListPage() {
             });
           }
         }
-        setAllPatients(filterDeletedPatients(dynamicPatients));
+        setAllPatients(await filterDeletedPatients(dynamicPatients));
       } catch {
         setAllPatients([]);
       }
@@ -300,9 +300,9 @@ export default function PatientListPage() {
     } catch {
       // Fallback: mark in localStorage
       try {
-        const deleted = JSON.parse(localStorage.getItem('emr_deleted_patients') || '[]');
+        const deleted = (await getItem('emr-deleted-patients')) as any[] || [];
         deleted.push(deleteTarget.id);
-        localStorage.setItem('emr_deleted_patients', JSON.stringify(deleted));
+        await setItem('emr-deleted-patients', deleted);
         setAllPatients((prev) => prev.filter((p: any) => p.id !== deleteTarget.id));
       } catch {}
     }

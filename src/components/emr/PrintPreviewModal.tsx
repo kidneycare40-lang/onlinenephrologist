@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { X, Printer } from 'lucide-react';
 import PrescriptionPrint from './PrescriptionPrint';
+import { getItem } from '@/lib/client-storage';
 import type { EMRConsultation, EMRPatient } from '@/types/emr';
 
 interface PrintPreviewModalProps {
@@ -44,18 +45,18 @@ export default function PrintPreviewModal({
         if (res.ok) {
           const data = await res.json();
           if (!cancelled) {
-            const hdr = data.header || localStorage.getItem(`emr_custom_rx_header_${clinicId}`) || '';
-            const ftr = data.footer || localStorage.getItem(`emr_custom_rx_footer_${clinicId}`) || '';
+            const hdr = data.header || (await getItem(`rx-header-${clinicId}`)) || '';
+            const ftr = data.footer || (await getItem(`rx-footer-${clinicId}`)) || '';
             setCustomHeaderImg(hdr);
             setCustomFooterImg(ftr);
             if (hdr || ftr) setLetterheadMode('custom');
             return;
           }
         }
-      } catch { /* fall through to localStorage */ }
+      } catch { /* fall through to KV store */ }
       if (!cancelled) {
-        const hdr = localStorage.getItem(`emr_custom_rx_header_${clinicId}`) || '';
-        const ftr = localStorage.getItem(`emr_custom_rx_footer_${clinicId}`) || '';
+        const hdr = (await getItem(`rx-header-${clinicId}`)) || '';
+        const ftr = (await getItem(`rx-footer-${clinicId}`)) || '';
         setCustomHeaderImg(hdr);
         setCustomFooterImg(ftr);
         if (hdr || ftr) setLetterheadMode('custom');

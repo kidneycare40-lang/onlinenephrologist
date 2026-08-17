@@ -10,6 +10,7 @@ import { useClinic } from '@/lib/emr-clinic-context';
 import { EMRPatient, EMRConsultation } from '@/types/emr';
 import { deleteOnlineBooking } from '@/lib/emr-delete';
 import { bookingsApi } from '@/lib/api-client';
+import { getItem, setItem } from '@/lib/client-storage';
 
 type StatusFilter = 'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -52,45 +53,51 @@ const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
   const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      setOnlineBookings(JSON.parse(localStorage.getItem('emr_bookings') || '[]'));
-    } catch { /* ignore */ }
+    const loadData = async () => {
+      try {
+        const bookingsData = await getItem('emr-bookings');
+        if (Array.isArray(bookingsData)) setOnlineBookings(bookingsData as any);
+      } catch { /* ignore */ }
 
-    // Load bookings synced from the public booking form into the database
-    bookingsApi.list()
-      .then((bookings) => setApiBookings(Array.isArray(bookings) ? bookings : []))
-      .catch(() => { /* ignore */ });
-    try {
-      setOnlineBookings(JSON.parse(localStorage.getItem('emr_bookings') || '[]'));
-    } catch { /* ignore */ }
-    try {
-      const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
-      const allPats = [...patients, ...JSON.parse(localStorage.getItem('emr_added_patients') || '[]') as EMRPatient[]];
-      const phoneToPatient = new Map<string, EMRPatient>();
-      for (const p of allPats) {
-        if (p.phone) phoneToPatient.set(p.phone, p);
-      }
-      // Deduplicate by phone (if available) or patientId
-      const byKey = new Map<string, EMRConsultation>();
-      for (const sc of stored) {
-        const pat = allPats.find((p) => p.id === sc.patientId);
-        const key = pat?.phone || sc.patientId;
-        const existing = byKey.get(key);
-        if (!existing || ((sc as any).updatedAt || sc.date) > ((existing as any).updatedAt || existing.date)) {
-          byKey.set(key, sc);
+      // Load bookings synced from the public booking form into the database
+      bookingsApi.list()
+        .then((bookings) => setApiBookings(Array.isArray(bookings) ? bookings : []))
+        .catch(() => { /* ignore */ });
+      try {
+        const bookingsData2 = await getItem('emr-bookings');
+        if (Array.isArray(bookingsData2)) setOnlineBookings(bookingsData2 as any);
+      } catch { /* ignore */ }
+      try {
+        const stored = ((await getItem('emr-consultations')) as EMRConsultation[]) || [];
+        const addedPatientsData = ((await getItem('emr-added-patients')) as EMRPatient[]) || [];
+        const allPats = [...patients, ...addedPatientsData];
+        const phoneToPatient = new Map<string, EMRPatient>();
+        for (const p of allPats) {
+          if (p.phone) phoneToPatient.set(p.phone, p);
         }
-      }
-      const deduped = Array.from(byKey.values());
-      if (deduped.length < stored.length) {
-        localStorage.setItem('emr_consultations', JSON.stringify(deduped));
-      }
-      setSavedConsultations(deduped);
-    } catch { /* ignore */ }
+        // Deduplicate by phone (if available) or patientId
+        const byKey = new Map<string, EMRConsultation>();
+        for (const sc of stored) {
+          const pat = allPats.find((p) => p.id === sc.patientId);
+          const key = pat?.phone || sc.patientId;
+          const existing = byKey.get(key);
+          if (!existing || ((sc as any).updatedAt || sc.date) > ((existing as any).updatedAt || existing.date)) {
+            byKey.set(key, sc);
+          }
+        }
+        const deduped = Array.from(byKey.values());
+        if (deduped.length < stored.length) {
+          await setItem('emr-consultations', deduped);
+        }
+        setSavedConsultations(deduped);
+      } catch { /* ignore */ }
+    };
+    loadData();
   }, []);
 
-  const handleDeleteBooking = () => {
+  const handleDeleteBooking = async () => {
     if (!deleteBookingId) return;
-    deleteOnlineBooking(deleteBookingId);
+    await deleteOnlineBooking(deleteBookingId);
     setOnlineBookings((prev) => prev.filter((b) => b.bookingId !== deleteBookingId));
     setApiBookings((prev) => prev.filter((b) => b.bookingId !== deleteBookingId));
     setDeleteBookingId(null);

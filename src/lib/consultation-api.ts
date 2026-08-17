@@ -1,6 +1,7 @@
 // Consultation data mapper - bridges EMRConsultation format to/from API format
 
 import { consultationsApi, patientsApi, bookingsApi } from '@/lib/api-client';
+import { getItem, setItem } from '@/lib/client-storage';
 import type { EMRConsultation, EMRPatient } from '@/types/emr';
 
 // Map API consultation response to EMRConsultation format
@@ -207,19 +208,19 @@ export async function saveConsultationToApi(
     }
 
     // Also save to localStorage as backup — keep the original ID so URL-based lookups work
-    saveConsultationToLocalStorage({ ...consultation, id: consultation.id });
+    await saveConsultationToLocalStorage({ ...consultation, id: consultation.id });
     return { success: true, newId: dbConsultationId !== consultation.id ? dbConsultationId : undefined };
   } catch {
     // Fallback: save to localStorage only
-    saveConsultationToLocalStorage(consultation);
+    await saveConsultationToLocalStorage(consultation);
     return { success: false };
   }
 }
 
 // Save to localStorage (existing logic)
-function saveConsultationToLocalStorage(consultation: EMRConsultation) {
+async function saveConsultationToLocalStorage(consultation: EMRConsultation): Promise<void> {
   try {
-    const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+    const stored = ((await getItem('emr-consultations')) as EMRConsultation[]) || [];
     const idx = stored.findIndex((c) => c.id === consultation.id);
     const updated = { ...consultation, updatedAt: new Date().toISOString() };
     if (idx >= 0) {
@@ -227,7 +228,7 @@ function saveConsultationToLocalStorage(consultation: EMRConsultation) {
     } else {
       stored.push(updated);
     }
-    localStorage.setItem('emr_consultations', JSON.stringify(stored));
+    await setItem('emr-consultations', stored);
   } catch { /* ignore */ }
 }
 

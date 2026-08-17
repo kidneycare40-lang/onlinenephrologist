@@ -1,3 +1,4 @@
+import { getItem } from '@/lib/client-storage';
 import type { EMRPatient } from '@/types/emr';
 
 interface Booking {
@@ -54,29 +55,29 @@ export function isActiveStatus(status: string): boolean {
   return active.includes(status);
 }
 
-export function getStoredBookings(): Booking[] {
+export async function getStoredBookings(): Promise<Booking[]> {
   try {
-    return JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+    return ((await getItem('emr-bookings')) as Booking[]) || [];
   } catch {
     return [];
   }
 }
 
-function getAllPatients(): EMRPatient[] {
+async function getAllPatients(): Promise<EMRPatient[]> {
   const all: EMRPatient[] = [];
-  try { all.push(...JSON.parse(localStorage.getItem('emr_added_patients') || '[]')); } catch {}
+  try { all.push(...((await getItem('emr-added-patients')) as EMRPatient[] || [])); } catch {}
   return all;
 }
 
 /**
  * Rule 1 & 3: Check if patient already has an active booking for the same date
  */
-function checkPatientDuplicate(
+async function checkPatientDuplicate(
   phone: string,
   date: string,
   excludeBookingId?: string
-): ExistingAppointment | null {
-  const bookings = getStoredBookings();
+): Promise<ExistingAppointment | null> {
+  const bookings = await getStoredBookings();
   const searchPhone = normalizePhone(phone);
   const match = bookings.find((b) => {
     if (excludeBookingId && b.bookingId === excludeBookingId) return false;
@@ -102,13 +103,13 @@ function checkPatientDuplicate(
 /**
  * Rule 2 & 4: Check if the slot is already taken by any patient
  */
-function checkSlotConflict(
+async function checkSlotConflict(
   clinicId: string,
   date: string,
   time: string,
   excludeBookingId?: string
-): ExistingAppointment | null {
-  const bookings = getStoredBookings();
+): Promise<ExistingAppointment | null> {
+  const bookings = await getStoredBookings();
   const match = bookings.find((b) => {
     if (excludeBookingId && b.bookingId === excludeBookingId) return false;
     if (b.date !== date) return false;
@@ -139,15 +140,15 @@ function checkSlotConflict(
 /**
  * Full validation: returns the first blocking issue found
  */
-export function validateBooking(
+export async function validateBooking(
   phone: string,
   clinicId: string,
   date: string,
   time: string,
   excludeBookingId?: string
-): ValidationResult {
+): Promise<ValidationResult> {
   // Rule 1 & 3: Same patient + same date
-  const patientDup = checkPatientDuplicate(phone, date, excludeBookingId);
+  const patientDup = await checkPatientDuplicate(phone, date, excludeBookingId);
   if (patientDup) {
     return {
       allowed: false,
@@ -158,7 +159,7 @@ export function validateBooking(
   }
 
   // Rule 2 & 4: Same slot (doctor + clinic + date + time)
-  const slotDup = checkSlotConflict(clinicId, date, time, excludeBookingId);
+  const slotDup = await checkSlotConflict(clinicId, date, time, excludeBookingId);
   if (slotDup) {
     return {
       allowed: false,

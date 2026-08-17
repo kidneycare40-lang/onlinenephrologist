@@ -1,6 +1,8 @@
 'use client';
 
-const STORAGE_KEY = 'emr_billing_settings';
+import { getItem, setItem } from '@/lib/client-storage';
+
+const STORAGE_KEY = 'billing-settings';
 
 export interface BillingSettings {
   doctor: {
@@ -66,18 +68,18 @@ const defaultSettings: BillingSettings = {
   },
 };
 
-export function loadBillingSettings(): BillingSettings {
+export async function loadBillingSettings(): Promise<BillingSettings> {
   if (typeof window === 'undefined') return defaultSettings;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = await getItem(STORAGE_KEY);
     if (stored) {
-      return { ...defaultSettings, ...JSON.parse(stored) };
+      return { ...defaultSettings, ...stored };
     }
   } catch { /* ignore */ }
   return defaultSettings;
 }
 
-export function saveBillingSettings(settings: BillingSettings): void {
+export async function saveBillingSettings(settings: BillingSettings): Promise<void> {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  await setItem(STORAGE_KEY, settings);
 }

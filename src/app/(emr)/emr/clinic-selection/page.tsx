@@ -13,6 +13,7 @@ import {
   Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { setItem } from '@/lib/client-storage';
 import { useClinic } from '@/lib/emr-clinic-context';
 
 const clinics = [
@@ -69,9 +70,9 @@ export default function ClinicSelectionPage() {
     }
   }
 
-  function handleLocationSelect(locationId: string) {
+  async function handleLocationSelect(locationId: string) {
     try {
-      localStorage.setItem('emr-clinic-id', locationId);
+      await setItem('emr-clinic-id', locationId);
     } catch {}
     window.location.replace('/emr/dashboard');
   }

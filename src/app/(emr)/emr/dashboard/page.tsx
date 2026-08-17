@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { dashboardApi, patientsApi, ApiError } from '@/lib/api-client';
 import { deleteOnlineBooking } from '@/lib/emr-delete';
+import { getItem, setItem } from '@/lib/client-storage';
 import type { AppointmentStatus, AppointmentType } from '@/types/emr';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
@@ -60,10 +61,10 @@ interface OnlineBooking {
   paymentStatus?: string;
 }
 
-function getOnlineBookings(): OnlineBooking[] {
+async function getOnlineBookings(): Promise<OnlineBooking[]> {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+    return (await getItem('emr-bookings')) as OnlineBooking[] || [];
   } catch {
     return [];
   }
@@ -106,7 +107,9 @@ export default function EMRDashboardPage() {
   useEffect(() => {
     const hour = new Date().getHours();
     setGreeting(hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening');
-    setOnlineBookings(getOnlineBookings());
+    (async () => {
+      setOnlineBookings(await getOnlineBookings());
+    })();
   }, []);
 
   // Fetch dashboard data from API
@@ -134,7 +137,7 @@ export default function EMRDashboardPage() {
           let sorted = (patientsResult.data || []);
           // Also merge in booking patients from localStorage
           try {
-            const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+            const bookings = (await getItem('emr-bookings')) as OnlineBooking[] || [];
             if (Array.isArray(bookings)) {
               const BOOKING_CLINIC_MAP: Record<string, string> = {
                 'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
@@ -177,20 +180,20 @@ export default function EMRDashboardPage() {
 
   useEffect(() => { refreshData(); }, [clinicId]);
 
-  const handleMarkPaid = (bookingId: string) => {
+  const handleMarkPaid = async (bookingId: string) => {
     try {
-      const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+      const bookings = (await getItem('emr-bookings')) as OnlineBooking[] || [];
       const idx = bookings.findIndex((b: OnlineBooking) => b.bookingId === bookingId);
       if (idx === -1) return;
       bookings[idx] = { ...bookings[idx], paymentStatus: 'paid' };
-      localStorage.setItem('emr_bookings', JSON.stringify(bookings));
+      await setItem('emr-bookings', bookings);
       setOnlineBookings([...bookings]);
     } catch {}
   };
 
-  const handleDeleteBooking = () => {
+  const handleDeleteBooking = async () => {
     if (!deleteBookingId) return;
-    deleteOnlineBooking(deleteBookingId);
+    await deleteOnlineBooking(deleteBookingId);
     setOnlineBookings((prev) => prev.filter((b) => b.bookingId !== deleteBookingId));
     setDeleteBookingId(null);
   };

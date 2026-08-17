@@ -87,11 +87,11 @@ export default function BookingSettingsComponent() {
   const [newHolidayEnd, setNewHolidayEnd] = useState('18:00');
 
   useEffect(() => {
-    setSettings(loadBookingSettings());
+    loadBookingSettings().then(setSettings);
   }, []);
 
-  function handleSave() {
-    saveBookingSettings(settings);
+  async function handleSave() {
+    await saveBookingSettings(settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }

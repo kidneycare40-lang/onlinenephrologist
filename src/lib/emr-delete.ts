@@ -1,48 +1,49 @@
 'use client';
 
+import { getItem, setItem } from '@/lib/client-storage';
 import { EMRPatient } from '@/types/emr';
 
-const DELETED_PATIENTS_KEY = 'emr_deleted_patients';
-const ADDED_PATIENTS_KEY = 'emr_added_patients';
-const BOOKINGS_KEY = 'emr_bookings';
+const DELETED_PATIENTS_KEY = 'emr-deleted-patients';
+const ADDED_PATIENTS_KEY = 'emr-added-patients';
+const BOOKINGS_KEY = 'emr-bookings';
 
-export function getDeletedPatientIds(): string[] {
+export async function getDeletedPatientIds(): Promise<string[]> {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem(DELETED_PATIENTS_KEY) || '[]');
+    return ((await getItem(DELETED_PATIENTS_KEY)) as string[]) || [];
   } catch { return []; }
 }
 
-export function markPatientDeleted(patientId: string): void {
-  const deleted = getDeletedPatientIds();
+export async function markPatientDeleted(patientId: string): Promise<void> {
+  const deleted = await getDeletedPatientIds();
   if (!deleted.includes(patientId)) {
     deleted.push(patientId);
-    localStorage.setItem(DELETED_PATIENTS_KEY, JSON.stringify(deleted));
+    await setItem(DELETED_PATIENTS_KEY, deleted);
   }
 }
 
-export function isPatientDeleted(patientId: string): boolean {
-  return getDeletedPatientIds().includes(patientId);
+export async function isPatientDeleted(patientId: string): Promise<boolean> {
+  return (await getDeletedPatientIds()).includes(patientId);
 }
 
-export function deleteAddedPatient(patientId: string): void {
+export async function deleteAddedPatient(patientId: string): Promise<void> {
   try {
-    const patients: EMRPatient[] = JSON.parse(localStorage.getItem(ADDED_PATIENTS_KEY) || '[]');
+    const patients = ((await getItem(ADDED_PATIENTS_KEY)) as EMRPatient[]) || [];
     const filtered = patients.filter((p) => p.id !== patientId);
-    localStorage.setItem(ADDED_PATIENTS_KEY, JSON.stringify(filtered));
+    await setItem(ADDED_PATIENTS_KEY, filtered);
   } catch { /* ignore */ }
 }
 
-export function deleteOnlineBooking(bookingId: string): void {
+export async function deleteOnlineBooking(bookingId: string): Promise<void> {
   try {
-    const bookings = JSON.parse(localStorage.getItem(BOOKINGS_KEY) || '[]');
-    const filtered = bookings.filter((b: { bookingId: string }) => b.bookingId !== bookingId);
-    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(filtered));
+    const bookings = ((await getItem(BOOKINGS_KEY)) as { bookingId: string }[]) || [];
+    const filtered = bookings.filter((b) => b.bookingId !== bookingId);
+    await setItem(BOOKINGS_KEY, filtered);
   } catch { /* ignore */ }
 }
 
-export function filterDeletedPatients<T extends { id: string }>(patientList: T[]): T[] {
-  const deleted = getDeletedPatientIds();
+export async function filterDeletedPatients<T extends { id: string }>(patientList: T[]): Promise<T[]> {
+  const deleted = await getDeletedPatientIds();
   if (deleted.length === 0) return patientList;
   return patientList.filter((p) => !deleted.includes(p.id));
 }

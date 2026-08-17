@@ -117,12 +117,12 @@ export default function PrivacyPolicyPage() {
           </ul>
 
           <h2>7. EMR System</h2>
-          <p>Our EMR system stores your medical data locally on your device/browser using localStorage. This data:</p>
+          <p>Our EMR system stores your medical data securely on encrypted cloud servers. This data:</p>
           <ul>
-            <li>Is stored on your device, not on external servers</li>
-            <li>Can be cleared by you at any time through browser settings</li>
+            <li>Is stored on secure, encrypted cloud infrastructure</li>
+            <li>Is accessible only to authorized medical staff</li>
             <li>Is used to maintain consultation history and prescriptions</li>
-            <li>Is backed up only if you explicitly export it</li>
+            <li>Is backed up regularly for data safety</li>
           </ul>
 
           <h2>8. Cookies</h2>

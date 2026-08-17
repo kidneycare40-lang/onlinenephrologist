@@ -1,6 +1,8 @@
-const PATIENTS_KEY = 'kcc_patients';
-const CURRENT_PATIENT_KEY = 'kcc_current_patient';
-const OTP_KEY = 'kcc_email_otp';
+import { getItem, setItem, removeItem } from '@/lib/client-storage';
+
+const PATIENTS_KEY = 'patient-accounts';
+const CURRENT_PATIENT_KEY = 'current-patient';
+const OTP_KEY = 'patient-otp-records';
 
 export interface Patient {
   id: string;
@@ -36,7 +38,7 @@ function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export function sendOTP(email: string): string {
+export async function sendOTP(email: string): Promise<string> {
   const otp = generateOTP();
   const record: OTPRecord = {
     email,
@@ -44,43 +46,42 @@ export function sendOTP(email: string): string {
     expiresAt: Date.now() + 10 * 60 * 1000,
     verified: false,
   };
-  localStorage.setItem(OTP_KEY, JSON.stringify(record));
+  await setItem(OTP_KEY, record);
   console.log(`OTP for ${email}: ${otp}`);
   return otp;
 }
 
-export function verifyOTP(email: string, otp: string): boolean {
-  const stored = localStorage.getItem(OTP_KEY);
-  if (!stored) return false;
-  const record: OTPRecord = JSON.parse(stored);
+export async function verifyOTP(email: string, otp: string): Promise<boolean> {
+  const record: OTPRecord | null = await getItem(OTP_KEY);
+  if (!record) return false;
   if (record.email.toLowerCase() !== email.toLowerCase()) return false;
   if (Date.now() > record.expiresAt) return false;
   if (record.otp !== otp) return false;
   record.verified = true;
-  localStorage.setItem(OTP_KEY, JSON.stringify(record));
+  await setItem(OTP_KEY, record);
   return true;
 }
 
-function getPatients(): Patient[] {
-  if (typeof window === 'undefined') return [];
+async function getPatients(): Promise<Patient[]> {
   try {
-    const stored = localStorage.getItem(PATIENTS_KEY);
-    return stored ? JSON.parse(stored) : [];
+    const stored = await getItem(PATIENTS_KEY);
+    return Array.isArray(stored) ? stored : [];
   } catch {
     return [];
   }
 }
 
-function savePatients(patients: Patient[]) {
-  localStorage.setItem(PATIENTS_KEY, JSON.stringify(patients));
+async function savePatients(patients: Patient[]): Promise<void> {
+  await setItem(PATIENTS_KEY, patients);
 }
 
-export function findPatientByEmail(email: string): Patient | undefined {
-  return getPatients().find((p) => p.email.toLowerCase() === email.toLowerCase());
+export async function findPatientByEmail(email: string): Promise<Patient | undefined> {
+  const patients = await getPatients();
+  return patients.find((p) => p.email.toLowerCase() === email.toLowerCase());
 }
 
-export function registerPatient(data: Omit<Patient, 'id' | 'createdAt' | 'lastLogin'>): Patient {
-  const patients = getPatients();
+export async function registerPatient(data: Omit<Patient, 'id' | 'createdAt' | 'lastLogin'>): Promise<Patient> {
+  const patients = await getPatients();
   const existing = patients.find((p) => p.email.toLowerCase() === data.email.toLowerCase());
   if (existing) throw new Error('Patient already registered with this email');
 
@@ -91,53 +92,53 @@ export function registerPatient(data: Omit<Patient, 'id' | 'createdAt' | 'lastLo
     lastLogin: new Date().toISOString(),
   };
   patients.push(patient);
-  savePatients(patients);
-  setCurrentPatient(patient);
+  await savePatients(patients);
+  await setCurrentPatient(patient);
   return patient;
 }
 
-export function updatePatient(id: string, data: Partial<Patient>): Patient | null {
-  const patients = getPatients();
+export async function updatePatient(id: string, data: Partial<Patient>): Promise<Patient | null> {
+  const patients = await getPatients();
   const idx = patients.findIndex((p) => p.id === id);
   if (idx === -1) return null;
   patients[idx] = { ...patients[idx], ...data };
-  savePatients(patients);
-  if (getCurrentPatient()?.id === id) {
-    setCurrentPatient(patients[idx]);
+  await savePatients(patients);
+  const current = await getCurrentPatient();
+  if (current?.id === id) {
+    await setCurrentPatient(patients[idx]);
   }
   return patients[idx];
 }
 
-export function loginPatient(email: string): Patient | null {
-  const patient = findPatientByEmail(email);
+export async function loginPatient(email: string): Promise<Patient | null> {
+  const patient = await findPatientByEmail(email);
   if (!patient) return null;
   patient.lastLogin = new Date().toISOString();
-  const patients = getPatients();
+  const patients = await getPatients();
   const idx = patients.findIndex((p) => p.email.toLowerCase() === email.toLowerCase());
   if (idx !== -1) patients[idx] = patient;
-  savePatients(patients);
-  setCurrentPatient(patient);
+  await savePatients(patients);
+  await setCurrentPatient(patient);
   return patient;
 }
 
-export function setCurrentPatient(patient: Patient | null) {
+export async function setCurrentPatient(patient: Patient | null): Promise<void> {
   if (patient) {
-    localStorage.setItem(CURRENT_PATIENT_KEY, JSON.stringify(patient));
+    await setItem(CURRENT_PATIENT_KEY, patient);
   } else {
-    localStorage.removeItem(CURRENT_PATIENT_KEY);
+    await removeItem(CURRENT_PATIENT_KEY);
   }
 }
 
-export function getCurrentPatient(): Patient | null {
-  if (typeof window === 'undefined') return null;
+export async function getCurrentPatient(): Promise<Patient | null> {
   try {
-    const stored = localStorage.getItem(CURRENT_PATIENT_KEY);
-    return stored ? JSON.parse(stored) : null;
+    const stored = await getItem(CURRENT_PATIENT_KEY);
+    return stored ?? null;
   } catch {
     return null;
   }
 }
 
-export function logoutPatient() {
-  localStorage.removeItem(CURRENT_PATIENT_KEY);
+export async function logoutPatient(): Promise<void> {
+  await removeItem(CURRENT_PATIENT_KEY);
 }

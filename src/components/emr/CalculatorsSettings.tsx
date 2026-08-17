@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, X, RotateCcw } from 'lucide-react';
 import {
   loadCalculatorSettings,
   saveCalculatorSettings,
   resetCalculatorSettings,
+  defaultCalculatorSettings,
   type CalculatorSettings,
   type BMICategory,
   type EGFRStage,
@@ -39,20 +40,25 @@ const colorOptions = [
 const riskOptions = ['Low', 'Moderate', 'High', 'Critical'];
 
 export default function CalculatorsSettings() {
-  const [settings, setSettings] = useState<CalculatorSettings>(loadCalculatorSettings);
+  const [settings, setSettings] = useState<CalculatorSettings>(defaultCalculatorSettings);
   const [activeTab, setActiveTab] = useState<CalcTab>('bmi');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    saveCalculatorSettings(settings);
+  useEffect(() => {
+    loadCalculatorSettings().then(setSettings);
+  }, []);
+
+  const handleSave = async () => {
+    await saveCalculatorSettings(settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (confirm('Reset all calculator settings to defaults? This cannot be undone.')) {
-      resetCalculatorSettings();
-      setSettings(loadCalculatorSettings());
+      await resetCalculatorSettings();
+      const fresh = await loadCalculatorSettings();
+      setSettings(fresh);
     }
   };
 

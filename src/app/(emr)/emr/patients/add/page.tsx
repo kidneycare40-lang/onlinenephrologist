@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi } from '@/lib/api-client';
+import { getItem, setItem } from '@/lib/client-storage';
 
 interface FamilyMemberForm {
   id: string;
@@ -133,11 +134,11 @@ export default function AddPatientPage() {
     (async () => {
       // Try localStorage first (consistent with patient detail page)
       try {
-        const localPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
-        const localBookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+        const localPatients = (await getItem('emr-added-patients')) as any[] || [];
+        const localBookings = (await getItem('emr-bookings')) as any[] || [];
         // Also search consultation/appointment localStorage
-        const consultPatients = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
-        const apptPatients = JSON.parse(localStorage.getItem('emr_appointments') || '[]');
+        const consultPatients = (await getItem('emr-consultations')) as any[] || [];
+        const apptPatients = (await getItem('emr-appointments')) as any[] || [];
 
         // Try to find patient in localStorage by ID
         let local = localPatients.find((p: any) => p.id === editId);
@@ -366,11 +367,11 @@ export default function AddPatientPage() {
 
       // Update localStorage
       try {
-        const localPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        const localPatients = (await getItem('emr-added-patients')) as any[] || [];
         const idx = localPatients.findIndex((p: any) => p.id === editId);
         if (idx >= 0) {
           localPatients[idx] = { ...localPatients[idx], ...updatedPatient };
-          localStorage.setItem('emr_added_patients', JSON.stringify(localPatients));
+          await setItem('emr-added-patients', localPatients);
         }
       } catch {}
 
@@ -448,9 +449,9 @@ export default function AddPatientPage() {
       totalVisits: 1,
     };
 
-    const existing = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+    const existing = (await getItem('emr-added-patients')) as any[] || [];
     existing.push(newPatient);
-    localStorage.setItem('emr_added_patients', JSON.stringify(existing));
+    await setItem('emr-added-patients', existing);
 
     // Also save to API for cross-browser persistence
     patientsApi.create({

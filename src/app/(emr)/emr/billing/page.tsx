@@ -9,6 +9,7 @@ import {
   RefreshCw, Users,
 } from 'lucide-react';
 import { cn, formatDate, formatCurrency } from '@/lib/utils';
+import { getItem, setItem, removeItem } from '@/lib/client-storage';
 import BillingInvoice from '@/components/emr/BillingInvoice';
 import CreateInvoiceModal from '@/components/emr/CreateInvoiceModal';
 import { billingApi } from '@/lib/api-client';
@@ -102,17 +103,17 @@ function apiInvoiceToEMR(apiInv: any): EMRInvoice {
   };
 }
 
-const BILLING_STORAGE_KEY = 'emr_billing_invoices';
+const BILLING_STORAGE_KEY = 'billing-invoices';
 
-function loadInvoicesFromStorage(): EMRInvoice[] {
+async function loadInvoicesFromStorage(): Promise<EMRInvoice[]> {
   try {
-    return JSON.parse(localStorage.getItem(BILLING_STORAGE_KEY) || '[]');
+    return (await getItem(BILLING_STORAGE_KEY)) as EMRInvoice[] || [];
   } catch { return []; }
 }
 
-function saveInvoicesToStorage(invoices: EMRInvoice[]) {
+async function saveInvoicesToStorage(invoices: EMRInvoice[]) {
   try {
-    localStorage.setItem(BILLING_STORAGE_KEY, JSON.stringify(invoices));
+    await setItem(BILLING_STORAGE_KEY, invoices);
   } catch {}
 }
 
@@ -122,12 +123,12 @@ async function enrichInvoicesWithAge(invoices: EMRInvoice[]): Promise<EMRInvoice
 
   const ageMap = new Map<string, { age?: number; gender?: string }>();
 
-  // Build a lookup from localStorage patient data
+  // Build a lookup from KV store patient data
   const localPatients: any[] = [];
-  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_added_patients') || '[]')); } catch {}
-  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_bookings') || '[]')); } catch {}
-  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_consultations') || '[]')); } catch {}
-  try { localPatients.push(...JSON.parse(localStorage.getItem('emr_appointments') || '[]')); } catch {}
+  try { localPatients.push(...((await getItem('emr-added-patients')) as any[] || [])); } catch {}
+  try { localPatients.push(...((await getItem('emr-bookings')) as any[] || [])); } catch {}
+  try { localPatients.push(...((await getItem('emr-consultations')) as any[] || [])); } catch {}
+  try { localPatients.push(...((await getItem('emr-appointments')) as any[] || [])); } catch {}
 
   for (const inv of missingAge) {
     const lp = localPatients.find((p: any) =>
@@ -219,20 +220,20 @@ export default function BillingPage() {
       if (apiInvoices.length > 0) {
         const enriched = await enrichInvoicesWithAge(apiInvoices);
         setInvoices(enriched);
-        saveInvoicesToStorage(enriched);
+        await saveInvoicesToStorage(enriched);
       } else {
-        const storageInvoices = loadInvoicesFromStorage();
+        const storageInvoices = await loadInvoicesFromStorage();
         const enriched = await enrichInvoicesWithAge(storageInvoices);
         if (enriched.length > 0) {
           setInvoices(enriched);
-          saveInvoicesToStorage(enriched);
+          await saveInvoicesToStorage(enriched);
         } else {
           setInvoices(mockInvoices);
-          saveInvoicesToStorage(mockInvoices);
+          await saveInvoicesToStorage(mockInvoices);
         }
       }
     } catch {
-      const storageInvoices = loadInvoicesFromStorage();
+      const storageInvoices = await loadInvoicesFromStorage();
       const enriched = await enrichInvoicesWithAge(storageInvoices);
       setInvoices(enriched.length > 0 ? enriched : mockInvoices);
     } finally {
@@ -369,7 +370,7 @@ export default function BillingPage() {
       } catch {}
       const updated = invoices.map((inv) => (inv.id === invoice.id ? invoice : inv));
       setInvoices(updated);
-      saveInvoicesToStorage(updated);
+      await saveInvoicesToStorage(updated);
     } else {
       // Create new
       try {
@@ -381,7 +382,7 @@ export default function BillingPage() {
       } catch {}
       const updated = [invoice, ...invoices];
       setInvoices(updated);
-      saveInvoicesToStorage(updated);
+      await saveInvoicesToStorage(updated);
     }
     setEditingInvoice(null);
   };
@@ -393,7 +394,7 @@ export default function BillingPage() {
       } catch {}
       const updated = invoices.filter((inv) => inv.id !== id);
       setInvoices(updated);
-      saveInvoicesToStorage(updated);
+      await saveInvoicesToStorage(updated);
       setSelectedInvoice(null);
     }
   };

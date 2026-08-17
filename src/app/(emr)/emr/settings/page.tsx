@@ -7,6 +7,7 @@ import {
   Camera, Lock, Save, X, Upload, Image as ImageIcon, Plus, Trash2, ChevronDown, ChevronRight, Stethoscope, Calculator, RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getItem, setItem, removeItem } from '@/lib/client-storage';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { settingsApi } from '@/lib/api-client';
 import type { PrescriptionTemplate, Medication, AdviceTemplate, TestPanelTemplate } from '@/types/emr';
@@ -131,7 +132,13 @@ function ImageUpload({ label, sublabel, image, onUpload, onRemove }: { label: st
 }
 
 function defaultBillingSettings(): BillingSettings {
-  return loadBillingSettings();
+  return {
+    doctor: { name: '', designation: '', locations: '', website1: '', website2: '', emergencyPhone: '', whatsappPhone: '' },
+    clinicFees: {},
+    services: [],
+    payment: { upiId: '', bankName: '', accountName: '', ifsc: '', accountNo: '' },
+    gst: { rate: 0, included: false, showBreakup: false, gstin: '' },
+  };
 }
 
 export default function SettingsPage() {
@@ -139,8 +146,8 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [saved, setSaved] = useState(false);
 
-  const rxHeaderKey = `emr_custom_rx_header_${clinicId}`;
-  const rxFooterKey = `emr_custom_rx_footer_${clinicId}`;
+  const rxHeaderKey = `rx-header-${clinicId}`;
+  const rxFooterKey = `rx-footer-${clinicId}`;
 
   // Profile state
   const [firstName, setFirstName] = useState('Rajesh');
@@ -199,7 +206,7 @@ export default function SettingsPage() {
   const [billingLoaded, setBillingLoaded] = useState(false);
 
   // Template management state
-  const STORAGE_KEY = 'kcc_custom_templates';
+  const STORAGE_KEY = 'setting-custom-templates';
   const [templates, setTemplates] = useState<PrescriptionTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<PrescriptionTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -231,14 +238,14 @@ export default function SettingsPage() {
   const loadAllSettings = useCallback(async () => {
     // Load templates
     try {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const stored = (await getItem(STORAGE_KEY)) as PrescriptionTemplate[] || [];
       setTemplates(stored);
     } catch { setTemplates([]); }
-    setAdviceTemplates(adviceTemplateStorage.getAll());
-    setTestPanelTemplates(testTemplateStorage.getAll());
+    setAdviceTemplates(await adviceTemplateStorage.getAll());
+    setTestPanelTemplates(await testTemplateStorage.getAll());
     try {
-      setCustomRxHeader(localStorage.getItem(rxHeaderKey) || null);
-      setCustomRxFooter(localStorage.getItem(rxFooterKey) || null);
+      setCustomRxHeader((await getItem(rxHeaderKey)) as string || null);
+      setCustomRxFooter((await getItem(rxFooterKey)) as string || null);
     } catch { /* ignore */ }
 
     // Load profile and settings from API
@@ -306,7 +313,7 @@ export default function SettingsPage() {
     } catch { /* fallback to localStorage values already loaded */ }
 
     // Load billing settings
-    setBilling(loadBillingSettings());
+    setBilling(await loadBillingSettings());
     setBillingLoaded(true);
   }, [clinicId, rxHeaderKey, rxFooterKey]);
 
@@ -314,9 +321,9 @@ export default function SettingsPage() {
     loadAllSettings();
   }, [loadAllSettings]);
 
-  function saveTemplates(updated: PrescriptionTemplate[]) {
+  async function saveTemplates(updated: PrescriptionTemplate[]) {
     setTemplates(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    await setItem(STORAGE_KEY, updated);
   }
 
   function startCreateTemplate() {
@@ -353,7 +360,7 @@ export default function SettingsPage() {
     setNewTemplateMeds(newTemplateMeds.filter((_, i) => i !== idx));
   }
 
-  function saveTemplate() {
+  async function saveTemplate() {
     if (!newTemplateName.trim() || newTemplateMeds.length === 0) return;
     const template: PrescriptionTemplate = {
       id: editingTemplate?.id || 'custom_' + Date.now(),
@@ -366,9 +373,9 @@ export default function SettingsPage() {
       isCustom: true,
     };
     if (editingTemplate) {
-      saveTemplates(templates.map((t) => (t.id === editingTemplate.id ? template : t)));
+      await saveTemplates(templates.map((t) => (t.id === editingTemplate.id ? template : t)));
     } else {
-      saveTemplates([...templates, template]);
+      await saveTemplates([...templates, template]);
     }
     setIsCreating(false);
     setEditingTemplate(null);
@@ -379,22 +386,22 @@ export default function SettingsPage() {
     setNewTemplateMeds([]);
   }
 
-  function deleteTemplate(id: string) {
-    saveTemplates(templates.filter((t) => t.id !== id));
+  async function deleteTemplate(id: string) {
+    await saveTemplates(templates.filter((t) => t.id !== id));
     setConfirmDeleteTemplateId(null);
   }
 
   // Advice template CRUD
-  function saveAdviceTemplateCrud() {
+  async function saveAdviceTemplateCrud() {
     if (!adviceName.trim() || !adviceText.trim()) return;
     if (editingAdvice) {
       const updated = { ...editingAdvice, name: adviceName, advice: adviceText };
-      adviceTemplateStorage.update(updated);
-      setAdviceTemplates(adviceTemplateStorage.getAll());
+      await adviceTemplateStorage.update(updated);
+      setAdviceTemplates(await adviceTemplateStorage.getAll());
     } else {
       const tpl: AdviceTemplate = { id: 'adv_custom_' + Date.now(), name: adviceName, advice: adviceText, isCustom: true };
-      adviceTemplateStorage.add(tpl);
-      setAdviceTemplates(adviceTemplateStorage.getAll());
+      await adviceTemplateStorage.add(tpl);
+      setAdviceTemplates(await adviceTemplateStorage.getAll());
     }
     setIsCreatingAdvice(false);
     setEditingAdvice(null);
@@ -409,24 +416,24 @@ export default function SettingsPage() {
     setAdviceText(tpl.advice);
   }
 
-  function deleteAdviceTemplate(id: string) {
-    adviceTemplateStorage.remove(id);
-    setAdviceTemplates(adviceTemplateStorage.getAll());
+  async function deleteAdviceTemplate(id: string) {
+    await adviceTemplateStorage.remove(id);
+    setAdviceTemplates(await adviceTemplateStorage.getAll());
     setConfirmDeleteAdviceId(null);
   }
 
   // Test panel template CRUD
-  function saveTestTemplateCrud() {
+  async function saveTestTemplateCrud() {
     if (!testPanelName.trim() || !testPanelTests.trim()) return;
     const tests = testPanelTests.split(',').map((t) => t.trim()).filter(Boolean);
     if (editingTest) {
       const updated = { ...editingTest, name: testPanelName, tests };
-      testTemplateStorage.update(updated);
-      setTestPanelTemplates(testTemplateStorage.getAll());
+      await testTemplateStorage.update(updated);
+      setTestPanelTemplates(await testTemplateStorage.getAll());
     } else {
       const tpl: TestPanelTemplate = { id: 'tp_custom_' + Date.now(), name: testPanelName, tests, isCustom: true };
-      testTemplateStorage.add(tpl);
-      setTestPanelTemplates(testTemplateStorage.getAll());
+      await testTemplateStorage.add(tpl);
+      setTestPanelTemplates(await testTemplateStorage.getAll());
     }
     setIsCreatingTest(false);
     setEditingTest(null);
@@ -441,9 +448,9 @@ export default function SettingsPage() {
     setTestPanelTests(tpl.tests.join(', '));
   }
 
-  function deleteTestTemplate(id: string) {
-    testTemplateStorage.remove(id);
-    setTestPanelTemplates(testTemplateStorage.getAll());
+  async function deleteTestTemplate(id: string) {
+    await testTemplateStorage.remove(id);
+    setTestPanelTemplates(await testTemplateStorage.getAll());
     setConfirmDeleteTestId(null);
   }
 
@@ -510,13 +517,13 @@ export default function SettingsPage() {
       }
     }
 
-    // Also persist to localStorage as fallback
+    // Also persist to KV store as fallback
     try {
-      if (customRxHeader) localStorage.setItem(rxHeaderKey, customRxHeader);
-      else localStorage.removeItem(rxHeaderKey);
-      if (customRxFooter) localStorage.setItem(rxFooterKey, customRxFooter);
-      else localStorage.removeItem(rxFooterKey);
-    } catch { /* localStorage full, server has it */ }
+      if (customRxHeader) await setItem(rxHeaderKey, customRxHeader);
+      else await removeItem(rxHeaderKey);
+      if (customRxFooter) await setItem(rxFooterKey, customRxFooter);
+      else await removeItem(rxFooterKey);
+    } catch { /* KV store full, server has it */ }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -945,9 +952,9 @@ export default function SettingsPage() {
                             <p className="text-[11px] text-gray-400">{tpl.medications.length} medicines &middot; {tpl.description}</p>
                           </div>
                         </div>
-                        <button onClick={() => {
+                        <button onClick={async () => {
                           const cloned = { ...tpl, id: 'custom_' + Date.now(), isCustom: true };
-                          saveTemplates([...templates, cloned]);
+                          await saveTemplates([...templates, cloned]);
                           setTemplates([...templates, cloned]);
                           startEditTemplate(cloned);
                         }}
@@ -1070,10 +1077,10 @@ export default function SettingsPage() {
                           <p className="text-sm font-semibold text-gray-900">{tpl.name}</p>
                           <p className="text-[11px] text-gray-400 line-clamp-2 mt-0.5">{tpl.advice}</p>
                         </div>
-                        <button onClick={() => {
+                        <button onClick={async () => {
                           const cloned = { ...tpl, id: 'adv_custom_' + Date.now(), isCustom: true };
-                          adviceTemplateStorage.add(cloned);
-                          setAdviceTemplates(adviceTemplateStorage.getAll());
+                          await adviceTemplateStorage.add(cloned);
+                          setAdviceTemplates(await adviceTemplateStorage.getAll());
                           startEditAdvice(cloned);
                         }} className="px-2.5 py-1 text-[11px] font-medium text-[#0A75BB] bg-[#0A75BB]/10 rounded-lg hover:bg-[#0A75BB]/20 transition-colors ml-3 shrink-0">Edit</button>
                       </div>
@@ -1171,10 +1178,10 @@ export default function SettingsPage() {
                           <p className="text-sm font-semibold text-gray-900">{tpl.name}</p>
                           <p className="text-[11px] text-gray-400 mt-0.5">{tpl.tests.length} tests: {tpl.tests.slice(0, 4).join(', ')}{tpl.tests.length > 4 ? '...' : ''}</p>
                         </div>
-                        <button onClick={() => {
+                        <button onClick={async () => {
                           const cloned = { ...tpl, id: 'tp_custom_' + Date.now(), isCustom: true };
-                          testTemplateStorage.add(cloned);
-                          setTestPanelTemplates(testTemplateStorage.getAll());
+                          await testTemplateStorage.add(cloned);
+                          setTestPanelTemplates(await testTemplateStorage.getAll());
                           startEditTest(cloned);
                         }} className="px-2.5 py-1 text-[11px] font-medium text-[#0A75BB] bg-[#0A75BB]/10 rounded-lg hover:bg-[#0A75BB]/20 transition-colors ml-3 shrink-0">Edit</button>
                       </div>

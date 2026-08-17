@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Building2, Save, RotateCcw, ChevronDown, ChevronRight,
   MapPin, Clock, DollarSign, CreditCard, Plus, Trash2, Eye, EyeOff,
@@ -199,19 +199,24 @@ function ClinicCard({ clinic, onChange, onDelete }: {
 }
 
 export default function ClinicSettingsTab() {
-  const [clinics, setClinics] = useState<ClinicDetail[]>(loadAllClinics);
+  const [clinics, setClinics] = useState<ClinicDetail[]>([]);
   const [saved, setSaved] = useState(false);
 
-  function handleSave() {
-    saveAllClinics(clinics);
+  useEffect(() => {
+    loadAllClinics().then(setClinics);
+  }, []);
+
+  async function handleSave() {
+    await saveAllClinics(clinics);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function handleReset() {
+  async function handleReset() {
     if (confirm('Reset all clinic settings to defaults?')) {
-      resetClinics();
-      setClinics(loadAllClinics());
+      await resetClinics();
+      const fresh = await loadAllClinics();
+      setClinics(fresh);
     }
   }
 

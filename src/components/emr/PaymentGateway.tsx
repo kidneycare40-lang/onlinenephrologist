@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, QrCode, Smartphone, CheckCircle2, X, Loader2, ExternalLink, Copy, AlertTriangle, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { loadBookingSettings } from '@/lib/booking-settings';
+import { loadBookingSettings, defaultSettings, type BookingSettings } from '@/lib/booking-settings';
 import { getConsultationPricing, formatPricing } from '@/lib/pricing';
 
 interface PaymentGatewayProps {
@@ -60,7 +60,7 @@ export default function PaymentGateway({
   onPaymentFailed,
   onSkipPayment,
 }: PaymentGatewayProps) {
-  const [settings] = useState(() => loadBookingSettings());
+  const [settings, setSettings] = useState<BookingSettings>(defaultSettings);
   const [selectedMethod, setSelectedMethod] = useState<'razorpay' | 'upi-qr' | 'upi-link'>('razorpay');
   const [processing, setProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -73,6 +73,10 @@ export default function PaymentGateway({
   const pricing = getConsultationPricing(consultationType);
   const displayAmount = pricing.amount || amount;
   const displayCurrency = pricing.currency || currency;
+
+  useEffect(() => {
+    loadBookingSettings().then(setSettings);
+  }, []);
 
   useEffect(() => {
     const script = document.createElement('script');

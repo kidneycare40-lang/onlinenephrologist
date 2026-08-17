@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { X, Plus, Search, RotateCcw, FileText, Save, Trash2, Pencil, ChevronDown, Check, ChevronRight, Type } from 'lucide-react';
 import { commonMedicines, recentFrequentMedicines, prescriptionTemplates } from '@/lib/data/emr-mock';
 import { medTemplateStorage } from '@/lib/template-storage';
+import { getItem, setItem } from '@/lib/client-storage';
 import type { PrescriptionItem, PrescriptionTemplate, Medication } from '@/types/emr';
 
 interface MasterMedicine {
@@ -16,12 +17,10 @@ interface MasterMedicine {
   route: string;
 }
 
-const MASTER_STORAGE_KEY = 'emr_master_medicines';
-
-function loadMasterList(): MasterMedicine[] {
+async function loadMasterList(): Promise<MasterMedicine[]> {
   if (typeof window === 'undefined') return [...commonMedicines];
   try {
-    const saved = JSON.parse(localStorage.getItem(MASTER_STORAGE_KEY) || '[]');
+    const saved = (await getItem('emr-master-medicines')) as MasterMedicine[] || [];
     const builtIn = commonMedicines.map(m => ({ name: m.name, genericName: m.genericName, dosage: m.dosage, frequency: m.frequency, route: m.route }));
     const merged = [...builtIn];
     for (const s of saved) {
@@ -35,10 +34,10 @@ function loadMasterList(): MasterMedicine[] {
   }
 }
 
-function saveMasterList(list: MasterMedicine[]) {
+async function saveMasterList(list: MasterMedicine[]) {
   const builtInNames = new Set(commonMedicines.map(m => `${m.name}|${m.dosage}|${m.genericName}`));
   const custom = list.filter(m => !builtInNames.has(`${m.name}|${m.dosage}|${m.genericName}`));
-  localStorage.setItem(MASTER_STORAGE_KEY, JSON.stringify(custom));
+  await setItem('emr-master-medicines', custom);
 }
 
 interface MedicineTableProps {
@@ -341,8 +340,8 @@ export default function MedicineTable({ prescriptions, onChange, onLoadTemplate,
   }, [prescriptions]);
 
   useEffect(() => {
-    setCustomTemplates(medTemplateStorage.getAll());
-    setMasterList(loadMasterList());
+    medTemplateStorage.getAll().then(setCustomTemplates);
+    loadMasterList().then(setMasterList);
   }, []);
 
   // Fetch diagnosis-based suggestions when diagnoses change

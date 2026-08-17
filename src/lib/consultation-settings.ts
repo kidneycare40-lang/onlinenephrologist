@@ -1,5 +1,7 @@
 'use client';
 
+import { getItem, setItem, removeItem } from '@/lib/client-storage';
+
 export interface ConsultationSection {
   id: string;
   label: string;
@@ -28,7 +30,7 @@ export interface ConsultationSettings {
   customComplaintSuggestions: string[];
 }
 
-const STORAGE_KEY = 'emr_consultation_settings';
+const STORAGE_KEY = 'emr-consultation-settings';
 
 const defaultSections: ConsultationSection[] = [
   { id: 'vitals', label: 'Vitals', icon: 'HeartPulse', enabled: true, order: 0 },
@@ -65,13 +67,12 @@ const defaults: ConsultationSettings = {
   customComplaintSuggestions: [],
 };
 
-export function loadConsultationSettings(): ConsultationSettings {
+export async function loadConsultationSettings(): Promise<ConsultationSettings> {
   if (typeof window === 'undefined') return defaults;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = await getItem(STORAGE_KEY);
     if (!raw) return defaults;
-    const saved = JSON.parse(raw) as Partial<ConsultationSettings>;
-    // Merge with defaults so new fields are always present
+    const saved = raw as Partial<ConsultationSettings>;
     return {
       ...defaults,
       ...saved,
@@ -83,12 +84,12 @@ export function loadConsultationSettings(): ConsultationSettings {
   }
 }
 
-export function saveConsultationSettings(settings: ConsultationSettings): void {
+export async function saveConsultationSettings(settings: ConsultationSettings): Promise<void> {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  await setItem(STORAGE_KEY, settings);
 }
 
-export function resetConsultationSettings(): void {
+export async function resetConsultationSettings(): Promise<void> {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEY);
+  await removeItem(STORAGE_KEY);
 }

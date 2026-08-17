@@ -7,6 +7,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patients as mockPatients } from '@/lib/data/emr-mock';
+import { getItem } from '@/lib/client-storage';
 import type { EMRPatient } from '@/types/emr';
 
 interface WaitingPatient {
@@ -38,59 +39,61 @@ export default function TelemedicinePage() {
 
   // Load waiting room from today's online bookings + appointments
   useEffect(() => {
-    const patients: WaitingPatient[] = [];
+    (async () => {
+      const patients: WaitingPatient[] = [];
 
-    // Online bookings
-    try {
-      const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-      const today = new Date().toISOString().split('T')[0];
-      for (const b of bookings) {
-        if (b.date === today && b.status !== 'cancelled') {
-          patients.push({
-            id: b.bookingId || b.id,
-            name: `${b.firstName} ${b.lastName}`,
-            phone: b.phone || '',
-            type: 'Online Consultation',
-            clinicId: b.clinicId || 'online',
-            uhid: b.uhid || '',
-          });
+      // Online bookings
+      try {
+        const bookings = (await getItem('emr-bookings')) as any[] || [];
+        const today = new Date().toISOString().split('T')[0];
+        for (const b of bookings) {
+          if (b.date === today && b.status !== 'cancelled') {
+            patients.push({
+              id: b.bookingId || b.id,
+              name: `${b.firstName} ${b.lastName}`,
+              phone: b.phone || '',
+              type: 'Online Consultation',
+              clinicId: b.clinicId || 'online',
+              uhid: b.uhid || '',
+            });
+          }
         }
-      }
-    } catch { /* */ }
+      } catch { /* */ }
 
-    // EMR-added patients with online consultation type
-    try {
-      const addedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]') as EMRPatient[];
-      for (const p of addedPatients) {
-        if (p.clinicId === 'online' || p.clinicId === 'online-intl') {
+      // EMR-added patients with online consultation type
+      try {
+        const addedPatients = (await getItem('emr-added-patients')) as EMRPatient[] || [];
+        for (const p of addedPatients) {
+          if (p.clinicId === 'online' || p.clinicId === 'online-intl') {
+            patients.push({
+              id: p.id,
+              name: `${p.firstName} ${p.lastName}`,
+              phone: p.phone || '',
+              type: 'Virtual Visit',
+              clinicId: p.clinicId,
+              uhid: p.uhid,
+            });
+          }
+        }
+      } catch { /* */ }
+
+      // Mock patients for demo
+      for (const p of mockPatients) {
+        if (!patients.some((wp) => wp.id === p.id)) {
           patients.push({
             id: p.id,
             name: `${p.firstName} ${p.lastName}`,
             phone: p.phone || '',
-            type: 'Virtual Visit',
-            clinicId: p.clinicId,
+            type: 'Consultation',
+            clinicId: p.clinicId || 'kcc-faridabad',
             uhid: p.uhid,
           });
         }
       }
-    } catch { /* */ }
 
-    // Mock patients for demo
-    for (const p of mockPatients) {
-      if (!patients.some((wp) => wp.id === p.id)) {
-        patients.push({
-          id: p.id,
-          name: `${p.firstName} ${p.lastName}`,
-          phone: p.phone || '',
-          type: 'Consultation',
-          clinicId: p.clinicId || 'kcc-faridabad',
-          uhid: p.uhid,
-        });
-      }
-    }
-
-    const filtered = clinicId ? patients.filter((p) => !p.clinicId || p.clinicId === clinicId || p.clinicId === 'online' || p.clinicId === 'online-intl') : patients;
-    setWaitingRoom(filtered);
+      const filtered = clinicId ? patients.filter((p) => !p.clinicId || p.clinicId === clinicId || p.clinicId === 'online' || p.clinicId === 'online-intl') : patients;
+      setWaitingRoom(filtered);
+    })();
   }, [clinicId]);
 
   // Call timer

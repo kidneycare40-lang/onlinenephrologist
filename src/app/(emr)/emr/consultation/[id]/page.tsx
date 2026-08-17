@@ -35,6 +35,7 @@ import { type ExtractedLabValue, type ExtractedMedicine, type OCRResult } from '
 import { autoCorrect } from '@/lib/spellcheck';
 import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR, loadBookingFromApi } from '@/lib/consultation-api';
 import { patientsApi } from '@/lib/api-client';
+import { getItem, setItem } from '@/lib/client-storage';
 import TemplateSelector from '@/components/emr/TemplateSelector';
 
 class ErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
@@ -113,10 +114,12 @@ export default function ConsultationPage() {
   const [testTemplateName, setTestTemplateName] = useState('');
   const [showPreviousRx, setShowPreviousRx] = useState(false);
   const [previousRx, setPreviousRx] = useState<EMRConsultation | null>(null);
+  const [pastVisitCount, setPastVisitCount] = useState(0);
+  const [patientStoredConsults, setPatientStoredConsults] = useState<EMRConsultation[]>([]);
 
   useEffect(() => {
-    setCustomAdviceTemplates(adviceTemplateStorage.getAll());
-    setCustomTestPanelTemplates(testTemplateStorage.getAll());
+    adviceTemplateStorage.getAll().then(setCustomAdviceTemplates);
+    testTemplateStorage.getAll().then(setCustomTestPanelTemplates);
   }, []);
 
   const testTemplates = [
@@ -141,11 +144,21 @@ export default function ConsultationPage() {
   const [consultation, setConsultation] = useState<EMRConsultation | null>(null);
   const [patient, setPatient] = useState<any>(null);
 
-  // Load online bookings from localStorage (kept as fallback)
-  const onlineBookings = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('emr_bookings') || '[]') as { bookingId: string; firstName: string; lastName: string; phone: string; email: string; age: string; gender: string; consultationType: string; clinicId: string; date: string; time: string; reason: string; complaints?: string; currentMedications?: string; medicines?: string; notes?: string; previousKidneyIssue?: string; reportFiles?: string[]; ultrasoundFile?: string; bookingMedicines?: { id: string; name: string; strength: string; dosage: string; when: string; frequency: string; duration: string }[]; doctorName?: string; consultationFee?: number; consultationFeeCurrency?: string; createdAt: string; status: string; paymentStatus?: string }[];
-    } catch { return []; }
+  useEffect(() => {
+    if (!patient) return;
+    getItem('emr-consultations').then((data) => {
+      const stored = (Array.isArray(data) ? data : []) as EMRConsultation[];
+      const patientConsults = stored.filter((c) => c.patientId === patient.id);
+      setPatientStoredConsults(patientConsults);
+      setPastVisitCount(patientConsults.filter((c) => c.id !== consultation?.id).length);
+    }).catch(() => {});
+  }, [patient, consultation?.id]);
+
+  const [onlineBookings, setOnlineBookings] = useState<{ bookingId: string; firstName: string; lastName: string; phone: string; email: string; age: string; gender: string; consultationType: string; clinicId: string; date: string; time: string; reason: string; complaints?: string; currentMedications?: string; medicines?: string; notes?: string; previousKidneyIssue?: string; reportFiles?: string[]; ultrasoundFile?: string; bookingMedicines?: { id: string; name: string; strength: string; dosage: string; when: string; frequency: string; duration: string }[]; doctorName?: string; consultationFee?: number; consultationFeeCurrency?: string; createdAt: string; status: string; paymentStatus?: string }[]>([]);
+  useEffect(() => {
+    getItem('emr-bookings').then((data) => {
+      if (Array.isArray(data)) setOnlineBookings(data as any);
+    }).catch(() => {});
   }, []);
 
   const allPatients = useMemo(() => [...patients, ...addedPatients], [addedPatients]);
@@ -201,7 +214,7 @@ export default function ConsultationPage() {
             // Check localStorage for existing consultation for this patient
             let existingConsult: EMRConsultation | null = null;
             try {
-              const storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+              const storedConsults = (await getItem('emr-consultations')) as EMRConsultation[] || [];
               existingConsult = storedConsults
                 .filter((c) => c.patientId === directPatient.id)
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || null;
@@ -245,12 +258,12 @@ export default function ConsultationPage() {
       // Fallback: load from localStorage (existing logic)
       let storedConsultations: EMRConsultation[] = [];
       try {
-        storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]');
+        storedConsultations = (await getItem('emr-consultations')) as EMRConsultation[] || [];
       } catch { /* ignore */ }
 
       let storedPatients: EMRPatient[] = [];
       try {
-        storedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+        storedPatients = (await getItem('emr-added-patients')) as EMRPatient[] || [];
       } catch { /* ignore */ }
 
       setAddedPatients(storedPatients);
@@ -315,7 +328,7 @@ export default function ConsultationPage() {
             const idx = storedConsultations.findIndex((c) => c.id === consultToUse.id);
             if (idx >= 0) {
               storedConsultations[idx] = consultToUse;
-              localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
+              await setItem('emr-consultations', storedConsultations);
             }
           }
           setConsultation(consultToUse);
@@ -385,11 +398,11 @@ export default function ConsultationPage() {
           },
         };
         storedConsultations.push(newConsult);
-        localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
+        await setItem('emr-consultations', storedConsultations);
         if (booking) {
           const updatedPat = { ...existingPat, medicalHistory: [existingPat.medicalHistory, booking.reason, booking.previousKidneyIssue === 'yes' ? 'Previous kidney issue' : ''].filter(Boolean).join(', ') };
           const patIdx = storedPatients.findIndex((p) => p.id === existingPat.id);
-          if (patIdx >= 0) { storedPatients[patIdx] = updatedPat; localStorage.setItem('emr_added_patients', JSON.stringify(storedPatients)); }
+          if (patIdx >= 0) { storedPatients[patIdx] = updatedPat; await setItem('emr-added-patients', storedPatients); }
           setPatient(updatedPat);
         } else {
           setPatient(existingPat);
@@ -434,7 +447,7 @@ export default function ConsultationPage() {
         // Save patient to localStorage
         if (!storedPatients.find((p) => p.id === patientId)) {
           storedPatients.push(newPat);
-          localStorage.setItem('emr_added_patients', JSON.stringify(storedPatients));
+          await setItem('emr-added-patients', storedPatients);
         }
 
         const bookingNotesParts: string[] = [];
@@ -479,7 +492,7 @@ export default function ConsultationPage() {
         };
 
         storedConsultations.push(newConsult);
-        localStorage.setItem('emr_consultations', JSON.stringify(storedConsultations));
+        await setItem('emr-consultations', storedConsultations);
 
         setConsultation(newConsult);
         setPatient(newPat);
@@ -690,9 +703,9 @@ export default function ConsultationPage() {
     showToastMessage('Complaints applied');
   };
 
-  const saveConsultationDirectlyToStorage = useCallback((consult: EMRConsultation) => {
+  const saveConsultationDirectlyToStorage = useCallback(async (consult: EMRConsultation) => {
     try {
-      const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const stored = ((await getItem('emr-consultations')) as EMRConsultation[]) || [];
       const updated = { ...consult, updatedAt: new Date().toISOString() };
       const idx = stored.findIndex((c) => c.id === consult.id);
       if (idx >= 0) {
@@ -700,7 +713,7 @@ export default function ConsultationPage() {
       } else {
         stored.push(updated);
       }
-      localStorage.setItem('emr_consultations', JSON.stringify(stored));
+      await setItem('emr-consultations', stored);
     } catch { /* ignore */ }
   }, []);
 
@@ -978,18 +991,18 @@ export default function ConsultationPage() {
     setShowAdviceTemplates(false);
   };
 
-  const saveAdviceTemplate = () => {
+  const saveAdviceTemplate = async () => {
     if (!adviceTemplateName.trim() || !consultation?.advice.trim()) return;
     const tpl: AdviceTemplate = { id: 'adv_custom_' + Date.now(), name: adviceTemplateName, advice: consultation.advice, isCustom: true };
-    adviceTemplateStorage.add(tpl);
-    setCustomAdviceTemplates(adviceTemplateStorage.getAll());
+    await adviceTemplateStorage.add(tpl);
+    setCustomAdviceTemplates(await adviceTemplateStorage.getAll());
     setShowSaveAdviceTemplate(false);
     setAdviceTemplateName('');
   };
 
-  const deleteAdviceTemplate = (id: string) => {
-    adviceTemplateStorage.remove(id);
-    setCustomAdviceTemplates(adviceTemplateStorage.getAll());
+  const deleteAdviceTemplate = async (id: string) => {
+    await adviceTemplateStorage.remove(id);
+    setCustomAdviceTemplates(await adviceTemplateStorage.getAll());
   };
 
   const loadTestPanelTemplate = (tpl: TestPanelTemplate) => {
@@ -997,18 +1010,18 @@ export default function ConsultationPage() {
     setShowTestPanelTemplates(false);
   };
 
-  const saveTestTemplate = () => {
+  const saveTestTemplate = async () => {
     if (!testTemplateName.trim() || testRequests.length === 0) return;
     const tpl: TestPanelTemplate = { id: 'tp_custom_' + Date.now(), name: testTemplateName, tests: [...testRequests], isCustom: true };
-    testTemplateStorage.add(tpl);
-    setCustomTestPanelTemplates(testTemplateStorage.getAll());
+    await testTemplateStorage.add(tpl);
+    setCustomTestPanelTemplates(await testTemplateStorage.getAll());
     setShowSaveTestTemplate(false);
     setTestTemplateName('');
   };
 
-  const deleteTestTemplate = (id: string) => {
-    testTemplateStorage.remove(id);
-    setCustomTestPanelTemplates(testTemplateStorage.getAll());
+  const deleteTestTemplate = async (id: string) => {
+    await testTemplateStorage.remove(id);
+    setCustomTestPanelTemplates(await testTemplateStorage.getAll());
   };
 
   const allTestNames = useMemo(() => labTestGroups.flatMap((g) => g.tests), []);
@@ -1385,9 +1398,7 @@ export default function ConsultationPage() {
               <div className="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-3">
                   {(() => {
-                    const pastCount = patient ? (JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[])
-                      .filter((c) => c.patientId === patient.id && c.id !== consultation?.id).length : 0;
-                    const label = pastCount === 0 ? '1st Visit' : pastCount === 1 ? '2nd Visit' : `${pastCount + 1}th Visit`;
+                    const label = pastVisitCount === 0 ? '1st Visit' : pastVisitCount === 1 ? '2nd Visit' : `${pastVisitCount + 1}th Visit`;
                     return <span className="text-sm font-semibold text-slate-700">{label}</span>;
                   })()}
                   <span className="text-slate-300">|</span>
@@ -1398,10 +1409,10 @@ export default function ConsultationPage() {
                     View Past
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (!patient || !consultation) return;
                       try {
-                        const stored = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+                        const stored = ((await getItem('emr-consultations')) as EMRConsultation[]) || [];
                         const lastRx = stored
                           .filter((c) => c.patientId === patient.id && c.id !== consultation.id && c.prescriptions.length > 0)
                           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -1438,8 +1449,8 @@ export default function ConsultationPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => {
-                      const stored = adviceTemplateStorage.getAll();
+                    onClick={async () => {
+                      const stored = await adviceTemplateStorage.getAll();
                       if (stored.length > 0) {
                         if (consultation) {
                           setConsultation({ ...consultation, advice: stored[0].advice });
@@ -2145,10 +2156,7 @@ export default function ConsultationPage() {
               <ErrorBoundary>
                 <div id="section-timeline">
                   {(() => {
-                    let storedConsults: EMRConsultation[] = [];
-                    try { storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]'); } catch { /* */ }
-                    const patientStored = storedConsults.filter((c) => c.patientId === patient.id);
-                    const mergedConsults = [...patientStored, ...consultations.filter((c) => c.patientId === patient.id && !patientStored.some((sc) => sc.id === c.id))];
+                    const mergedConsults = [...patientStoredConsults, ...consultations.filter((c) => c.patientId === patient.id && !patientStoredConsults.some((sc) => sc.id === c.id))];
                     return (
                       <PastVisitsTimeline
                         currentConsultationId={consultation.id}

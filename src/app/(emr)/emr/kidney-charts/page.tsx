@@ -11,6 +11,7 @@ import {
   ChevronDown, ChevronUp, ArrowLeft,
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
+import { getItem } from '@/lib/client-storage';
 import { patientsApi } from '@/lib/api-client';
 import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { useRouter } from 'next/navigation';
@@ -149,9 +150,9 @@ export default function KidneyChartsPage() {
           })));
         }
       } catch { /* */ }
-      // Merge localStorage patients
+      // Merge KV store patients
       try {
-        const addedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]') as EMRPatient[];
+        const addedPatients = (await getItem('emr-added-patients')) as EMRPatient[] || [];
         const existingIds = new Set(allPatients.map((p) => p.id));
         for (const p of addedPatients) {
           if (!existingIds.has(p.id)) {
@@ -184,9 +185,9 @@ export default function KidneyChartsPage() {
         }
       }
     } catch { /* */ }
-    // Fallback: build from localStorage consultations (vitals only have creatinine/egfr)
+    // Fallback: build from KV store consultations (vitals only have creatinine/egfr)
     try {
-      const storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const storedConsults = (await getItem('emr-consultations')) as EMRConsultation[] || [];
       const patientConsults = storedConsults
         .filter((c) => c.patientId === patientId && c.vitals && (c.vitals.creatinine || c.vitals.egfr))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

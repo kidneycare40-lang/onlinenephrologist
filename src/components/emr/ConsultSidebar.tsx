@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { loadConsultationSettings } from '@/lib/consultation-settings';
 import {
@@ -39,30 +39,32 @@ const defaultSections = [
 
 export default function ConsultSidebar({ activeSection, onSectionClick }: ConsultSidebarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [sidebarItems, setSidebarItems] = useState<{ id: string; label: string; icon: any; type?: 'link'; href?: string }[]>([]);
 
-  const sidebarItems = useMemo(() => {
-    const settings = loadConsultationSettings();
-    const enabledIds = new Set(settings.sections.filter(s => s.enabled).map(s => s.id));
-    const ordered = settings.sections
-      .filter(s => s.enabled)
-      .sort((a, b) => a.order - b.order)
-      .map(s => {
-        const fallback = defaultSections.find(d => d.id === s.id);
-        return {
-          id: s.id,
-          label: s.label,
-          icon: iconMap[s.icon] || FileText,
-          type: s.isLink ? ('link' as const) : undefined,
-          href: s.href || fallback?.href,
-        };
-      });
-    if (ordered.length === 0) {
-      return defaultSections.map(d => ({
-        ...d,
-        icon: iconMap[d.icon] || FileText,
-      }));
-    }
-    return ordered;
+  useEffect(() => {
+    loadConsultationSettings().then(settings => {
+      const ordered = settings.sections
+        .filter(s => s.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map(s => {
+          const fallback = defaultSections.find(d => d.id === s.id);
+          return {
+            id: s.id,
+            label: s.label,
+            icon: iconMap[s.icon] || FileText,
+            type: s.isLink ? ('link' as const) : undefined,
+            href: s.href || fallback?.href,
+          };
+        });
+      if (ordered.length === 0) {
+        setSidebarItems(defaultSections.map(d => ({
+          ...d,
+          icon: iconMap[d.icon] || FileText,
+        })));
+      } else {
+        setSidebarItems(ordered);
+      }
+    });
   }, []);
 
   // Auto-scroll to active tab on mobile

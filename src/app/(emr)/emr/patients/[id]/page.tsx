@@ -15,6 +15,7 @@ import { patients, consultations, prescriptions, labOrders, timelineEvents } fro
 import { useClinic } from '@/lib/emr-clinic-context';
 import { EMRPatient, EMRConsultation } from '@/types/emr';
 import { deleteAddedPatient, markPatientDeleted } from '@/lib/emr-delete';
+import { getItem, setItem } from '@/lib/client-storage';
 
 type Tab = 'overview' | 'visits' | 'prescriptions' | 'lab' | 'reports' | 'timeline';
 
@@ -88,22 +89,28 @@ export default function PatientDetailPage() {
   const initialTab = (searchParams.get('tab') as Tab) || 'overview';
 
   const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
+  const [localBookings, setLocalBookings] = useState<any[]>([]);
+  const [localConsultations, setLocalConsultations] = useState<EMRConsultation[]>([]);
 
   useEffect(() => {
-    try {
-      setAddedPatients(JSON.parse(localStorage.getItem('emr_added_patients') || '[]'));
-    } catch { /* ignore */ }
+    (async () => {
+      try {
+        setAddedPatients((await getItem('emr-added-patients')) as EMRPatient[] || []);
+      } catch { /* ignore */ }
+      try {
+        setLocalBookings((await getItem('emr-bookings')) as any[] || []);
+      } catch { /* ignore */ }
+      try {
+        setLocalConsultations((await getItem('emr-consultations')) as EMRConsultation[] || []);
+      } catch { /* ignore */ }
+    })();
   }, []);
 
   const allPatients = useMemo(() => {
-    let dynamic: EMRPatient[] = [];
+    let dynamic: EMRPatient[] = [...addedPatients];
     try {
-      dynamic = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
-    } catch { /* ignore */ }
-    try {
-      const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-      if (Array.isArray(bookings)) {
-        for (const b of bookings) {
+      if (Array.isArray(localBookings)) {
+        for (const b of localBookings) {
           if (b.firstName) {
             const id = 'obp-' + b.bookingId;
             if (!dynamic.some(p => p.id === id) && !patients.some(p => p.id === id)) {
@@ -124,7 +131,7 @@ export default function PatientDetailPage() {
       }
     } catch { /* ignore */ }
     return [...patients, ...dynamic];
-  }, []);
+  }, [addedPatients, localBookings]);
 
   const patient = useMemo(() => {
     const found = allPatients.find((p) => p.id === patientId) || null;
@@ -137,19 +144,19 @@ export default function PatientDetailPage() {
     if (!patient) return [];
     const mockConsults = consultations.filter((c) => c.patientId === patient.id && (!clinicId || !c.clinicId || c.clinicId === clinicId));
     try {
-      const storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const storedConsultations = localConsultations;
       const dynamicConsults = storedConsultations.filter((c) => c.patientId === patient.id);
       const allConsults = [...dynamicConsults, ...mockConsults.filter((mc) => !dynamicConsults.some((dc) => dc.id === mc.id))];
       return allConsults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch {
       return mockConsults;
     }
-  }, [patient, clinicId]);
+  }, [patient, clinicId, localConsultations]);
   const clinicPrescriptions = useMemo(() => {
     if (!patient) return [];
     const mockRx = prescriptions.filter((pr) => pr.patientId === patient.id);
     try {
-      const storedConsultations = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const storedConsultations = localConsultations;
       const patientConsults = storedConsultations.filter((c) => c.patientId === patient.id && c.prescriptions && c.prescriptions.length > 0);
       const dynamicRx = patientConsults
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -183,7 +190,7 @@ export default function PatientDetailPage() {
     } catch {
       return mockRx;
     }
-  }, [patient]);
+  }, [patient, localConsultations]);
   const clinicLabOrders = useMemo(() => {
     if (!patient) return [];
     return labOrders.filter((lo) => lo.patientId === patient.id);
@@ -192,7 +199,7 @@ export default function PatientDetailPage() {
     if (!patient) return [];
     const mockEvents = timelineEvents.filter((te) => te.patientId === patient.id);
     try {
-      const storedConsults = JSON.parse(localStorage.getItem('emr_consultations') || '[]') as EMRConsultation[];
+      const storedConsults = localConsultations;
       const patientConsults = storedConsults.filter((c) => c.patientId === patient.id);
       const consultEvents = patientConsults.map((c) => ({
         id: `tl-${c.id}`,
@@ -218,20 +225,20 @@ export default function PatientDetailPage() {
     } catch {
       return mockEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
-  }, [patient]);
+  }, [patient, localConsultations]);
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [expandedConsultation, setExpandedConsultation] = useState<string | null>(null);
   const [expandedPrescription, setExpandedPrescription] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleDeletePatient = () => {
+  const handleDeletePatient = async () => {
     if (!patient) return;
     const isAdded = addedPatients.some((p) => p.id === patient.id);
     if (isAdded) {
-      deleteAddedPatient(patient.id);
+      await deleteAddedPatient(patient.id);
     }
-    markPatientDeleted(patient.id);
+    await markPatientDeleted(patient.id);
     router.push('/emr/patients');
   };
 

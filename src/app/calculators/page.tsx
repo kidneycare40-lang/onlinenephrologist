@@ -25,7 +25,7 @@ export default function CalculatorsPage() {
   const [settings, setSettings] = useState<CalculatorSettings | null>(null);
 
   useEffect(() => {
-    setSettings(loadCalculatorSettings());
+    loadCalculatorSettings().then(setSettings);
   }, []);
 
   return (

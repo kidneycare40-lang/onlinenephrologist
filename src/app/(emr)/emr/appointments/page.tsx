@@ -20,6 +20,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getItem, setItem } from '@/lib/client-storage';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { appointmentsApi, patientsApi, ApiError } from '@/lib/api-client';
 import { CreditCard } from 'lucide-react';
@@ -94,7 +95,7 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
   const [duplicate, setDuplicate] = useState<any>(null);
   const { clinicId } = useClinic();
 
-  const savePatientAndRedirect = (action: 'rx' | 'bill' | 'appt') => {
+  const savePatientAndRedirect = async (action: 'rx' | 'bill' | 'appt') => {
     if (!name.trim() || !phone.trim()) return;
     const now = new Date();
     const uhid = clinicId === 'psri-delhi'
@@ -114,9 +115,9 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
       source: 'emr' as const, createdAt: now.toISOString().split('T')[0],
       lastVisit: now.toISOString().split('T')[0], totalVisits: 1, familyMembers: [],
     };
-    const existing = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+    const existing = (await getItem('emr-added-patients')) as any[] || [];
     existing.push(newPatient);
-    localStorage.setItem('emr_added_patients', JSON.stringify(existing));
+    await setItem('emr-added-patients', existing);
     setName(''); setPhone(''); setAge('');
     onClose();
     if (action === 'rx') router.push(`/emr/consultation/consult-emr-${newPatient.id}`);
@@ -259,11 +260,13 @@ export default function AppointmentsPage() {
 
   const dateStr = formatDateISO(selectedDate);
 
-  // Load online bookings from localStorage
+  // Load online bookings from KV store
   useEffect(() => {
-    try {
-      setOnlineBookings(JSON.parse(localStorage.getItem('emr_bookings') || '[]'));
-    } catch { /* ignore */ }
+    (async () => {
+      try {
+        setOnlineBookings((await getItem('emr-bookings')) as any[] || []);
+      } catch { /* ignore */ }
+    })();
   }, []);
 
   // Fetch appointments from API for selected date

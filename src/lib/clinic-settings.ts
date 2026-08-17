@@ -1,5 +1,7 @@
 'use client';
 
+import { getItem, setItem, removeItem } from '@/lib/client-storage';
+
 export interface ClinicDetail {
   id: string;
   name: string;
@@ -36,7 +38,7 @@ export interface ClinicDetail {
   enabled: boolean;
 }
 
-const STORAGE_KEY = 'emr_all_clinics';
+const STORAGE_KEY = 'emr-all-clinics';
 
 const defaultClinics: ClinicDetail[] = [
   {
@@ -157,13 +159,12 @@ const defaultClinics: ClinicDetail[] = [
   },
 ];
 
-export function loadAllClinics(): ClinicDetail[] {
+export async function loadAllClinics(): Promise<ClinicDetail[]> {
   if (typeof window === 'undefined') return defaultClinics;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = await getItem(STORAGE_KEY);
     if (!raw) return defaultClinics;
-    const saved = JSON.parse(raw) as Partial<ClinicDetail>[];
-    // Merge with defaults so new fields are always present
+    const saved = raw as Partial<ClinicDetail>[];
     return defaultClinics.map(def => {
       const s = saved.find(c => c.id === def.id);
       return s ? { ...def, ...s, bankDetails: { ...def.bankDetails, ...(s.bankDetails || {}) } } : def;
@@ -173,16 +174,16 @@ export function loadAllClinics(): ClinicDetail[] {
   }
 }
 
-export function saveAllClinics(clinics: ClinicDetail[]): void {
+export async function saveAllClinics(clinics: ClinicDetail[]): Promise<void> {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(clinics));
+  await setItem(STORAGE_KEY, clinics);
 }
 
-export function getClinicById(id: string): ClinicDetail | undefined {
-  return loadAllClinics().find(c => c.id === id);
+export async function getClinicById(id: string): Promise<ClinicDetail | undefined> {
+  return (await loadAllClinics()).find(c => c.id === id);
 }
 
-export function resetClinics(): void {
+export async function resetClinics(): Promise<void> {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEY);
+  await removeItem(STORAGE_KEY);
 }

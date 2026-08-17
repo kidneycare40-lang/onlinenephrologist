@@ -10,10 +10,11 @@ import {
   Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital, Plus, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { loadBookingSettings, type BookingSettings } from '@/lib/booking-settings';
+import { loadBookingSettings, defaultSettings, type BookingSettings } from '@/lib/booking-settings';
 import { loadAllClinics } from '@/lib/clinic-settings';
 import { validateBooking, type ExistingAppointment, getStoredBookings, isActiveStatus } from '@/lib/booking-validator';
 import { getCurrentPatient, type Patient } from '@/lib/patient-auth';
+import { getItem, setItem } from '@/lib/client-storage';
 import PaymentGateway, { type PaymentData } from '@/components/emr/PaymentGateway';
 import { getConsultationPricing, formatPricing, isInternationalConsultation } from '@/lib/pricing';
 
@@ -184,8 +185,8 @@ function generateSlots(schedule: BookingSettings['schedules'][0]): string[] {
 
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function buildClinicsFromSettings(settings: BookingSettings): ClinicSlot[] {
-  const allClinics = loadAllClinics();
+async function buildClinicsFromSettings(settings: BookingSettings): Promise<ClinicSlot[]> {
+  const allClinics = await loadAllClinics();
   return settings.schedules.filter(s => s.enabled).map(s => {
     const clinicDetail = allClinics.find(c => c.id === s.clinicId);
     const info = clinicDetail
@@ -219,18 +220,23 @@ function BookingForm() {
   const initialType = searchParams.get('type') || 'online';
   const forceInternational = initialType === 'online_intl';
 
-  const [bookingSettings, setBookingSettings] = useState<BookingSettings>(() => {
-    const s = loadBookingSettings();
-    s.paymentGateway.enabled = true;
-    return s;
+  const [bookingSettings, setBookingSettings] = useState<BookingSettings>({
+    ...defaultSettings,
+    paymentGateway: { ...defaultSettings.paymentGateway, enabled: true },
   });
-  const [clinics, setClinics] = useState<ClinicSlot[]>(() => buildClinicsFromSettings(loadBookingSettings()));
+  const [clinics, setClinics] = useState<ClinicSlot[]>([]);
 
   useEffect(() => {
-    const s = loadBookingSettings();
-    s.paymentGateway.enabled = true;
-    setBookingSettings(s);
-    setClinics(buildClinicsFromSettings(s));
+    buildClinicsFromSettings(defaultSettings).then(setClinics);
+  }, []);
+
+  useEffect(() => {
+    loadBookingSettings().then(async s => {
+      s.paymentGateway.enabled = true;
+      setBookingSettings(s);
+      const c = await buildClinicsFromSettings(s);
+      setClinics(c);
+    });
   }, []);
 
   const [step, setStep] = useState(forceInternational ? 2 : 1);
@@ -253,6 +259,7 @@ function BookingForm() {
   const [duplicateAppt, setDuplicateAppt] = useState<ExistingAppointment | null>(null);
   const [duplicateType, setDuplicateType] = useState<'duplicate_patient' | 'slot_conflict' | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set());
   const [currentPatient, setCurrentPatientState] = useState<Patient | null>(null);
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
@@ -281,24 +288,25 @@ function BookingForm() {
       .catch(() => {});
 
     // Also load legacy localStorage patient (fallback)
-    const patient = getCurrentPatient();
-    setCurrentPatientState(patient);
-    if (patient) {
-      setFormData(prev => ({
-        ...prev,
-        firstName: patient.name.split(' ')[0] || prev.firstName,
-        lastName: patient.name.split(' ').slice(1).join(' ') || prev.lastName,
-        phone: patient.phone || prev.phone,
-        email: patient.email || prev.email,
-        age: patient.age?.toString() || prev.age,
-        gender: patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : prev.gender,
-        isInternational: patient.isInternational || prev.isInternational,
-        country: patient.country || prev.country,
-        countryCode: patient.countryCode || prev.countryCode,
-        timezone: patient.timezone || prev.timezone,
-        whatsappNumber: patient.whatsappNumber || prev.whatsappNumber,
-      }));
-    }
+    getCurrentPatient().then((patient) => {
+      setCurrentPatientState(patient);
+      if (patient) {
+        setFormData(prev => ({
+          ...prev,
+          firstName: patient.name.split(' ')[0] || prev.firstName,
+          lastName: patient.name.split(' ').slice(1).join(' ') || prev.lastName,
+          phone: patient.phone || prev.phone,
+          email: patient.email || prev.email,
+          age: patient.age?.toString() || prev.age,
+          gender: patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : prev.gender,
+          isInternational: patient.isInternational || prev.isInternational,
+          country: patient.country || prev.country,
+          countryCode: patient.countryCode || prev.countryCode,
+          timezone: patient.timezone || prev.timezone,
+          whatsappNumber: patient.whatsappNumber || prev.whatsappNumber,
+        }));
+      }
+    });
   }, []);
 
   const fileToBase64 = (file: File): Promise<string> =>
@@ -388,7 +396,7 @@ function BookingForm() {
     }
 
     // Validate for duplicates before saving
-    const validation = validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time);
+    const validation = await validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time);
     if (!validation.allowed && validation.existing) {
       setDuplicateAppt(validation.existing);
       setDuplicateType(validation.reason === 'duplicate_patient' ? 'duplicate_patient' : 'slot_conflict');
@@ -446,20 +454,19 @@ function BookingForm() {
     };
 
     try {
-      const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]').filter((b: any) => b.bookingId !== id);
+      const existing = ((await getItem('emr-bookings')) as any[] || []).filter((b: any) => b.bookingId !== id);
       existing.push(bookingData);
-      localStorage.setItem('emr_bookings', JSON.stringify(existing));
+      await setItem('emr-bookings', existing);
     } catch {
-      // Quota exceeded — retry with report file names only (no image data)
       try {
         const slimBooking = {
           ...bookingData,
           reportFiles: reportFilesData.map(({ name, type }) => ({ name, type, data: '' })),
           ultrasoundFile: ultrasoundData ? { ...ultrasoundData, data: '' } : null,
         };
-        const existing = JSON.parse(localStorage.getItem('emr_bookings') || '[]').filter((b: any) => b.bookingId !== id);
+        const existing = ((await getItem('emr-bookings')) as any[] || []).filter((b: any) => b.bookingId !== id);
         existing.push(slimBooking);
-        localStorage.setItem('emr_bookings', JSON.stringify(existing));
+        await setItem('emr-bookings', existing);
       } catch {}
     }
 
@@ -508,13 +515,13 @@ function BookingForm() {
         totalVisits: 1,
         createdAt: new Date().toISOString(),
       };
-      const addedPatients = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+      const addedPatients = ((await getItem('emr-added-patients')) as any[] || []);
       const exists = addedPatients.some((p: any) =>
         (p.phone && p.phone === fullPhone) || (p.email && p.email === formData.email)
       );
       if (!exists) {
         addedPatients.push(patientRecord);
-        localStorage.setItem('emr_added_patients', JSON.stringify(addedPatients));
+        await setItem('emr-added-patients', addedPatients);
       }
     } catch {}
 
@@ -677,17 +684,21 @@ function BookingForm() {
     : `91${formData.phone.replace(/[\s-]/g, '')}`;
 
   // Booked slots for the selected date/clinic (for visual indicators)
-  const bookedSlots = useMemo(() => {
-    if (!mounted || !formData.date || !formData.clinicId) return new Set<string>();
-    const bookings = getStoredBookings();
-    const taken = new Set<string>();
-    for (const b of bookings) {
-      if (b.date !== formData.date) continue;
-      if (b.clinicId !== formData.clinicId) continue;
-      if (!isActiveStatus(b.status)) continue;
-      taken.add(b.time.replace(/\s+/g, '').toUpperCase());
+  useEffect(() => {
+    if (!mounted || !formData.date || !formData.clinicId) {
+      setBookedSlots(new Set());
+      return;
     }
-    return taken;
+    getStoredBookings().then(bookings => {
+      const taken = new Set<string>();
+      for (const b of bookings) {
+        if (b.date !== formData.date) continue;
+        if (b.clinicId !== formData.clinicId) continue;
+        if (!isActiveStatus(b.status)) continue;
+        taken.add(b.time.replace(/\s+/g, '').toUpperCase());
+      }
+      setBookedSlots(taken);
+    });
   }, [mounted, formData.date, formData.clinicId]);
 
   const slotOptions = useMemo(() => {
@@ -2057,13 +2068,13 @@ function BookingForm() {
                 Reschedule
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   try {
-                    const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+                    const bookings = ((await getItem('emr-bookings')) as any[] || []);
                     const idx = bookings.findIndex((b: any) => b.bookingId === duplicateAppt.bookingId);
                     if (idx >= 0) {
                       bookings[idx].status = 'cancelled';
-                      localStorage.setItem('emr_bookings', JSON.stringify(bookings));
+                      await setItem('emr-bookings', bookings);
                     }
                   } catch {}
                   setDuplicateAppt(null);

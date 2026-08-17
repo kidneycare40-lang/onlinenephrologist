@@ -1,4 +1,6 @@
-const STORAGE_KEY = 'emr_booking_settings';
+import { getItem, setItem } from '@/lib/client-storage';
+
+const STORAGE_KEY = 'booking-settings';
 
 export interface ClinicSchedule {
   clinicId: string;
@@ -149,26 +151,25 @@ export const defaultSettings: BookingSettings = {
   },
 };
 
-export function loadBookingSettings(): BookingSettings {
+export async function loadBookingSettings(): Promise<BookingSettings> {
   if (typeof window === 'undefined') return defaultSettings;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = await getItem(STORAGE_KEY);
     if (!stored) return defaultSettings;
-    const parsed = JSON.parse(stored);
     return {
       ...defaultSettings,
-      ...parsed,
-      paymentGateway: { ...defaultSettings.paymentGateway, ...(parsed.paymentGateway || {}) },
-      rules: { ...defaultSettings.rules, ...(parsed.rules || {}) },
-      onlineBooking: { ...defaultSettings.onlineBooking, ...(parsed.onlineBooking || {}) },
-      noticeBoard: { ...defaultSettings.noticeBoard, ...(parsed.noticeBoard || {}) },
-      international: { ...defaultSettings.international, ...(parsed.international || {}) },
+      ...stored,
+      paymentGateway: { ...defaultSettings.paymentGateway, ...(stored.paymentGateway || {}) },
+      rules: { ...defaultSettings.rules, ...(stored.rules || {}) },
+      onlineBooking: { ...defaultSettings.onlineBooking, ...(stored.onlineBooking || {}) },
+      noticeBoard: { ...defaultSettings.noticeBoard, ...(stored.noticeBoard || {}) },
+      international: { ...defaultSettings.international, ...(stored.international || {}) },
     };
   } catch {
     return defaultSettings;
   }
 }
 
-export function saveBookingSettings(settings: BookingSettings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+export async function saveBookingSettings(settings: BookingSettings): Promise<void> {
+  await setItem(STORAGE_KEY, settings);
 }

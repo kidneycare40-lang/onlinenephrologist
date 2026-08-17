@@ -1,4 +1,5 @@
 import Tesseract from 'tesseract.js';
+import { getItem } from '@/lib/client-storage';
 
 const TESSERACT_OPTIONS = {
   workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@v7.0.0/dist/worker.min.js',
@@ -826,7 +827,7 @@ export async function extractWithOpenAI(file: File): Promise<OCRResult | null> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('openai_api_key') || '' : process.env.OPENAI_API_KEY || ''}`,
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? (await getItem('openai-api-key')) || '' : process.env.OPENAI_API_KEY || ''}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o',

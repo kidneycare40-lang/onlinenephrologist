@@ -1,4 +1,6 @@
-const STORAGE_KEY = 'emr_calculator_settings';
+import { getItem, setItem, removeItem } from '@/lib/client-storage';
+
+const STORAGE_KEY = 'emr-calculator-settings';
 
 export interface BMICategory {
   id: string;
@@ -148,13 +150,12 @@ export const defaultCalculatorSettings: CalculatorSettings = {
   },
 };
 
-export function loadCalculatorSettings(): CalculatorSettings {
+export async function loadCalculatorSettings(): Promise<CalculatorSettings> {
   if (typeof window === 'undefined') return defaultCalculatorSettings;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = await getItem(STORAGE_KEY);
     if (!stored) return defaultCalculatorSettings;
-    const parsed = JSON.parse(stored);
-    // Merge with defaults to handle new fields
+    const parsed = stored;
     return {
       bmi: { ...defaultCalculatorSettings.bmi, ...parsed.bmi },
       egfr: { ...defaultCalculatorSettings.egfr, ...parsed.egfr },
@@ -167,10 +168,10 @@ export function loadCalculatorSettings(): CalculatorSettings {
   }
 }
 
-export function saveCalculatorSettings(settings: CalculatorSettings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+export async function saveCalculatorSettings(settings: CalculatorSettings): Promise<void> {
+  await setItem(STORAGE_KEY, settings);
 }
 
-export function resetCalculatorSettings() {
-  localStorage.removeItem(STORAGE_KEY);
+export async function resetCalculatorSettings(): Promise<void> {
+  await removeItem(STORAGE_KEY);
 }

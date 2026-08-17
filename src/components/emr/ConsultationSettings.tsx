@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Settings, Save, RotateCcw, GripVertical, Eye, EyeOff,
   HeartPulse, ClipboardList, FileText, MessageSquare,
@@ -56,7 +56,15 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean
 }
 
 export default function ConsultationSettingsComponent() {
-  const [settings, setSettings] = useState<ConsultationSettings>(loadConsultationSettings);
+  const [settings, setSettings] = useState<ConsultationSettings>({
+    sections: [],
+    showPatientInfo: true,
+    showPrescriptionPreview: true,
+    defaultVitals: { height: '', weight: '', bpSystolic: '', bpDiastolic: '', pulse: '', temperature: '', spo2: '' },
+    defaultAdvice: [],
+    customDiagnosisSuggestions: [],
+    customComplaintSuggestions: [],
+  });
   const [saved, setSaved] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [newDiagnosis, setNewDiagnosis] = useState('');
@@ -64,16 +72,21 @@ export default function ConsultationSettingsComponent() {
   const [newAdvice, setNewAdvice] = useState('');
   const dragItem = useRef<number | null>(null);
 
-  function handleSave() {
-    saveConsultationSettings(settings);
+  useEffect(() => {
+    loadConsultationSettings().then(setSettings);
+  }, []);
+
+  async function handleSave() {
+    await saveConsultationSettings(settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function handleReset() {
+  async function handleReset() {
     if (confirm('Reset all consultation settings to defaults?')) {
-      resetConsultationSettings();
-      setSettings(loadConsultationSettings());
+      await resetConsultationSettings();
+      const fresh = await loadConsultationSettings();
+      setSettings(fresh);
     }
   }
 

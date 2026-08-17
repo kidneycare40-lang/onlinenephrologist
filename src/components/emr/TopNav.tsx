@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { useAuth } from '@/lib/emr-auth-context';
 import { patientsApi } from '@/lib/api-client';
+import { getItem, setItem } from '@/lib/client-storage';
 
 const clinicOptions = [
   { id: 'kcc-faridabad', name: 'Kidney Care Centre - Faridabad', parent: 'Kidney Care Centre', address: 'Sector 15, Faridabad' },
@@ -91,40 +92,48 @@ export default function TopNav() {
     const query = (patientPhone || patientName).trim().toLowerCase();
     if (query.length < 3) { setDuplicatePatient(null); return; }
 
-    const allStored: any[] = [];
-    try { allStored.push(...JSON.parse(localStorage.getItem('emr_added_patients') || '[]')); } catch {}
-    try {
-      const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
-      if (Array.isArray(bookings)) {
-        for (const b of bookings) {
-          if (b.firstName) {
-            const id = 'obp-' + b.bookingId;
-            if (!allStored.some((p: any) => p.id === id)) {
-              allStored.push({
-                id, firstName: b.firstName, lastName: b.lastName || '',
-                phone: b.phone || '', clinicId: b.clinicId || '',
-                uhid: 'OB-' + b.bookingId.slice(-6).toUpperCase(), dateOfBirth: b.age ? `${new Date().getFullYear() - parseInt(b.age)}-01-01` : '',
-                gender: b.gender || 'Male',
-              });
+    let cancelled = false;
+
+    (async () => {
+      const allStored: any[] = [];
+      try { allStored.push(...((await getItem('emr-added-patients')) as any[] || [])); } catch {}
+      try {
+        const bookings = (await getItem('emr-bookings')) as any[] || [];
+        if (Array.isArray(bookings)) {
+          for (const b of bookings) {
+            if (b.firstName) {
+              const id = 'obp-' + b.bookingId;
+              if (!allStored.some((p: any) => p.id === id)) {
+                allStored.push({
+                  id, firstName: b.firstName, lastName: b.lastName || '',
+                  phone: b.phone || '', clinicId: b.clinicId || '',
+                  uhid: 'OB-' + b.bookingId.slice(-6).toUpperCase(), dateOfBirth: b.age ? `${new Date().getFullYear() - parseInt(b.age)}-01-01` : '',
+                  gender: b.gender || 'Male',
+                });
+              }
             }
           }
         }
-      }
-    } catch {}
-    // Also check mock patients
-    try {
-      const { patients: mockPatients } = require('@/lib/data/emr-mock');
-      allStored.push(...mockPatients);
-    } catch {}
+      } catch {}
+      // Also check mock patients
+      try {
+        const { patients: mockPatients } = require('@/lib/data/emr-mock');
+        allStored.push(...mockPatients);
+      } catch {}
 
-    const match = allStored.find((p: any) => {
-      const fullName = `${p.firstName || ''} ${p.lastName || ''}`.toLowerCase().trim();
-      const phone = (p.phone || '').replace(/\D/g, '');
-      const searchPhone = patientPhone.replace(/\D/g, '');
-      return (patientPhone && searchPhone.length >= 5 && phone.includes(searchPhone)) ||
-             (patientName && fullName.includes(query));
-    });
-    setDuplicatePatient(match || null);
+      if (cancelled) return;
+
+      const match = allStored.find((p: any) => {
+        const fullName = `${p.firstName || ''} ${p.lastName || ''}`.toLowerCase().trim();
+        const phone = (p.phone || '').replace(/\D/g, '');
+        const searchPhone = patientPhone.replace(/\D/g, '');
+        return (patientPhone && searchPhone.length >= 5 && phone.includes(searchPhone)) ||
+               (patientName && fullName.includes(query));
+      });
+      setDuplicatePatient(match || null);
+    })();
+
+    return () => { cancelled = true; };
   }, [patientPhone, patientName, showAddPatient, clinicId]);
 
   useEffect(() => {
@@ -170,11 +179,11 @@ export default function TopNav() {
           })));
         }
       } catch {
-        // Fallback to localStorage search
+        // Fallback to KV store search
         if (cancelled) return;
         const allPatients: { id: string; name: string; phone: string; uhid: string }[] = [];
         try {
-          const stored = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+          const stored = (await getItem('emr-added-patients')) as any[] || [];
           if (Array.isArray(stored)) {
             for (const p of stored) {
               if (clinicId && p.clinicId && p.clinicId !== clinicId) continue;
@@ -183,7 +192,7 @@ export default function TopNav() {
           }
         } catch {}
         try {
-          const bookings = JSON.parse(localStorage.getItem('emr_bookings') || '[]');
+          const bookings = (await getItem('emr-bookings')) as any[] || [];
           if (Array.isArray(bookings)) {
             for (const b of bookings) {
               if (clinicId && b.clinicId !== clinicId) continue;
@@ -233,7 +242,7 @@ export default function TopNav() {
     setPatientUhid('');
   }
 
-  function handleAddPatient() {
+  async function handleAddPatient() {
     if (!patientName.trim() || !patientPhone.trim()) return;
     setAddingPatient(true);
 
@@ -282,9 +291,9 @@ export default function TopNav() {
       totalVisits: 1,
     };
 
-    const existing = JSON.parse(localStorage.getItem('emr_added_patients') || '[]');
+    const existing = ((await getItem('emr-added-patients')) as any[] || []);
     existing.push(newPatient);
-    localStorage.setItem('emr_added_patients', JSON.stringify(existing));
+    await setItem('emr-added-patients', existing);
 
     // Also save to API for cross-browser persistence
     patientsApi.create({

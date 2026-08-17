@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { getItem, setItem, removeItem } from '@/lib/client-storage';
 
 export interface ClinicInfo {
   id: string;
@@ -37,20 +38,22 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const [clinicId, setClinicIdState] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('emr-clinic-id') : null;
-    if (saved && clinicMap[saved]) {
-      setClinicIdState(saved);
-    }
+    (async () => {
+      const saved = typeof window !== 'undefined' ? await getItem('emr-clinic-id') : null;
+      if (saved && clinicMap[saved as string]) {
+        setClinicIdState(saved as string);
+      }
+    })();
   }, []);
 
-  function setClinicId(id: string) {
+  async function setClinicId(id: string) {
     setClinicIdState(id);
-    localStorage.setItem('emr-clinic-id', id);
+    await setItem('emr-clinic-id', id);
   }
 
-  function clearClinic() {
+  async function clearClinic() {
     setClinicIdState(null);
-    localStorage.removeItem('emr-clinic-id');
+    await removeItem('emr-clinic-id');
   }
 
   const clinic = clinicId ? clinicMap[clinicId] || null : null;
