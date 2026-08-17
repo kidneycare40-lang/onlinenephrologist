@@ -219,11 +219,16 @@ function BookingForm() {
   const initialType = searchParams.get('type') || 'online';
   const forceInternational = initialType === 'online_intl';
 
-  const [bookingSettings, setBookingSettings] = useState<BookingSettings>(() => loadBookingSettings());
+  const [bookingSettings, setBookingSettings] = useState<BookingSettings>(() => {
+    const s = loadBookingSettings();
+    s.paymentGateway.enabled = true;
+    return s;
+  });
   const [clinics, setClinics] = useState<ClinicSlot[]>(() => buildClinicsFromSettings(loadBookingSettings()));
 
   useEffect(() => {
     const s = loadBookingSettings();
+    s.paymentGateway.enabled = true;
     setBookingSettings(s);
     setClinics(buildClinicsFromSettings(s));
   }, []);

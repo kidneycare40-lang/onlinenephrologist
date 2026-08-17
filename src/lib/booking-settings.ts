@@ -155,7 +155,15 @@ export function loadBookingSettings(): BookingSettings {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return defaultSettings;
     const parsed = JSON.parse(stored);
-    return { ...defaultSettings, ...parsed };
+    return {
+      ...defaultSettings,
+      ...parsed,
+      paymentGateway: { ...defaultSettings.paymentGateway, ...(parsed.paymentGateway || {}) },
+      rules: { ...defaultSettings.rules, ...(parsed.rules || {}) },
+      onlineBooking: { ...defaultSettings.onlineBooking, ...(parsed.onlineBooking || {}) },
+      noticeBoard: { ...defaultSettings.noticeBoard, ...(parsed.noticeBoard || {}) },
+      international: { ...defaultSettings.international, ...(parsed.international || {}) },
+    };
   } catch {
     return defaultSettings;
   }
