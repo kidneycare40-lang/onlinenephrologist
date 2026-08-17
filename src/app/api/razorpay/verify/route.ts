@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { getDb } from '@/lib/db/client';
 import { applyRateLimit, apiError } from '@/lib/auth/middleware';
+import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,6 +71,26 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('booking_id', bookingId);
+
+    // Auto-generate invoice + payment record in EMR billing
+    try {
+      await autoCreateBookingInvoice({
+        bookingId,
+        patientName: payment.patient_name || 'Patient',
+        patientPhone: payment.patient_phone || '',
+        patientEmail: payment.patient_email || undefined,
+        clinicId: payment.consultation_type || 'online',
+        consultationType: payment.consultation_type || 'online',
+        consultationFee: payment.amount || 0,
+        currency: payment.currency || 'INR',
+        paymentMethod: 'Razorpay',
+        transactionId: razorpayPaymentId,
+        orderId: razorpayOrderId,
+        paymentStatus: 'COMPLETED',
+      });
+    } catch (invErr) {
+      console.error('[verify] Auto-invoice error:', invErr);
+    }
 
     return NextResponse.json({ success: true, payment });
   } catch (error) {

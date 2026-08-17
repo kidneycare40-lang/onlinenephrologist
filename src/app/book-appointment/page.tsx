@@ -493,6 +493,28 @@ function BookingForm() {
       });
     } catch {}
 
+    // Auto-generate invoice in EMR billing for all booking types
+    // Online: invoice is PAID (Razorpay verify also creates one as backup)
+    // Offline: invoice is PENDING (patient pays at clinic)
+    try {
+      fetch('/api/bookings/auto-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: id,
+          patientName: `${formData.firstName} ${formData.lastName || ''}`.trim(),
+          patientPhone: fullPhone,
+          clinicId: formData.clinicId,
+          consultationType: formData.consultationType,
+          consultationFee: consultFee,
+          currency: consultCurrency,
+          date: formData.date,
+          reason: formData.reason,
+          paymentMethod: pData ? 'Razorpay' : 'CASH',
+        }),
+      }).catch(() => {});
+    } catch {}
+
     // Also add patient to emr_added_patients so they appear in EMR Patients list
     try {
       const BOOKING_CLINIC_MAP: Record<string, string> = {

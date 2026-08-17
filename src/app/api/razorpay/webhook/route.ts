@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHmac } from 'crypto';
 import { getDb } from '@/lib/db/client';
 import { sendBookingWhatsApp } from '@/lib/whatsapp-notify';
+import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
 
 const STATUS_MAP: Record<string, string> = {
   'order.paid': 'CAPTURED',
@@ -110,15 +111,40 @@ export async function POST(request: NextRequest) {
 
     // Send WhatsApp notification to doctor when payment is captured
     if (newStatus === 'CAPTURED') {
+      // Fetch booking data for invoice + WhatsApp
+      let booking: any = null;
       try {
-        const { data: booking } = await db
+        const result = await db
           .from('bookings')
           .select('*')
           .eq('booking_id', bookingId)
           .limit(1)
           .single();
+        booking = result.data;
+      } catch {}
 
-        if (booking) {
+      // Auto-generate invoice + payment record in EMR billing
+      try {
+        await autoCreateBookingInvoice({
+          bookingId,
+          patientName: booking?.patient_name || booking?.first_name || 'Patient',
+          patientPhone: booking?.patient_phone || booking?.phone || '',
+          patientEmail: booking?.patient_email || booking?.email || undefined,
+          clinicId: booking?.clinic_id || booking?.consultation_type || 'online',
+          consultationType: booking?.consultation_type || 'online',
+          consultationFee: booking?.consultation_fee || booking?.amount || 0,
+          currency: booking?.consultation_fee_currency || 'INR',
+          paymentMethod: 'Razorpay',
+          transactionId: razorpayPaymentId || undefined,
+          orderId: razorpayOrderId || undefined,
+          paymentStatus: 'COMPLETED',
+        });
+      } catch (invErr) {
+        console.error('[webhook] Auto-invoice error:', invErr);
+      }
+
+      if (booking) {
+        try {
           await sendBookingWhatsApp({
             bookingId: booking.booking_id || bookingId,
             clinicName: booking.clinic_name || booking.clinic_id || '',
@@ -138,9 +164,9 @@ export async function POST(request: NextRequest) {
             medicines: booking.medicines || booking.current_medications || undefined,
             notes: booking.notes || undefined,
           });
+        } catch (notifyErr) {
+          console.error('[webhook] WhatsApp notify error:', notifyErr);
         }
-      } catch (notifyErr) {
-        console.error('[webhook] WhatsApp notify error:', notifyErr);
       }
     }
 
