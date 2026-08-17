@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
     if (rlError) return rlError;
 
     const body = await request.json();
-    if (!body.bookingId || !body.firstName || !body.lastName || !body.phone) {
-      return apiError('bookingId, firstName, lastName, and phone are required', 400);
+    if (!body.bookingId || !body.firstName || !body.phone) {
+      return apiError('bookingId, firstName, and phone are required', 400);
     }
 
     const db = getDb();
