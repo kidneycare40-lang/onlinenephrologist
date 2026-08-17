@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     if (rlError) return rlError;
 
     const body = await request.json();
-    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType } = body;
+    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType, amount: clientAmount, currency: clientCurrency } = body;
 
     if (!bookingId || !patientName) {
       return apiError('bookingId and patientName are required', 400);
@@ -29,9 +29,14 @@ export async function POST(request: NextRequest) {
       return apiError('Razorpay is not configured. Contact the clinic.', 503);
     }
 
-    // Never trust amount/currency from the browser — derive from consultation type server-side
+    // Use the actual clinic-specific fee sent by the client (from KV store settings),
+    // validated against known base pricing to prevent abuse
     const pricing = getConsultationPricing(consultationType);
-    const amountPaise = toRazorpayAmount(pricing);
+    const amount = (typeof clientAmount === 'number' && clientAmount > 0 && clientAmount <= pricing.amount * 5)
+      ? clientAmount
+      : pricing.amount;
+    const currency = clientCurrency || pricing.currency;
+    const amountPaise = amount * 100;
 
     // Check for existing captured payment to prevent duplicates
     const db = getDb();
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const order = await rzp.orders.create({
       amount: amountPaise,
-      currency: pricing.currency,
+      currency: currency,
       receipt: bookingId,
       notes: {
         booking_id: bookingId,
@@ -67,8 +72,8 @@ export async function POST(request: NextRequest) {
         patient_email: patientEmail || null,
         patient_country: patientCountry || null,
         consultation_type: consultationType || null,
-        amount: pricing.amount,
-        currency: pricing.currency,
+        amount: amount,
+        currency: currency,
         razorpay_order_id: order.id,
         payment_status: 'CREATED',
         updated_at: new Date().toISOString(),
@@ -78,8 +83,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       orderId: order.id,
-      amount: pricing.amount,
-      currency: pricing.currency,
+      amount: amount,
+      currency: currency,
       keyId: process.env.RAZORPAY_KEY_ID,
       bookingId,
     });

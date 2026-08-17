@@ -48,8 +48,8 @@ export default function PaymentGateway({
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
   const pricing = getConsultationPricing(consultationType);
-  const displayAmount = pricing.amount || amount;
-  const displayCurrency = pricing.currency || currency;
+  const displayAmount = amount || pricing.amount;
+  const displayCurrency = currency || pricing.currency;
 
   useEffect(() => {
     const script = document.createElement('script');
@@ -71,6 +71,8 @@ export default function PaymentGateway({
         patientEmail: patientEmail || '',
         patientCountry: patientCountry || '',
         consultationType,
+        amount: displayAmount,
+        currency: displayCurrency,
       }),
     });
     const data = await res.json();
