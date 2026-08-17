@@ -592,12 +592,13 @@ function BookingForm() {
     const doctorMsg = encodeURIComponent(
       `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${isIntl ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
     );
+    // Open WhatsApp to doctor (number 1) with full booking details — patient clicks Send
     window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
 
-    const patientMsg = encodeURIComponent(
-      `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${localTimeDisplay || formData.time}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${pData ? `Payment: Paid (${pData.paymentId})\n` : ''}${formData.clinicId === 'psri' ? 'Payment: Pay at Hospital' : pData ? '' : 'Payment: Pay now or at clinic'}\n\nFor any queries, call +91 98182 35613`
-    );
-    window.open(`https://wa.me/${fullPhone.replace(/[^0-9+]/g, '').replace(/^\+/, '')}?text=${patientMsg}`, '_blank');
+    // Also open WhatsApp to doctor (number 2) with same details — after a short delay
+    setTimeout(() => {
+      window.open(`https://wa.me/919818235688?text=${doctorMsg}`, '_blank');
+    }, 1500);
 
     setShowPaymentGateway(false);
     setPaymentData(pData);
