@@ -118,7 +118,7 @@ export const defaultSettings: BookingSettings = {
     upiId: '9818235688@pthdfc',
     currency: 'INR',
     requirePaymentForOnline: true,
-    requirePaymentForClinic: false,
+    requirePaymentForClinic: true,
   },
   international: {
     enabled: true,

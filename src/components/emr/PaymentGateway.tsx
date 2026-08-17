@@ -151,7 +151,7 @@ export default function PaymentGateway({
       amount: order.amount * 100,
       currency: order.currency,
       name: 'Kidney Care Centre',
-      description: `${consultationType === 'online_intl' ? 'International' : 'Online'} Consultation - ${bookingId}`,
+      description: `${consultationType === 'online_intl' ? 'International' : consultationType === 'offline' ? 'In-Clinic' : consultationType === 'hospital' ? 'Hospital' : 'Online'} Consultation - ${bookingId}`,
       order_id: order.orderId,
       prefill: {
         name: patientName,
@@ -254,7 +254,10 @@ export default function PaymentGateway({
       <div className="bg-gradient-to-br from-[#0A75BB]/5 to-transparent border border-[#0A75BB]/15 rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-bold text-gray-900">
-            {isInternational ? 'International Online Consultation' : 'Online Consultation'}
+            {isInternational ? 'International Online Consultation' :
+             consultationType === 'offline' ? 'In-Clinic Consultation' :
+             consultationType === 'hospital' ? 'Hospital Consultation' :
+             'Online Consultation'}
           </h3>
           {isInternational && (
             <span className="flex items-center gap-1 px-2 py-1 bg-[#0A75BB]/10 text-[#0A75BB] text-[10px] font-bold rounded-full">
@@ -462,8 +465,8 @@ export default function PaymentGateway({
         </>
       )}
 
-      {/* Skip Payment */}
-      {paymentStatus !== 'success' && (
+      {/* Skip Payment — only shown if payment not strictly required */}
+      {false && paymentStatus !== 'success' && (
         <div className="border-t border-gray-100 pt-4">
           <button onClick={onSkipPayment} className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors py-2">
             {isInternational ? 'Pay later — continue without payment' : 'Skip payment for now'}

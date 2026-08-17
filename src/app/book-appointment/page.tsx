@@ -393,16 +393,11 @@ function BookingForm() {
     // Check if payment gateway requires payment
     const pg = bookingSettings?.paymentGateway;
     if (pg?.enabled && pg.provider !== 'manual') {
-      const needsPayment =
-        ((formData.consultationType === 'online' || formData.consultationType === 'online_intl') && pg.requirePaymentForOnline) ||
-        ((formData.consultationType === 'offline' || formData.consultationType === 'hospital') && pg.requirePaymentForClinic);
-      if (needsPayment) {
-        const id = `KN-${Date.now().toString(36).toUpperCase()}`;
-        setBookingId(id);
-        sessionStorage.setItem('pending_booking_id', id);
-        setShowPaymentGateway(true);
-        return;
-      }
+      const id = `KN-${Date.now().toString(36).toUpperCase()}`;
+      setBookingId(id);
+      sessionStorage.setItem('pending_booking_id', id);
+      setShowPaymentGateway(true);
+      return;
     }
 
     await finalizeBooking(null);
@@ -1922,9 +1917,8 @@ function BookingForm() {
                   <span className="text-3xl font-bold">{formData.consultationType === 'online_intl' ? `$${consultFee}` : `₹${consultFee}`}</span>
                 </div>
                 <p className="text-xs text-white/60">
-                  {formData.consultationType === 'hospital' ? 'Pay at PSRI Hospital during your visit' :
-                   formData.consultationType === 'online_intl' ? 'Pay via Razorpay (USD)' :
-                   'Pay now via UPI or pay at clinic'}
+                  {formData.consultationType === 'online_intl' ? 'Pay via Razorpay (USD)' :
+                   'Pay now via Razorpay'}
                 </p>
               </div>
 
