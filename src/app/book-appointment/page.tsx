@@ -359,7 +359,7 @@ function BookingForm() {
 
     // Validate phone & email before anything else
     const isIntlBooking = formData.consultationType === 'online_intl';
-    const cleanPhone = formData.phone.replace(/[\s-]/g, '');
+    const cleanPhone = formData.phone.replace(/[\s-]/g, '').replace(/^\+?91/, '');
     if (isIntlBooking && !formData.countryCode) {
       alert('Please select your country code for the WhatsApp number.');
       return;
