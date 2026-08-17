@@ -1130,7 +1130,7 @@ function BookingForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           {/* Step 1: Consultation Type */}
           {step === 1 && (
             <div className="space-y-6">
