@@ -395,12 +395,16 @@ function BookingForm() {
       }
     }
 
-    // Validate for duplicates before saving
-    const validation = await validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time);
-    if (!validation.allowed && validation.existing) {
-      setDuplicateAppt(validation.existing);
-      setDuplicateType(validation.reason === 'duplicate_patient' ? 'duplicate_patient' : 'slot_conflict');
-      return;
+    // Validate for duplicates before saving (non-blocking — always show payment)
+    try {
+      const validation = await validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time);
+      if (!validation.allowed && validation.existing) {
+        setDuplicateAppt(validation.existing);
+        setDuplicateType(validation.reason === 'duplicate_patient' ? 'duplicate_patient' : 'slot_conflict');
+        return;
+      }
+    } catch {
+      // If validation fails (e.g. API down), still proceed to payment
     }
 
     // Always show payment gateway — payment is mandatory for all booking types

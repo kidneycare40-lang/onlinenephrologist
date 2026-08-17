@@ -4,13 +4,21 @@
  *
  * Includes a localStorage cache layer so repeated reads are instant.
  * All writes go through to the server AND update the local cache.
+ * Has fallback to in-memory only if server is unavailable.
  */
 
 const API = '/api/kv';
+const TIMEOUT_MS = 5000;
 
 // In-memory cache (populated on first read)
 let cache: Record<string, any> | null = null;
 let cachePromise: Promise<Record<string, any>> | null = null;
+
+function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
 
 async function ensureCache(): Promise<Record<string, any>> {
   if (cache) return cache;
@@ -18,7 +26,7 @@ async function ensureCache(): Promise<Record<string, any>> {
 
   cachePromise = (async () => {
     try {
-      const res = await fetch(API);
+      const res = await fetchWithTimeout(API);
       const data = await res.json();
       cache = data.values || {};
     } catch {
@@ -35,9 +43,8 @@ export async function getItem(key: string): Promise<any | null> {
   const c = await ensureCache();
   if (key in c) return c[key];
 
-  // Not in cache — fetch individually
   try {
-    const res = await fetch(`${API}?key=${encodeURIComponent(key)}`);
+    const res = await fetchWithTimeout(`${API}?key=${encodeURIComponent(key)}`);
     const data = await res.json();
     c[key] = data.value ?? null;
     return c[key];
@@ -51,7 +58,7 @@ export async function setItem(key: string, value: any): Promise<void> {
   c[key] = value;
 
   try {
-    await fetch(API, {
+    await fetchWithTimeout(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, value }),
@@ -66,19 +73,19 @@ export async function removeItem(key: string): Promise<void> {
   delete c[key];
 
   try {
-    await fetch(`${API}?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+    await fetchWithTimeout(`${API}?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
   } catch (e) {
     console.error('[client-storage] removeItem failed:', e);
   }
 }
 
-/** Bulk-set multiple keys at once (more efficient than many setItem calls) */
+/** Bulk-set multiple keys at once */
 export async function setItems(entries: { key: string; value: any }[]): Promise<void> {
   const c = await ensureCache();
   entries.forEach(e => { c[e.key] = e.value; });
 
   try {
-    await fetch(API, {
+    await fetchWithTimeout(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entries }),
@@ -101,7 +108,7 @@ export async function getItems(keys: string[]): Promise<Record<string, any>> {
 
   if (missing.length > 0) {
     try {
-      const res = await fetch(`${API}?keys=${missing.map(encodeURIComponent).join(',')}`);
+      const res = await fetchWithTimeout(`${API}?keys=${missing.map(encodeURIComponent).join(',')}`);
       const data = await res.json();
       Object.entries(data.values || {}).forEach(([k, v]) => {
         c[k] = v;
