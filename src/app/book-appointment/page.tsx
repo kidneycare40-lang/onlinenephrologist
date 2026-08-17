@@ -745,7 +745,7 @@ function BookingForm() {
     if (step === 1) return !!formData.consultationType;
     if (step === 2) return !!formData.clinicId;
     if (step === 3) {
-      if (!formData.firstName || !formData.lastName || !formData.phone || !formData.age) return false;
+      if (!formData.firstName || !formData.phone || !formData.age) return false;
       if (formData.isInternational && !formData.country) return false;
       return true;
     }
