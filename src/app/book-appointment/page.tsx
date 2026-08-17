@@ -395,24 +395,27 @@ function BookingForm() {
       }
     }
 
-    // Validate for duplicates before saving (non-blocking — always show payment)
-    try {
-      const validation = await validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time);
-      if (!validation.allowed && validation.existing) {
-        setDuplicateAppt(validation.existing);
-        setDuplicateType(validation.reason === 'duplicate_patient' ? 'duplicate_patient' : 'slot_conflict');
-        return;
-      }
-    } catch {
-      // If validation fails (e.g. API down), still proceed to payment
-    }
-
-    // Always show payment gateway — payment is mandatory for all booking types
+    // Show payment gateway IMMEDIATELY — do not wait for async validation.
+    // Duplicate/slot checks can run in background; they only block if a conflict
+    // is found, in which case we close the gateway and show the conflict dialog.
     const id = `KN-${Date.now().toString(36).toUpperCase()}`;
     setBookingId(id);
     sessionStorage.setItem('pending_booking_id', id);
     setShowPaymentGateway(true);
-    return;
+
+    // Run duplicate check in background (non-blocking). If a conflict is found,
+    // close the payment gateway and show the duplicate dialog.
+    validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time)
+      .then((validation) => {
+        if (!validation.allowed && validation.existing) {
+          setShowPaymentGateway(false);
+          setDuplicateAppt(validation.existing);
+          setDuplicateType(validation.reason === 'duplicate_patient' ? 'duplicate_patient' : 'slot_conflict');
+        }
+      })
+      .catch(() => {
+        // Validation API down — payment gateway stays open, proceed normally
+      });
   };
 
   const finalizeBooking = async (pData: PaymentData | null) => {
