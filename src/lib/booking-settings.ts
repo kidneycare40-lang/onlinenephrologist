@@ -111,13 +111,13 @@ export const defaultSettings: BookingSettings = {
     type: 'info',
   },
   paymentGateway: {
-    enabled: false,
-    provider: 'upi-only',
+    enabled: true,
+    provider: 'razorpay',
     razorpayKeyId: '',
     razorpayKeySecret: '',
     upiId: '9818235688@pthdfc',
     currency: 'INR',
-    requirePaymentForOnline: false,
+    requirePaymentForOnline: true,
     requirePaymentForClinic: false,
   },
   international: {
