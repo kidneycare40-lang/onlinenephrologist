@@ -1396,8 +1396,8 @@ function BookingForm() {
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors" placeholder="Enter first name" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name *</label>
-                    <input type="text" name="lastName" required value={formData.lastName} onChange={handleChange}
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name</label>
+                    <input type="text" name="lastName" value={formData.lastName} onChange={handleChange}
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors" placeholder="Enter last name" />
                   </div>
                   <div>
