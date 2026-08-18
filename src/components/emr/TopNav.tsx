@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import {
   Search, Bell, Menu, X, UserPlus, LayoutDashboard, Calendar, Users,
   Stethoscope, Video, Receipt, TrendingUp, Settings, Sparkles, Grid3X3,
-  ChevronDown, ChevronLeft, LogOut, Phone, MapPin, Hash, Building2, Check, AlertTriangle,
+  ChevronDown, ChevronLeft, LogOut, Phone, MapPin, Hash, Building2, Check, AlertTriangle, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
@@ -26,6 +26,7 @@ const navLinks = [
   { label: 'Appointments', href: '/emr/appointments', icon: Calendar },
   { label: 'Patients', href: '/emr/patients', icon: Users },
   { label: 'Consultation', href: '/emr/consultation', icon: Stethoscope },
+  { label: 'Messages', href: '/emr/messages', icon: MessageSquare },
   { label: 'Telemedicine', href: '/emr/telemedicine', icon: Video },
   { label: 'Billing', href: '/emr/billing', icon: Receipt },
   { label: 'Kidney Charts', href: '/emr/kidney-charts', icon: TrendingUp },

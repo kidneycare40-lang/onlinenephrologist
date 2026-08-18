@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, Calendar, Stethoscope,
   Activity, FlaskConical, Receipt, Bot, Video, Settings, LogOut,
   ChevronLeft, ChevronRight,
-  ClipboardList, Clock, Pill, TrendingUp, UserCog,
+  ClipboardList, Clock, Pill, TrendingUp, UserCog, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
@@ -45,6 +45,7 @@ const sidebarSections = [
   {
     label: 'COMMUNICATION',
     items: [
+      { label: 'Messages', href: '/emr/messages', icon: MessageSquare },
       { label: 'Telemedicine', href: '/emr/telemedicine', icon: Video },
       { label: 'AI Assistant', href: '/emr/ai', icon: Bot },
     ],

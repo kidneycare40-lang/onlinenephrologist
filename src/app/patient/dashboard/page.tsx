@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Calendar, FileText, ClipboardList, Receipt, User, Clock,
-  Video, MapPin, Globe, ChevronRight, AlertTriangle, Pill,
+  Video, MapPin, Globe, ChevronRight, AlertTriangle, Pill, MessageSquare,
 } from 'lucide-react';
 
 interface PortalData {
@@ -131,6 +131,46 @@ export default function PatientDashboardPage() {
         <Link href="/patient/reports" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
           <div className="text-2xl font-bold text-amber-600">{data.recentReports.length}</div>
           <div className="text-xs text-gray-500">Reports</div>
+        </Link>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Link href="/book-appointment" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-[#0A75BB]/10 flex items-center justify-center shrink-0">
+            <Calendar className="h-5 w-5 text-[#0A75BB]" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Book Appointment</p>
+            <p className="text-[10px] text-gray-500">Schedule a consultation</p>
+          </div>
+        </Link>
+        <Link href="/patient/messages" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+            <MessageSquare className="h-5 w-5 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Ask a Question</p>
+            <p className="text-[10px] text-gray-500">Message the doctor</p>
+          </div>
+        </Link>
+        <Link href="/patient/reports" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+            <FileText className="h-5 w-5 text-amber-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Upload Report</p>
+            <p className="text-[10px] text-gray-500">Share test results</p>
+          </div>
+        </Link>
+        <Link href="/patient/prescriptions" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+            <Pill className="h-5 w-5 text-purple-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">My Prescription</p>
+            <p className="text-[10px] text-gray-500">View medications</p>
+          </div>
         </Link>
       </div>
 

@@ -7,6 +7,7 @@ import {
   Users,
   FileText,
   Receipt,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/emr-auth-context';
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { href: '/emr/dashboard', icon: LayoutDashboard, label: 'Home', permission: 'dashboard' as const },
   { href: '/emr/appointments', icon: Calendar, label: 'Appts', permission: 'appointments' as const },
   { href: '/emr/patients', icon: Users, label: 'Patients', permission: 'patients' as const },
+  { href: '/emr/messages', icon: MessageSquare, label: 'Messages', permission: 'patients' as const },
   { href: '/emr/consultation', icon: FileText, label: 'Rx', permission: 'consultations' as const },
   { href: '/emr/billing', icon: Receipt, label: 'Billing', permission: 'billing' as const },
 ];

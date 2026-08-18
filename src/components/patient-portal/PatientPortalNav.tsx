@@ -5,12 +5,13 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Calendar, FileText, ClipboardList,
-  Receipt, User, LogOut, Stethoscope,
+  Receipt, User, LogOut, Stethoscope, MessageSquare,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/patient/dashboard', label: 'Overview', icon: LayoutDashboard },
   { href: '/patient/appointments', label: 'Appointments', icon: Calendar },
+  { href: '/patient/messages', label: 'Messages', icon: MessageSquare },
   { href: '/patient/consultations', label: 'Consultations', icon: Stethoscope },
   { href: '/patient/prescriptions', label: 'Prescriptions', icon: ClipboardList },
   { href: '/patient/reports', label: 'Reports', icon: FileText },
