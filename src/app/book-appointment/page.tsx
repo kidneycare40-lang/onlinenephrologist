@@ -2085,12 +2085,12 @@ function BookingForm() {
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <a
-                href={`/emr/consultation/consult-obp-${duplicateAppt.bookingId}`}
+              <button
+                onClick={() => { setDuplicateAppt(null); setDuplicateType(null); }}
                 className="w-full py-2.5 bg-[#0A75BB] text-white font-semibold rounded-xl text-sm text-center hover:bg-[#085D94] transition-colors"
               >
-                View Appointment
-              </a>
+                Close
+              </button>
               <button
                 onClick={() => { setDuplicateAppt(null); setDuplicateType(null); }}
                 className="w-full py-2.5 bg-amber-500 text-white font-semibold rounded-xl text-sm hover:bg-amber-600 transition-colors"
