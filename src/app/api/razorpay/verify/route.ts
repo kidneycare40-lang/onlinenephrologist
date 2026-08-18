@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { getDb } from '@/lib/db/client';
 import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
@@ -21,12 +21,14 @@ export async function POST(request: NextRequest) {
       return apiError('Razorpay is not configured. Contact the clinic.', 503);
     }
 
-    // Server-side signature verification
+    // Server-side signature verification (timing-safe to prevent timing attacks)
     const expected = createHmac('sha256', secret)
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
-    if (expected !== razorpaySignature) {
+    const sigBuf = Buffer.from(razorpaySignature, 'hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
       return apiError('Invalid payment signature', 400);
     }
 

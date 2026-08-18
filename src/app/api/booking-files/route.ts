@@ -3,6 +3,14 @@ import { getDb } from '@/lib/db/client';
 import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 
 const BUCKET = 'booking-reports';
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB per file
+const MAX_FILES = 10;
+const ALLOWED_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'application/pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+]);
 
 async function ensureBucket() {
   const db = getDb();
@@ -16,7 +24,7 @@ function safeName(name: string): string {
   return encodeURIComponent(name.replace(/[/\\]/g, '_'));
 }
 
-// POST — public: upload the booking's report files to Supabase Storage
+// POST — public (rate-limited): upload the booking's report files to Supabase Storage
 export async function POST(request: NextRequest) {
   try {
     const rlError = applyRateLimit(request, 'booking');
@@ -28,6 +36,9 @@ export async function POST(request: NextRequest) {
     if (!bookingId || !Array.isArray(files) || files.length === 0) {
       return apiError('bookingId and files are required', 400);
     }
+    if (files.length > MAX_FILES) {
+      return apiError(`Maximum ${MAX_FILES} files allowed`, 400);
+    }
 
     await ensureBucket();
     const db = getDb();
@@ -35,9 +46,11 @@ export async function POST(request: NextRequest) {
     const urls: { name: string; url: string }[] = [];
     for (const f of files) {
       if (!f?.data || !f?.name) continue;
+      if (f.type && !ALLOWED_TYPES.has(f.type)) continue;
       const base64 = String(f.data).replace(/^data:[^;]+;base64,/, '');
       const buffer = Buffer.from(base64, 'base64');
       if (buffer.byteLength === 0) continue;
+      if (buffer.byteLength > MAX_FILE_SIZE_BYTES) continue;
       const path = `${bookingId}/${safeName(f.name)}`;
       const { error } = await db.storage.from(BUCKET).upload(path, buffer, {
         contentType: f.type || 'application/octet-stream',

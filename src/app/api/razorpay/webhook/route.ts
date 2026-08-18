@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { getDb } from '@/lib/db/client';
 import { sendBookingWhatsApp } from '@/lib/whatsapp-notify';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
     }
 
     const expected = createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
-    if (expected !== signature) {
+    const sigBuf = Buffer.from(signature, 'hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
       return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 });
     }
 

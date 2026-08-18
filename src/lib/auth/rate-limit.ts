@@ -9,6 +9,8 @@ const DEFAULTS: Record<string, RateLimitConfig> = {
   login: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
   otp: { windowMs: 60 * 1000, maxRequests: 3 },
   booking: { windowMs: 60 * 1000, maxRequests: 10 },
+  notify: { windowMs: 60 * 1000, maxRequests: 5 },
+  kv: { windowMs: 60 * 1000, maxRequests: 30 },
   passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
   api: { windowMs: 60 * 1000, maxRequests: 60 },
 };

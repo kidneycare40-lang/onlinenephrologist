@@ -13,9 +13,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error }, { status: 429 });
     }
 
-    // In production, send the OTP via email here.
-    // For now, log it server-side only (never exposed to the client).
-    console.log(`[PATIENT OTP] ${email}: ${result.otp}`);
+    // Only log OTP in development — never log in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[PATIENT OTP] ${email}: ${result.otp}`);
+    }
 
     return NextResponse.json({ success: true, message: `Verification code sent to ${email}` });
   } catch (err: any) {

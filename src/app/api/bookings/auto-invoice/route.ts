@@ -6,6 +6,7 @@ import { applyRateLimit, apiError } from '@/lib/auth/middleware';
  * POST /api/bookings/auto-invoice
  * Creates a PENDING invoice for offline/in-clinic bookings.
  * Online payments are auto-invoiced via the Razorpay verify/webhook routes.
+ * Rate-limited to prevent abuse (public endpoint called from booking form).
  */
 export async function POST(request: NextRequest) {
   try {

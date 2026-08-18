@@ -13,7 +13,6 @@ import { getItem, setItem, removeItem } from '@/lib/client-storage';
 import BillingInvoice from '@/components/emr/BillingInvoice';
 import CreateInvoiceModal from '@/components/emr/CreateInvoiceModal';
 import { billingApi } from '@/lib/api-client';
-import { mockInvoices } from '@/lib/data/billing-mock';
 import type { EMRInvoice, InvoiceStatus } from '@/types/emr';
 import type { BookingPayment } from '@/lib/db/types';
 
@@ -199,16 +198,20 @@ export default function BillingPage() {
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
   const [onlinePayments, setOnlinePayments] = useState<BookingPayment[]>([]);
   const [onlinePaymentsLoading, setOnlinePaymentsLoading] = useState(false);
+  const [onlinePaymentsError, setOnlinePaymentsError] = useState<string | null>(null);
   const [showOnlinePayments, setShowOnlinePayments] = useState(true);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [clearingMocks, setClearingMocks] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
+    setInvoiceError(null);
 
     try {
       const params: Record<string, string> = {};
       if (statusFilter !== 'ALL') params.status = statusFilter;
-      const result = await billingApi.list(params).catch(() => null);
+      const result = await billingApi.list(params);
 
       let apiInvoices: EMRInvoice[] = [];
       if (result && Array.isArray(result.data) && result.data.length > 0) {
@@ -228,26 +231,42 @@ export default function BillingPage() {
           setInvoices(enriched);
           await saveInvoicesToStorage(enriched);
         } else {
-          setInvoices(mockInvoices);
-          await saveInvoicesToStorage(mockInvoices);
+          setInvoices([]);
         }
       }
-    } catch {
-      const storageInvoices = await loadInvoicesFromStorage();
-      const enriched = await enrichInvoicesWithAge(storageInvoices);
-      setInvoices(enriched.length > 0 ? enriched : mockInvoices);
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to load invoices';
+      setInvoiceError(msg);
+      try {
+        const storageInvoices = await loadInvoicesFromStorage();
+        const enriched = await enrichInvoicesWithAge(storageInvoices);
+        setInvoices(enriched.length > 0 ? enriched : []);
+      } catch {
+        setInvoices([]);
+      }
     } finally {
       setLoading(false);
     }
 
     setOnlinePaymentsLoading(true);
+    setOnlinePaymentsError(null);
     try {
       const res = await fetch('/api/razorpay/payments');
-      if (res.ok) {
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          setOnlinePaymentsError('You don\'t have permission to view online payments. Requires billing view access.');
+        } else {
+          setOnlinePaymentsError(`Failed to load payments (HTTP ${res.status})`);
+        }
+        setOnlinePayments([]);
+      } else {
         const data = await res.json();
         setOnlinePayments(Array.isArray(data) ? data : data?.payments || []);
       }
-    } catch {}
+    } catch {
+      setOnlinePaymentsError('Failed to load online payments');
+      setOnlinePayments([]);
+    }
     setOnlinePaymentsLoading(false);
   }, [statusFilter]);
 
@@ -503,6 +522,23 @@ export default function BillingPage() {
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           </button>
           <button
+            onClick={async () => {
+              if (!confirm('Clear cached billing data (including any dummy/mock data)? This will reload from the server on next refresh.')) return;
+              setClearingMocks(true);
+              try {
+                await removeItem('billing-invoices');
+              } catch {}
+              setClearingMocks(false);
+              refreshData();
+            }}
+            disabled={clearingMocks}
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors min-h-[44px]"
+            title="Clear cached mock data"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {clearingMocks ? 'Clearing...' : 'Clear Cache'}
+          </button>
+          <button
             onClick={() => {
               setEditingInvoice(null);
               setShowCreateModal(true);
@@ -514,6 +550,21 @@ export default function BillingPage() {
           </button>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {invoiceError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800">Failed to load invoices from server</p>
+            <p className="text-xs text-red-600 mt-1">{invoiceError}</p>
+            <p className="text-xs text-red-500 mt-1">Showing cached data if available. Click Refresh to retry.</p>
+          </div>
+          <button onClick={() => setInvoiceError(null)} className="p-1 text-red-400 hover:text-red-600">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Top Stats — 4 cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -676,6 +727,12 @@ export default function BillingPage() {
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {onlinePaymentsLoading ? (
             <div className="py-10 text-center text-gray-400 text-sm">Loading payments...</div>
+          ) : onlinePaymentsError ? (
+            <div className="py-10 text-center text-red-500">
+              <AlertTriangle className="h-10 w-10 mx-auto mb-3 text-red-300" />
+              <p className="text-sm font-medium">{onlinePaymentsError}</p>
+              <button onClick={refreshData} className="mt-3 text-xs text-[#0A75BB] hover:underline">Retry</button>
+            </div>
           ) : onlinePayments.length === 0 ? (
             <div className="py-10 text-center text-gray-500">
               <CreditCard className="h-10 w-10 mx-auto mb-3 text-gray-300" />
@@ -974,7 +1031,10 @@ export default function BillingPage() {
           {filtered.length === 0 && (
             <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-500">
               <Receipt className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-              <p className="text-sm font-medium">{loading ? 'Loading invoices...' : 'No invoices found'}</p>
+              <p className="text-sm font-medium">{loading ? 'Loading invoices...' : invoiceError ? 'Could not load invoices' : 'No invoices found'}</p>
+              {!loading && !invoiceError && (
+                <p className="text-xs text-gray-400 mt-1">Invoices are auto-generated when online bookings are paid, or created manually via &quot;New Invoice&quot;</p>
+              )}
             </div>
           )}
         </>

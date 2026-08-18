@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
+import { authenticateRequest, applyRateLimit } from '@/lib/auth/middleware';
 
-// GET /api/kv?key=xxx — read a value
-// GET /api/kv?keys=a,b,c — read multiple values
-// GET /api/kv — read all keys
+function kvAuthError(): NextResponse {
+  return NextResponse.json({ error: 'Authentication required for write operations' }, { status: 401 });
+}
+
+// GET /api/kv?key=xxx — public read (used by client-storage for settings/clinics)
 export async function GET(req: NextRequest) {
   try {
+    const rlError = applyRateLimit(req, 'kv');
+    if (rlError) return rlError;
+
     const db = getDb();
     const key = req.nextUrl.searchParams.get('key');
     const keys = req.nextUrl.searchParams.get('keys');
@@ -30,7 +36,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ values: result });
     }
 
-    // All keys
     const { data } = await db
       .from('app_kv_store')
       .select('store_key, store_value');
@@ -43,14 +48,19 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/kv — { key, value } or { entries: [{ key, value }, ...] }
+// POST /api/kv — requires EMR auth (staff/admin only)
 export async function POST(req: NextRequest) {
   try {
+    const rlError = applyRateLimit(req, 'kv');
+    if (rlError) return rlError;
+
+    const { user, error: authError } = await authenticateRequest(req);
+    if (authError) return kvAuthError();
+
     const db = getDb();
     const body = await req.json();
 
     if (body.entries && Array.isArray(body.entries)) {
-      // Upsert multiple
       const rows = body.entries.map((e: { key: string; value: any }) => ({
         store_key: e.key,
         store_value: e.value,
@@ -82,9 +92,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE /api/kv?key=xxx
+// DELETE /api/kv?key=xxx — requires EMR auth (staff/admin only)
 export async function DELETE(req: NextRequest) {
   try {
+    const rlError = applyRateLimit(req, 'kv');
+    if (rlError) return rlError;
+
+    const { user, error: authError } = await authenticateRequest(req);
+    if (authError) return kvAuthError();
+
     const db = getDb();
     const key = req.nextUrl.searchParams.get('key');
     if (!key) {

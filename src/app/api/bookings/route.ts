@@ -3,6 +3,8 @@ import { getDb } from '@/lib/db/client';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
 
 // Map the booking form payload (camelCase) to the bookings table (snake_case)
+// Note: paymentStatus, paymentId, razorpayOrderId are NEVER set by the client.
+// They are only set server-side via verify/webhook routes.
 function toRow(body: any) {
   return {
     booking_id: body.bookingId,
@@ -32,9 +34,9 @@ function toRow(body: any) {
     booking_medicines: body.bookingMedicines || [],
     consultation_fee: body.consultationFee ?? null,
     consultation_fee_currency: body.consultationFeeCurrency || 'INR',
-    payment_status: body.paymentStatus || 'unpaid',
-    payment_id: body.paymentId || null,
-    razorpay_order_id: body.razorpayOrderId || null,
+    payment_status: 'unpaid',
+    payment_id: null,
+    razorpay_order_id: null,
     doctor_name: body.doctorName || 'Dr Rajesh Goel',
     status: body.status || 'pending',
   };
@@ -101,24 +103,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, bookingId: body.bookingId, alreadyExists: true });
     }
 
-    // Server-side duplicate booking prevention for logged-in patients
-    if (body.patientAccountId && body.clinicId && body.date && body.time) {
-      const { data: duplicate } = await db
-        .from('bookings')
-        .select('booking_id, first_name, last_name, booking_date, booking_time, status')
-        .eq('patient_account_id', body.patientAccountId)
-        .eq('clinic_id', body.clinicId)
-        .eq('booking_date', body.date)
-        .eq('booking_time', body.time)
-        .in('status', ['pending', 'confirmed', 'booked'])
-        .limit(1);
+    // Server-side duplicate booking prevention
+    // Check by patient_account_id (logged-in patients) OR by phone + date + clinic (guests)
+    const cleanPhone = (body.phone || '').replace(/\D/g, '').replace(/^0+/, '').replace(/^91/, '');
+    const effectiveClinicId = body.clinicId || null;
+    const effectiveDate = body.date || null;
+    const effectiveTime = body.time || null;
 
-      if (duplicate && duplicate.length > 0) {
-        return apiError(
-          'You already have an appointment booked for this date and time.',
-          409,
-          { existing: duplicate[0] }
-        );
+    if (effectiveClinicId && effectiveDate && effectiveTime) {
+      // Build OR conditions: account match OR phone match
+      const orConditions = [];
+      if (body.patientAccountId) {
+        orConditions.push(`patient_account_id.eq.${body.patientAccountId}`);
+      }
+      if (cleanPhone.length >= 6) {
+        orConditions.push(`phone.ilike.%${cleanPhone}%`);
+      }
+
+      if (orConditions.length > 0) {
+        const { data: duplicates } = await db
+          .from('bookings')
+          .select('booking_id, first_name, last_name, phone, booking_date, booking_time, status')
+          .eq('clinic_id', effectiveClinicId)
+          .eq('booking_date', effectiveDate)
+          .eq('booking_time', effectiveTime)
+          .or(orConditions.join(','))
+          .in('status', ['pending', 'confirmed', 'booked'])
+          .limit(5);
+
+        if (duplicates && duplicates.length > 0) {
+          const isOwn = duplicates.some(
+            (d) => body.patientAccountId && d.first_name?.toLowerCase() === (body.firstName || '').toLowerCase()
+          );
+          return apiError(
+            isOwn
+              ? 'You already have an appointment booked for this date and time.'
+              : 'An appointment already exists for this patient at this date and time.',
+            409,
+            { existing: duplicates[0] }
+          );
+        }
       }
     }
 

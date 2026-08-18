@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendBookingWhatsApp, type BookingNotification } from '@/lib/whatsapp-notify';
+import { applyRateLimit } from '@/lib/auth/middleware';
 
 export async function POST(req: NextRequest) {
   try {
+    const rlError = applyRateLimit(req, 'notify');
+    if (rlError) return rlError;
+
     const body = await req.json();
     const notification: BookingNotification = {
       bookingId: body.bookingId || '',
