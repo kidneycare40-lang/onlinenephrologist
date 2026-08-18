@@ -41,6 +41,16 @@ export default function EMRMessagesPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch('/api/emr/messages')
+        .then(r => r.json())
+        .then(d => { setConversations(d.conversations || []); })
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const loadMessages = async (conv: Conversation) => {
     setSelected(conv);
     const res = await fetch(`/api/emr/messages?conversationId=${conv.id}`);
@@ -51,6 +61,17 @@ export default function EMRMessagesPage() {
     const listData = await listRes.json();
     setConversations(listData.conversations || []);
   };
+
+  useEffect(() => {
+    if (!selected) return;
+    const interval = setInterval(() => {
+      fetch(`/api/emr/messages?conversationId=${selected.id}`)
+        .then(r => r.json())
+        .then(d => { if (d.messages) setMessages(d.messages); })
+        .catch(() => {});
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [selected?.id]);
 
   const handleSend = async () => {
     if (!input.trim() || !selected || sending) return;

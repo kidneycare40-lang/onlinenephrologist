@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/emr-auth-context';
+import { useEMRUnreadCount } from '@/hooks/useEMRUnreadCount';
 
 const NAV_ITEMS = [
   { href: '/emr/dashboard', icon: LayoutDashboard, label: 'Home', permission: 'dashboard' as const },
@@ -25,6 +26,7 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { can } = useAuth();
+  const unreadCount = useEMRUnreadCount(30000);
 
   const filteredItems = NAV_ITEMS.filter((item) => can(item.permission as any, 'view'));
 
@@ -49,11 +51,16 @@ export default function MobileBottomNav() {
               onClick={() => router.push(item.href)}
               style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors min-h-[48px]',
+                'relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors min-h-[48px]',
                 active ? 'text-[#0A75BB]' : 'text-gray-400 active:text-gray-600'
               )}
             >
               <item.icon className={cn('h-6 w-6', active && 'stroke-[2.5]')} />
+              {item.href === '/emr/messages' && unreadCount > 0 && (
+                <span className="absolute top-1 right-1/4 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold bg-red-500 text-white rounded-full leading-none">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
               <span className={cn('text-[10px] leading-tight', active ? 'font-semibold' : 'font-medium')}>
                 {item.label}
               </span>

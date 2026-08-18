@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
+import { useEMRUnreadCount } from '@/hooks/useEMRUnreadCount';
 
 export interface SidebarProps {
   collapsed: boolean;
@@ -63,6 +64,7 @@ const sidebarSections = [
 function SidebarContent({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   const { clinic } = useClinic();
+  const unreadCount = useEMRUnreadCount(30000);
 
   return (
     <div className="flex flex-col h-full">
@@ -111,6 +113,14 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
                     )}
                     <item.icon className={cn('h-[18px] w-[18px] shrink-0', isActive && 'text-primary-400')} />
                     {!collapsed && <span className="truncate">{item.label}</span>}
+                    {item.href === '/emr/messages' && unreadCount > 0 && (
+                      <span className={cn(
+                        'ml-auto text-[10px] font-bold px-1.5 py-0.5 bg-red-500 text-white rounded-full leading-none',
+                        collapsed && 'absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center px-1'
+                      )}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
 
                     {/* Tooltip for collapsed mode */}
                     {collapsed && (

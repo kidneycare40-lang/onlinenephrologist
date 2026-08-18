@@ -35,6 +35,24 @@ export default function PatientMessagesPage() {
   }, []);
 
   useEffect(() => {
+    const interval = setInterval(() => {
+      fetch('/api/patient-auth/messages')
+        .then(r => r.json())
+        .then(d => {
+          setMessages(prev => {
+            const newMsgs = d.messages || [];
+            if (newMsgs.length > prev.length) {
+              setTimeout(scrollToBottom, 100);
+            }
+            return newMsgs;
+          });
+        })
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
 

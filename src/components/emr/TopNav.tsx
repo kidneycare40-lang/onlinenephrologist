@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { useAuth } from '@/lib/emr-auth-context';
+import { useEMRUnreadCount } from '@/hooks/useEMRUnreadCount';
 import { patientsApi } from '@/lib/api-client';
 import { getItem, setItem } from '@/lib/client-storage';
 
@@ -53,6 +54,7 @@ export default function TopNav() {
   const appsRef = useRef<HTMLDivElement>(null);
 
   const [showAddPatient, setShowAddPatient] = useState(false);
+  const unreadCount = useEMRUnreadCount(30000);
   const [patientPrefix, setPatientPrefix] = useState('Mr');
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
@@ -344,6 +346,11 @@ export default function TopNav() {
                   {isActive && <div className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-5 h-[3px] bg-white rounded-t-full" />}
                   <link.icon className="h-4 w-4" />
                   <span className="text-[10px] font-medium leading-tight mt-0.5">{link.label}</span>
+                  {link.href === '/emr/messages' && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold bg-red-500 text-white rounded-full leading-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
