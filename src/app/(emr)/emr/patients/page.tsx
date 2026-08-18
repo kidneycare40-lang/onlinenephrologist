@@ -115,9 +115,9 @@ export default function PatientListPage() {
           for (const b of bookings) {
             const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || '';
             if (clinicFilter && clinicFilter !== 'all' && mappedClinic !== clinicFilter) continue;
-            const phone = (b.phone || '').replace(/\s/g, '');
+            const phone = (b.phone || '').replace(/\D/g, '').replace(/^91/, '');
             const email = (b.email || '').toLowerCase();
-            if (allPats.some((p: any) => (p.phone || '').replace(/\s/g, '') === phone && phone) ||
+            if (allPats.some((p: any) => (p.phone || '').replace(/\D/g, '').replace(/^91/, '') === phone && phone) ||
                 (email && allPats.some((p: any) => (p.email || '').toLowerCase() === email))) continue;
             const existingBooking = allPats.find((p: any) => p.id === b.bookingId);
             if (existingBooking) continue;
@@ -184,7 +184,9 @@ export default function PatientListPage() {
           for (const b of bookings) {
             const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || '';
             if (clinicFilter && clinicFilter !== 'all' && mappedClinic !== clinicFilter) continue;
+            const phone = (b.phone || '').replace(/\D/g, '').replace(/^91/, '');
             if (dynamicPatients.some((p: any) => p.id === b.bookingId)) continue;
+            if (phone && dynamicPatients.some((p: any) => (p.phone || '').replace(/\D/g, '').replace(/^91/, '') === phone)) continue;
             dynamicPatients.push({
               id: b.bookingId,
               firstName: b.firstName || '',

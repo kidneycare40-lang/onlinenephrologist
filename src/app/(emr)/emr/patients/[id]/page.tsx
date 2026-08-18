@@ -113,7 +113,10 @@ export default function PatientDetailPage() {
         for (const b of localBookings) {
           if (b.firstName) {
             const id = b.bookingId;
-            if (!dynamic.some(p => p.id === id) && !patients.some(p => p.id === id)) {
+            const phone = (b.phone || '').replace(/\D/g, '').replace(/^91/, '');
+            const phoneMatch = phone && (patients.some(p => (p.phone || '').replace(/\D/g, '').replace(/^91/, '') === phone) ||
+                              dynamic.some(p => (p.phone || '').replace(/\D/g, '').replace(/^91/, '') === phone));
+            if (!dynamic.some(p => p.id === id) && !patients.some(p => p.id === id) && !phoneMatch) {
               dynamic.push({
                 id, firstName: b.firstName || '', lastName: b.lastName || '',
                 phone: b.phone || '', email: b.email || '',
