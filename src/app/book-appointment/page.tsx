@@ -2092,7 +2092,17 @@ function BookingForm() {
                 Close
               </button>
               <button
-                onClick={() => { setDuplicateAppt(null); setDuplicateType(null); }}
+                onClick={() => {
+                  setDuplicateAppt(null);
+                  setDuplicateType(null);
+                  setTimeout(() => {
+                    const dateInput = document.querySelector('input[name="date"]') as HTMLInputElement | null;
+                    if (dateInput) {
+                      dateInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      dateInput.focus();
+                    }
+                  }, 100);
+                }}
                 className="w-full py-2.5 bg-amber-500 text-white font-semibold rounded-xl text-sm hover:bg-amber-600 transition-colors"
               >
                 Reschedule
