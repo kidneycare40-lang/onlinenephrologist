@@ -2,304 +2,244 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Navbar } from '@/components/layout/Navbar';
-import { Footer } from '@/components/layout/Footer';
 import {
-  User, Calendar, LogOut, Clock, MapPin, Video, Globe,
-  ChevronRight, Plus,
+  Calendar, FileText, ClipboardList, Receipt, User, Clock,
+  Video, MapPin, Globe, ChevronRight, AlertTriangle, Pill,
 } from 'lucide-react';
 
-interface Patient {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-  gender: string | null;
-  country: string | null;
-  timezone: string | null;
-  isInternational: boolean;
-}
-
-interface Booking {
-  id: string;
-  booking_id: string;
-  first_name: string;
-  last_name: string;
-  consultation_type: string;
-  clinic_id: string | null;
-  booking_date: string | null;
-  booking_time: string | null;
-  status: string;
-  payment_status: string;
-  payment_id: string | null;
-  consultation_fee: number | null;
-  consultation_fee_currency: string;
-  doctor_name: string | null;
-  reason: string | null;
-  created_at: string;
+interface PortalData {
+  account: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+    gender: string | null;
+    country: string | null;
+    is_international: boolean;
+  } | null;
+  emrPatientId: string | null;
+  upcomingBookings: any[];
+  totalBookings: number;
+  activeFollowUp: {
+    id: string;
+    original_booking_id: string;
+    valid_until: string;
+    consultation_type: string;
+  } | null;
+  recentPrescriptions: any[];
+  recentInvoices: any[];
+  recentReports: any[];
 }
 
 const typeConfig: Record<string, { label: string; icon: typeof Video; color: string }> = {
-  online: { label: 'Online Consultation', icon: Video, color: 'text-purple-600 bg-purple-50' },
-  offline: { label: 'Clinic Visit', icon: MapPin, color: 'text-emerald-600 bg-emerald-50' },
-  hospital: { label: 'Hospital Visit', icon: MapPin, color: 'text-blue-600 bg-blue-50' },
-  online_intl: { label: 'International Consultation', icon: Globe, color: 'text-amber-600 bg-amber-50' },
-};
-
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  confirmed: 'bg-green-100 text-green-700',
-  completed: 'bg-blue-100 text-blue-700',
-  cancelled: 'bg-red-100 text-red-700',
-  booked: 'bg-green-100 text-green-700',
-};
-
-const clinicNames: Record<string, string> = {
-  'online': 'Online Consultation',
-  'psri': 'PSRI Hospital, New Delhi',
-  'kcc-faridabad': 'Kidney Care Centre, Faridabad',
-  'kcc-saket': 'Kidney Care Centre, Saket',
+  online: { label: 'Online', icon: Video, color: 'text-purple-600 bg-purple-50' },
+  offline: { label: 'Clinic', icon: MapPin, color: 'text-emerald-600 bg-emerald-50' },
+  hospital: { label: 'Hospital', icon: MapPin, color: 'text-blue-600 bg-blue-50' },
+  online_intl: { label: 'International', icon: Globe, color: 'text-amber-600 bg-amber-50' },
 };
 
 export default function PatientDashboardPage() {
-  const router = useRouter();
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/patient-auth/me')
-      .then(r => {
-        if (!r.ok) throw new Error('not auth');
-        return r.json();
-      })
-      .then(data => {
-        setPatient(data.patient);
-        return fetch('/api/patient-auth/appointments');
-      })
-      .then(r => r.json())
-      .then(data => {
-        setBookings(data.bookings || []);
-        setLoading(false);
-      })
-      .catch(() => {
-        router.push('/patient/login');
-      });
-  }, [router]);
-
-  const handleLogout = async () => {
-    await fetch('/api/patient-auth/logout', { method: 'POST' });
-    router.push('/');
-  };
-
-  const handleCancel = async (bookingId: string) => {
-    if (!confirm('Are you sure you want to cancel this appointment?')) return;
-    const res = await fetch('/api/patient-auth/appointments', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingId }),
-    });
-    if (res.ok) {
-      setBookings(prev => prev.map(b => b.booking_id === bookingId ? { ...b, status: 'cancelled' } : b));
-    }
-  };
-
-  const now = new Date().toISOString().split('T')[0];
-  const upcoming = bookings.filter(b => (b.booking_date || '') >= now && !['cancelled', 'completed'].includes(b.status));
-  const past = bookings.filter(b => (b.booking_date || '') < now || ['cancelled', 'completed'].includes(b.status));
-
-  const filtered = activeFilter === 'all' ? bookings
-    : activeFilter === 'upcoming' ? upcoming
-    : activeFilter === 'completed' ? bookings.filter(b => b.status === 'completed')
-    : activeFilter === 'cancelled' ? bookings.filter(b => b.status === 'cancelled')
-    : activeFilter === 'online' ? bookings.filter(b => b.consultation_type === 'online' || b.consultation_type === 'online_intl')
-    : activeFilter === 'offline' ? bookings.filter(b => b.consultation_type === 'offline' || b.consultation_type === 'hospital')
-    : bookings;
+    fetch('/api/patient-auth/portal')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-[60vh] flex items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-[#0A75BB] border-t-transparent rounded-full" />
-        </div>
-        <Footer />
-      </>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin h-8 w-8 border-4 border-[#0A75BB] border-t-transparent rounded-full" />
+      </div>
     );
   }
 
-  if (!patient) return null;
+  if (!data) return <p className="text-center text-gray-500 py-10">Failed to load dashboard.</p>;
 
-  const displayName = [patient.firstName, patient.lastName].filter(Boolean).join(' ') || patient.email;
+  const displayName = data.account
+    ? [data.account.first_name, data.account.last_name].filter(Boolean).join(' ') || data.account.email
+    : 'Patient';
+
+  const now = new Date().toISOString();
+  const followUpDaysLeft = data.activeFollowUp
+    ? Math.ceil((new Date(data.activeFollowUp.valid_until).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   return (
-    <>
-      <Navbar />
-      <section className="min-h-[80vh] bg-gray-50 py-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Welcome Header */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-[#0A75BB] text-white rounded-full flex items-center justify-center text-xl font-bold">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Welcome, {displayName}</h1>
-                  <p className="text-sm text-gray-500">
-                    {patient.email} {patient.isInternational && patient.country ? `· ${patient.country}` : ''}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Link href="/book-appointment" className="flex items-center gap-1.5 px-4 py-2 bg-[#0A75BB] text-white text-sm font-medium rounded-lg hover:bg-[#085a94] transition-all">
-                  <Plus className="h-4 w-4" /> Book Follow-up
+    <div className="space-y-6">
+      {/* Welcome */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-[#0A75BB] text-white rounded-full flex items-center justify-center text-xl font-bold">
+            {displayName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Welcome, {displayName}</h1>
+            <p className="text-sm text-gray-500">
+              {data.account?.email}
+              {data.account?.is_international && data.account?.country ? ` · ${data.account.country}` : ''}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Follow-Up Banner */}
+      {data.activeFollowUp && followUpDaysLeft > 0 && (
+        <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+              <Clock className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-emerald-900">FREE FOLLOW-UP AVAILABLE</p>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                Your online consultation payment includes one free follow-up.{' '}
+                <strong>{followUpDaysLeft} day{followUpDaysLeft !== 1 ? 's' : ''} remaining.</strong>
+              </p>
+              <p className="text-[10px] text-emerald-600 mt-1">
+                Valid until: {new Date(data.activeFollowUp.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+            <Link
+              href={`/book-appointment?type=followup&entitlement=${data.activeFollowUp.id}`}
+              className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
+            >
+              Book Follow-up
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link href="/patient/appointments" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
+          <div className="text-2xl font-bold text-[#0A75BB]">{data.totalBookings}</div>
+          <div className="text-xs text-gray-500">Appointments</div>
+        </Link>
+        <Link href="/patient/prescriptions" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
+          <div className="text-2xl font-bold text-purple-600">{data.recentPrescriptions.length}</div>
+          <div className="text-xs text-gray-500">Prescriptions</div>
+        </Link>
+        <Link href="/patient/billing" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
+          <div className="text-2xl font-bold text-emerald-600">{data.recentInvoices.length}</div>
+          <div className="text-xs text-gray-500">Invoices</div>
+        </Link>
+        <Link href="/patient/reports" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
+          <div className="text-2xl font-bold text-amber-600">{data.recentReports.length}</div>
+          <div className="text-xs text-gray-500">Reports</div>
+        </Link>
+      </div>
+
+      {/* Upcoming Appointments */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-gray-900">Upcoming Appointments</h2>
+          <Link href="/patient/appointments" className="text-xs text-[#0A75BB] font-medium hover:underline">View All</Link>
+        </div>
+        {data.upcomingBookings.length === 0 ? (
+          <div className="bg-white rounded-xl p-6 text-center border border-gray-100">
+            <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-500 mb-3">No upcoming appointments</p>
+            <Link href="/book-appointment" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0A75BB] text-white text-sm font-semibold rounded-xl hover:bg-[#085a94] transition-all">
+              Book Appointment <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {data.upcomingBookings.slice(0, 3).map((b: any) => {
+              const tc = typeConfig[b.consultation_type] || typeConfig.offline;
+              const Icon = tc.icon;
+              return (
+                <Link key={b.booking_id} href={`/patient/appointments?id=${b.booking_id}`} className="block bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tc.color}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">{tc.label}</span>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                          {b.status.charAt(0).toUpperCase() + b.status.slice(1)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                        <span>{b.booking_date ? new Date(b.booking_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</span>
+                        <span>{b.booking_time}</span>
+                        <span>{b.booking_id}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-300" />
+                  </div>
                 </Link>
-                <button onClick={handleLogout} className="flex items-center gap-1.5 px-4 py-2 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-100 transition-all">
-                  <LogOut className="h-4 w-4" /> Logout
-                </button>
-              </div>
-            </div>
+              );
+            })}
           </div>
+        )}
+      </section>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
-              <div className="text-2xl font-bold text-[#0A75BB]">{upcoming.length}</div>
-              <div className="text-xs text-gray-500">Upcoming</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
-              <div className="text-2xl font-bold text-green-600">{bookings.filter(b => b.status === 'completed').length}</div>
-              <div className="text-xs text-gray-500">Completed</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
-              <div className="text-2xl font-bold text-gray-900">{bookings.length}</div>
-              <div className="text-xs text-gray-500">Total Bookings</div>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-100">
-              <div className="text-sm font-bold text-gray-900">{patient.isInternational ? 'International' : 'Domestic'}</div>
-              <div className="text-xs text-gray-500">Patient Type</div>
-            </div>
+      {/* Recent Prescriptions */}
+      {data.recentPrescriptions.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-gray-900">Recent Prescriptions</h2>
+            <Link href="/patient/prescriptions" className="text-xs text-[#0A75BB] font-medium hover:underline">View All</Link>
           </div>
-
-          {/* Filter Tabs */}
-          <div className="flex gap-1 bg-white p-1 rounded-xl mb-6 border border-gray-100 overflow-x-auto">
-            {[
-              { key: 'all', label: `All (${bookings.length})` },
-              { key: 'upcoming', label: `Upcoming (${upcoming.length})` },
-              { key: 'completed', label: `Completed (${bookings.filter(b => b.status === 'completed').length})` },
-              { key: 'cancelled', label: `Cancelled (${bookings.filter(b => b.status === 'cancelled').length})` },
-              { key: 'online', label: 'Online' },
-              { key: 'offline', label: 'Offline' },
-            ].map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveFilter(tab.key)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                  activeFilter === tab.key
-                    ? 'bg-[#0A75BB] text-white shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {tab.label}
-              </button>
+          <div className="space-y-2">
+            {data.recentPrescriptions.slice(0, 3).map((p: any) => (
+              <Link key={p.id} href="/patient/prescriptions" className="block bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                    <Pill className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">{p.prescription_number}</p>
+                    <p className="text-xs text-gray-500">{p.prescription_date} · {p.doctor_name}</p>
+                  </div>
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                    {p.status}
+                  </span>
+                </div>
+              </Link>
             ))}
           </div>
+        </section>
+      )}
 
-          {/* Bookings */}
-          <div className="space-y-3">
-            {filtered.length === 0 ? (
-              <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
-                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 mb-4">
-                  {activeFilter === 'all' ? 'No bookings yet' : 'No bookings match this filter'}
-                </p>
-                <Link href="/book-appointment" className="inline-flex items-center gap-2 px-6 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-all">
-                  Book Your First Appointment <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-            ) : (
-              filtered.map(b => (
-                <BookingCard
-                  key={b.booking_id}
-                  booking={b}
-                  onCancel={b.status !== 'cancelled' && b.status !== 'completed' ? () => handleCancel(b.booking_id) : undefined}
-                />
-              ))
-            )}
+      {/* Recent Billing */}
+      {data.recentInvoices.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-gray-900">Recent Bills</h2>
+            <Link href="/patient/billing" className="text-xs text-[#0A75BB] font-medium hover:underline">View All</Link>
           </div>
-        </div>
-      </section>
-      <Footer />
-    </>
-  );
-}
-
-function BookingCard({ booking, onCancel }: { booking: Booking; onCancel?: () => void }) {
-  const typeInfo = typeConfig[booking.consultation_type] || typeConfig.offline;
-  const Icon = typeInfo.icon;
-  const clinicLabel = clinicNames[booking.clinic_id || ''] || booking.clinic_id || 'Online';
-
-  const formatDate = (d: string | null) => {
-    if (!d) return '';
-    try {
-      return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch {
-      return d;
-    }
-  };
-
-  const paymentLabel = booking.payment_status === 'paid' ? 'PAID'
-    : booking.payment_status === 'unpaid' ? 'UNPAID'
-    : booking.payment_status;
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-sm transition-all">
-      <div className="flex items-start gap-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${typeInfo.color}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="font-semibold text-gray-900 text-sm">{clinicLabel}</h3>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColors[booking.status] || 'bg-gray-100 text-gray-600'}`}>
-              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-            </span>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-              {typeInfo.label}
-            </span>
+          <div className="space-y-2">
+            {data.recentInvoices.slice(0, 3).map((inv: any) => (
+              <Link key={inv.id} href="/patient/billing" className="block bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                    <Receipt className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">{inv.invoice_number}</p>
+                    <p className="text-xs text-gray-500">{inv.invoice_date} · ₹{inv.grand_total}</p>
+                  </div>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                    inv.status === 'PAID' ? 'bg-green-100 text-green-700' :
+                    inv.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {inv.status}
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />{formatDate(booking.booking_date)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />{booking.booking_time}
-            </span>
-            {booking.consultation_fee != null && (
-              <span className="font-medium text-[#0A75BB]">
-                {booking.consultation_fee_currency === 'USD' ? `$${booking.consultation_fee}` : `₹${booking.consultation_fee}`}
-                <span className={`ml-1 text-[10px] ${booking.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {paymentLabel}
-                </span>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
-            <span>{booking.booking_id}</span>
-            <span>Dr. {booking.doctor_name || 'Dr Rajesh Goel'}</span>
-          </div>
-          {booking.reason && <p className="text-xs text-gray-400 mt-1">{booking.reason}</p>}
-        </div>
-        {onCancel && (
-          <button onClick={onCancel} className="text-xs text-red-500 hover:text-red-700 px-3 py-1 rounded-lg hover:bg-red-50 transition-all">
-            Cancel
-          </button>
-        )}
-      </div>
+        </section>
+      )}
     </div>
   );
 }

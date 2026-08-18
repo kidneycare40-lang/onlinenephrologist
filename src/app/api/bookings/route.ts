@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
+import { autoBridgeFromBooking } from '@/lib/patient-portal-server';
 
 // Map the booking form payload (camelCase) to the bookings table (snake_case)
 // Note: paymentStatus, paymentId, razorpayOrderId are NEVER set by the client.
@@ -150,6 +151,15 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('POST /api/bookings insert error:', error);
       return apiError('Failed to save booking', 500);
+    }
+
+    // Auto-create EMR bridge for logged-in patients
+    if (body.patientAccountId) {
+      try {
+        await autoBridgeFromBooking(body.patientAccountId, body.phone || '');
+      } catch {
+        // Non-blocking
+      }
     }
 
     return NextResponse.json({ success: true, bookingId: body.bookingId }, { status: 201 });

@@ -4,6 +4,7 @@ import Razorpay from 'razorpay';
 import { getDb } from '@/lib/db/client';
 import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
+import { autoBridgeFromBooking, createFollowUpEntitlement } from '@/lib/patient-portal-server';
 
 function getRazorpay(): Razorpay | null {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -131,6 +132,34 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('booking_id', bookingId);
+
+    // Auto-create EMR bridge and follow-up entitlement for online consultations
+    try {
+      const { data: booking } = await db
+        .from('bookings')
+        .select('patient_account_id, phone, consultation_type')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      if (booking?.patient_account_id) {
+        // Bridge patient_account → EMR patient
+        await autoBridgeFromBooking(booking.patient_account_id, booking.phone || '');
+
+        // Create follow-up entitlement for eligible online consultations
+        const consultType = booking.consultation_type;
+        if (consultType === 'online' || consultType === 'online_intl') {
+          await createFollowUpEntitlement(
+            booking.patient_account_id,
+            bookingId,
+            razorpayPaymentId,
+            consultType
+          );
+        }
+      }
+    } catch (portalErr) {
+      console.error('[verify] Portal bridge/entitlement error:', portalErr);
+      // Non-blocking — booking is still confirmed
+    }
 
     // Auto-generate invoice + payment record in EMR billing
     try {

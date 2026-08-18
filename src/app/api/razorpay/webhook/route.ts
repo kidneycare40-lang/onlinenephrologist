@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { getDb } from '@/lib/db/client';
 import { sendBookingWhatsApp } from '@/lib/whatsapp-notify';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
+import { autoBridgeFromBooking, createFollowUpEntitlement } from '@/lib/patient-portal-server';
 
 const STATUS_MAP: Record<string, string> = {
   'order.paid': 'CAPTURED',
@@ -143,6 +144,24 @@ export async function POST(request: NextRequest) {
         });
       } catch (invErr) {
         console.error('[webhook] Auto-invoice error:', invErr);
+      }
+
+      // Auto-create EMR bridge and follow-up entitlement for online consultations
+      try {
+        if (booking?.patient_account_id) {
+          await autoBridgeFromBooking(booking.patient_account_id, booking.phone || '');
+          const consultType = booking.consultation_type;
+          if (consultType === 'online' || consultType === 'online_intl') {
+            await createFollowUpEntitlement(
+              booking.patient_account_id,
+              bookingId,
+              razorpayPaymentId || null,
+              consultType
+            );
+          }
+        }
+      } catch (portalErr) {
+        console.error('[webhook] Portal bridge/entitlement error:', portalErr);
       }
 
       if (booking) {

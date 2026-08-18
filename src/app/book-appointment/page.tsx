@@ -1254,7 +1254,15 @@ function BookingForm() {
               </>
               )}
               <div className="flex justify-end">
-                <button type="button" onClick={() => canNext() && setStep(2)} disabled={!canNext()}
+                <button type="button" onClick={() => {
+                  if (!canNext()) return;
+                  // Enforce authentication before proceeding past step 1
+                  if (!patientAccountId) {
+                    window.location.href = '/patient/login?redirect=/book-appointment';
+                    return;
+                  }
+                  setStep(2);
+                }} disabled={!canNext()}
                   className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
                   Next <ChevronRight className="h-4 w-4" />
                 </button>
