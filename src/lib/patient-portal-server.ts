@@ -463,7 +463,22 @@ export async function getFullPatientProfile(patientAccountId: string): Promise<{
     .eq('id', patientAccountId)
     .maybeSingle();
 
-  const emrPatientId = await getEmrPatientId(patientAccountId);
+  let emrPatientId = await getEmrPatientId(patientAccountId);
+
+  // Auto-create bridge if missing — find EMR patient by phone
+  if (!emrPatientId && account?.phone) {
+    await autoBridgeFromBooking(patientAccountId, account.phone);
+    emrPatientId = await getEmrPatientId(patientAccountId);
+  }
+
+  // Auto-link existing bookings by email (bookings made before patient_account_id was added)
+  if (account?.email) {
+    await db
+      .from('bookings')
+      .update({ patient_account_id: patientAccountId })
+      .eq('email', account.email)
+      .is('patient_account_id', null);
+  }
 
   // Get bookings
   const now = new Date().toISOString().split('T')[0];

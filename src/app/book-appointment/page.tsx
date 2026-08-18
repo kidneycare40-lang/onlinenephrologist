@@ -276,7 +276,6 @@ function BookingForm() {
       .then(data => {
         if (data?.patient?.patientId && data.patient.patientId !== 'pending') {
           setPatientAccountId(data.patient.patientId);
-          // Set currentPatient so "Already a patient? Sign in" banner hides
           setCurrentPatientState({
             id: data.patient.patientId,
             name: data.patient.name || '',
@@ -286,7 +285,6 @@ function BookingForm() {
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
           });
-          // Pre-fill form from server-side patient profile
           setFormData(prev => ({
             ...prev,
             firstName: data.patient.name?.split(' ')[0] || prev.firstName,
@@ -297,10 +295,10 @@ function BookingForm() {
       })
       .catch(() => {});
 
-    // Also load legacy localStorage patient (fallback)
+    // Also load legacy localStorage patient (fallback — only if server-side auth didn't find a patient)
     getCurrentPatient().then((patient) => {
-      setCurrentPatientState(patient);
       if (patient) {
+        setCurrentPatientState(patient);
         setFormData(prev => ({
           ...prev,
           firstName: patient.name.split(' ')[0] || prev.firstName,
@@ -1161,7 +1159,17 @@ function BookingForm() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-slate-900">Welcome back, {currentPatient.name}!</p>
-              <p className="text-xs text-slate-500">Your details have been auto-filled. <button onClick={() => { window.location.reload(); }} className="text-[#0A75BB] underline">Switch patient</button></p>
+              <p className="text-xs text-slate-500">Your details have been auto-filled. <button onClick={async () => {
+                try { await fetch('/api/patient-auth/logout', { method: 'POST' }); } catch {}
+                localStorage.removeItem('current-patient');
+                localStorage.removeItem('patient-accounts');
+                setCurrentPatientState(null);
+                setPatientAccountId(null);
+                setFormData(prev => ({
+                  ...prev,
+                  firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
+                }));
+              }} className="text-[#0A75BB] underline">Switch patient</button></p>
             </div>
           </div>
         )}

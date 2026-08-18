@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     await setPatientCookie(token);
 
     return NextResponse.json({
-      success: false, // not new
+      success: true,
       isNew: false,
       patient: {
         id: patient.id,
