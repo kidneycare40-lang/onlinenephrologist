@@ -63,23 +63,36 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Store order record
-    await db.from('booking_payments').upsert(
-      {
-        booking_id: bookingId,
-        patient_name: patientName,
-        patient_phone: patientPhone || null,
-        patient_email: patientEmail || null,
-        patient_country: patientCountry || null,
-        consultation_type: consultationType || null,
-        amount: amount,
-        currency: currency,
-        razorpay_order_id: order.id,
-        payment_status: 'CREATED',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'booking_id' }
-    );
+    // Store order record — check for existing record first, then update or insert
+    const { data: existingRecord } = await db
+      .from('booking_payments')
+      .select('id, payment_status')
+      .eq('booking_id', bookingId)
+      .limit(1);
+
+    const paymentRow = {
+      booking_id: bookingId,
+      patient_name: patientName,
+      patient_phone: patientPhone || null,
+      patient_email: patientEmail || null,
+      patient_country: patientCountry || null,
+      consultation_type: consultationType || null,
+      amount: amount,
+      currency: currency,
+      razorpay_order_id: order.id,
+      payment_status: 'CREATED',
+      updated_at: new Date().toISOString(),
+    };
+
+    if (existingRecord && existingRecord.length > 0) {
+      await db.from('booking_payments').update(paymentRow).eq('id', existingRecord[0].id);
+    } else {
+      const { error: insertError } = await db.from('booking_payments').insert(paymentRow);
+      if (insertError) {
+        console.error('[create-order] Failed to store payment record:', insertError);
+        return apiError('Failed to store payment record', 500);
+      }
+    }
 
     return NextResponse.json({
       orderId: order.id,

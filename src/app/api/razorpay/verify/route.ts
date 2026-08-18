@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!payment) {
-      return apiError('Failed to store payment record', 500);
+      console.error('[verify] No booking_payments record found for booking:', bookingId);
+      return apiError('Payment record not found. The booking may not have been properly initialized. Please retry the payment or contact support.', 500);
     }
 
     // Also confirm the booking in the bookings table
