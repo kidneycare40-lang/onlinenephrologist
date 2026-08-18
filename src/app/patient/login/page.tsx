@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -11,6 +11,8 @@ type Step = 'email' | 'otp' | 'register';
 
 export default function PatientLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/patient/dashboard';
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -30,9 +32,9 @@ export default function PatientLoginPage() {
   // Check if already logged in
   useEffect(() => {
     fetch('/api/patient-auth/me').then(r => {
-      if (r.ok) router.push('/patient/dashboard');
+      if (r.ok) router.push(redirectTo);
     }).catch(() => {});
-  }, [router]);
+  }, [router, redirectTo]);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -93,8 +95,8 @@ export default function PatientLoginPage() {
         // New patient — need to complete registration
         setStep('register');
       } else {
-        // Returning patient — logged in, go to dashboard
-        router.push('/patient/dashboard');
+        // Returning patient — logged in, go to redirect target
+        router.push(redirectTo);
       }
     } catch {
       setError('Network error. Please try again.');
@@ -129,8 +131,8 @@ export default function PatientLoginPage() {
         setLoading(false);
         return;
       }
-      setLoading(false);
-      router.push('/patient/dashboard');
+        setLoading(false);
+        router.push(redirectTo);
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);
@@ -324,8 +326,8 @@ export default function PatientLoginPage() {
           </div>
 
           <div className="mt-6 text-center space-y-2">
-            <Link href="/book-appointment" className="text-sm text-[#0A75BB] hover:underline block">
-              &larr; Back to Book Appointment
+            <Link href={redirectTo === '/book-appointment' ? '/book-appointment' : '/patient/dashboard'} className="text-sm text-[#0A75BB] hover:underline block">
+              &larr; {redirectTo === '/book-appointment' ? 'Back to Book Appointment' : 'Go to Dashboard'}
             </Link>
             <Link href="/patient/dashboard" className="text-sm text-gray-400 hover:text-gray-600 block">
               Go to Dashboard &rarr;

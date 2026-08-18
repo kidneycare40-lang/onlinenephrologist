@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   TrendingUp, Download, Calendar, Users, FileText,
   BarChart3, ArrowUpRight, ArrowDownRight,
-  Activity, FlaskConical,
+  Activity, FlaskConical, Loader2,
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { cn } from '@/lib/utils';
-import { patients, consultations, prescriptions, labOrders } from '@/lib/data/emr-mock';
-import { mockInvoices } from '@/lib/data/billing-mock';
-import type { EMRInvoice } from '@/types/emr';
+import type { InvoiceWithRelations } from '@/lib/db/types';
+import type { Patient } from '@/lib/db/types';
+import type { PrescriptionWithRelations } from '@/lib/db/types';
 
 type ReportTab = 'revenue' | 'patients' | 'clinical';
 
@@ -42,52 +42,83 @@ const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('revenue');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceWithRelations[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [prescriptions, setPrescriptions] = useState<PrescriptionWithRelations[]>([]);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [invRes, patRes, rxRes] = await Promise.all([
+        fetch('/api/billing?limit=500'),
+        fetch('/api/patients?limit=500&isActive=true'),
+        fetch('/api/prescriptions'),
+      ]);
+
+      if (!invRes.ok) throw new Error('Failed to load invoices');
+      if (!patRes.ok) throw new Error('Failed to load patients');
+      if (!rxRes.ok) throw new Error('Failed to load prescriptions');
+
+      const invJson = await invRes.json();
+      const patJson = await patRes.json();
+      const rxJson = await rxRes.json();
+
+      setInvoices(invJson.data ?? invJson ?? []);
+      setPatients(patJson.data ?? patJson ?? []);
+      setPrescriptions(Array.isArray(rxJson) ? rxJson : rxJson.data ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load report data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  // ── REVENUE DATA ──
   const revenueData = useMemo(() => {
-    const invoices: EMRInvoice[] = mockInvoices;
-
-    // By clinic
     const byClinic: Record<string, number> = {};
     invoices.forEach((inv) => {
-      byClinic[inv.clinicId] = (byClinic[inv.clinicId] || 0) + inv.paidAmount;
+      const cid = inv.clinic_id || 'online';
+      byClinic[cid] = (byClinic[cid] || 0) + (inv.paid_amount || 0);
     });
     const revenueByClinic = Object.entries(byClinic).map(([id, value]) => ({
       name: clinicLabels[id] || id, value, color: id === 'kcc-faridabad' ? '#0A75BB' : id === 'kcc-saket' ? '#10B981' : id === 'online' ? '#F59E0B' : '#8B5CF6',
     }));
 
-    // By service (from invoice items)
     const byService: Record<string, number> = {};
     invoices.forEach((inv) => {
-      inv.items.forEach((item) => {
-        const key = item.description.includes('Online') ? 'Online Consultation' :
-                    item.description.includes('Consultation') ? 'In-Clinic Consultation' :
-                    item.description;
-        byService[key] = (byService[key] || 0) + item.amount;
+      inv.items?.forEach((item) => {
+        const desc = item.description || item.item_name || '';
+        const key = desc.includes('Online') ? 'Online Consultation' :
+                    desc.includes('Consultation') ? 'In-Clinic Consultation' :
+                    desc;
+        if (key) byService[key] = (byService[key] || 0) + (item.total_price || item.unit_price || 0);
       });
     });
     const revenueByService = Object.entries(byService).map(([name, value], i) => ({
       name, value, color: ['#0A75BB', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444'][i % 5],
     }));
 
-    // By payment method
     const byMethod: Record<string, { amount: number; count: number }> = {};
     invoices.forEach((inv) => {
       inv.payments?.forEach((p) => {
-        if (!byMethod[p.method]) byMethod[p.method] = { amount: 0, count: 0 };
-        byMethod[p.method].amount += p.amount;
-        byMethod[p.method].count++;
+        const method = p.payment_method || 'Other';
+        if (!byMethod[method]) byMethod[method] = { amount: 0, count: 0 };
+        byMethod[method].amount += p.amount || 0;
+        byMethod[method].count++;
       });
     });
     const paymentMethods = Object.entries(byMethod).map(([method, data], i) => ({
       method, ...data, color: ['#0A75BB', '#10B981', '#F59E0B', '#8B5CF6'][i % 4],
     }));
 
-    // Monthly trend (last 6 months)
     const monthlyTrend: { month: string; revenue: number; count: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(currentYear, currentMonth - i, 1);
@@ -95,47 +126,45 @@ export default function ReportsPage() {
       const y = d.getFullYear();
       const label = `${monthNames[m]} ${String(y).slice(2)}`;
       const filtered = invoices.filter((inv) => {
-        const id = new Date(inv.date);
+        const id = new Date(inv.invoice_date);
         return id.getMonth() === m && id.getFullYear() === y;
       });
-      monthlyTrend.push({ month: label, revenue: filtered.reduce((s, i) => s + i.paidAmount, 0), count: filtered.length });
+      monthlyTrend.push({ month: label, revenue: filtered.reduce((s, i) => s + (i.paid_amount || 0), 0), count: filtered.length });
     }
 
-    // This month / This year
     const thisMonth = invoices.filter((inv) => {
-      const d = new Date(inv.date);
+      const d = new Date(inv.invoice_date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
-    const thisYear = invoices.filter((inv) => new Date(inv.date).getFullYear() === currentYear);
+    const thisYear = invoices.filter((inv) => new Date(inv.invoice_date).getFullYear() === currentYear);
 
-    const totalRevenue = invoices.reduce((s, i) => s + i.paidAmount, 0);
-    const totalPending = invoices.reduce((s, i) => s + i.balance, 0);
-    const totalItems = invoices.reduce((s, i) => s + i.items.length, 0);
+    const totalRevenue = invoices.reduce((s, i) => s + (i.paid_amount || 0), 0);
+    const totalPending = invoices.reduce((s, i) => s + ((i.total_amount || 0) - (i.paid_amount || 0)), 0);
+    const totalItems = invoices.reduce((s, i) => s + (i.items?.length || 0), 0);
 
     return {
       totalRevenue, totalPending,
       totalInvoices: invoices.length,
       paidCount: invoices.filter((i) => i.status === 'PAID').length,
       revenueByClinic, revenueByService, paymentMethods, monthlyTrend,
-      thisMonthRevenue: thisMonth.reduce((s, i) => s + i.paidAmount, 0),
+      thisMonthRevenue: thisMonth.reduce((s, i) => s + (i.paid_amount || 0), 0),
       thisMonthCount: thisMonth.length,
-      thisYearRevenue: thisYear.reduce((s, i) => s + i.paidAmount, 0),
+      thisYearRevenue: thisYear.reduce((s, i) => s + (i.paid_amount || 0), 0),
       thisYearCount: thisYear.length,
       totalItems,
     };
-  }, [currentMonth, currentYear]);
+  }, [invoices, currentMonth, currentYear]);
 
-  // ── PATIENT DATA ──
   const patientData = useMemo(() => {
     const total = patients.length;
     const male = patients.filter((p) => p.gender === 'Male').length;
     const female = patients.filter((p) => p.gender === 'Female').length;
     const other = total - male - female;
 
-    // Age distribution
     const ageGroups: Record<string, number> = { '0-18': 0, '19-30': 0, '31-45': 0, '46-60': 0, '60+': 0 };
     patients.forEach((p) => {
-      const age = new Date().getFullYear() - new Date(p.dateOfBirth).getFullYear();
+      if (!p.date_of_birth) return;
+      const age = new Date().getFullYear() - new Date(p.date_of_birth).getFullYear();
       if (age <= 18) ageGroups['0-18']++;
       else if (age <= 30) ageGroups['19-30']++;
       else if (age <= 45) ageGroups['31-45']++;
@@ -144,51 +173,45 @@ export default function ReportsPage() {
     });
     const ageDistribution = Object.entries(ageGroups).map(([range, count]) => ({ range, count }));
 
-    // By clinic
     const byClinic: Record<string, number> = {};
-    patients.forEach((p) => { byClinic[p.clinicId] = (byClinic[p.clinicId] || 0) + 1; });
+    patients.forEach((p) => { const c = p.primary_clinic_id || 'online'; byClinic[c] = (byClinic[c] || 0) + 1; });
     const patientsByClinic = Object.entries(byClinic).map(([id, count]) => ({
       name: clinicLabels[id] || id, count,
     }));
 
-    // Chronic vs non-chronic
-    const chronic = patients.filter((p) => p.isChronic).length;
-
-    const avgVisits = total > 0 ? (patients.reduce((s, p) => s + (p.totalVisits || 0), 0) / total).toFixed(1) : '0';
+    const chronic = patients.filter((p) => p.is_chronic).length;
+    const avgVisits = total > 0 ? (patients.reduce((s, p) => s + (p.total_visits || 0), 0) / total).toFixed(1) : '0';
 
     return { total, male, female, other, ageDistribution, patientsByClinic, chronic, avgVisits };
-  }, []);
+  }, [patients]);
 
-  // ── CLINICAL DATA ──
   const clinicalData = useMemo(() => {
-    const totalConsultations = consultations.length;
     const totalPrescriptions = prescriptions.length;
-    const totalLabOrders = labOrders.length;
 
-    // Common diagnoses
     const diagCount: Record<string, number> = {};
-    consultations.forEach((c) => {
-      c.diagnoses?.forEach((d) => {
-        diagCount[d.name] = (diagCount[d.name] || 0) + 1;
-      });
+    prescriptions.forEach((rx) => {
+      if (rx.diagnosis) {
+        rx.diagnosis.split(',').map((d: string) => d.trim()).filter(Boolean).forEach((d: string) => {
+          diagCount[d] = (diagCount[d] || 0) + 1;
+        });
+      }
     });
     const sortedDiags = Object.entries(diagCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
       .map(([name, count]) => ({
-        name, count, percentage: totalConsultations > 0 ? Math.round((count / totalConsultations) * 100) : 0,
+        name, count, percentage: totalPrescriptions > 0 ? Math.round((count / totalPrescriptions) * 100) : 0,
       }));
 
-    // Prescription categories (from medicine names)
     const catCount: Record<string, number> = {};
     const catColors: Record<string, string> = {
       'Antihypertensives': '#0A75BB', 'ESAs': '#10B981', 'Phosphate Binders': '#F59E0B',
       'Immunosuppressants': '#8B5CF6', 'Diuretics': '#EF4444', 'Antibiotics': '#06B6D4',
       'Calcium/Vitamin D': '#EC4899', 'Other': '#6B7280',
     };
-    consultations.forEach((c) => {
-      c.prescriptions?.forEach((rx) => {
-        const name = rx.name.toLowerCase();
+    prescriptions.forEach((rx) => {
+      rx.medicines?.forEach((med) => {
+        const name = (med.medicine_name || '').toLowerCase();
         let cat = 'Other';
         if (name.includes('olol') || name.includes('sartan') || name.includes('ipine') || name.includes('pril') || name.includes('telm') || name.includes('amlo')) cat = 'Antihypertensives';
         else if (name.includes('epo') || name.includes('alfa')) cat = 'ESAs';
@@ -204,26 +227,17 @@ export default function ReportsPage() {
       .sort((a, b) => b[1] - a[1])
       .map(([category, count]) => ({ category, count, color: catColors[category] || '#6B7280' }));
 
-    // Lab test frequency
-    const testCount: Record<string, number> = {};
-    labOrders.forEach((lo) => {
-      lo.results?.forEach((r) => {
-        testCount[r.testName] = (testCount[r.testName] || 0) + 1;
-      });
-    });
-    const labTestFrequency = Object.entries(testCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([test, count]) => ({ test, count }));
-
-    return { totalConsultations, totalPrescriptions, totalLabOrders, sortedDiags, prescriptionsByCategory, labTestFrequency };
-  }, []);
+    return { totalPrescriptions, sortedDiags, prescriptionsByCategory };
+  }, [prescriptions]);
 
   const downloadCSV = () => {
     const headers = ['Invoice #', 'Patient', 'Clinic', 'Date', 'Amount', 'Paid', 'Balance', 'Status'];
-    const rows = mockInvoices.map((inv) => [
-      inv.invoiceNumber, inv.patientName, clinicLabels[inv.clinicId] || inv.clinicId,
-      inv.date, inv.grandTotal, inv.paidAmount, inv.balance, inv.status,
+    const rows = invoices.map((inv) => [
+      inv.invoice_number,
+      inv.patient ? `${inv.patient.first_name} ${inv.patient.last_name}` : '',
+      clinicLabels[inv.clinic_id] || inv.clinic_id,
+      inv.invoice_date, inv.total_amount, inv.paid_amount,
+      (inv.total_amount || 0) - (inv.paid_amount || 0), inv.status,
     ]);
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -235,9 +249,30 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        <span className="ml-3 text-gray-500">Loading report data…</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <p className="text-red-700 font-medium">{error}</p>
+          <button onClick={fetchData} className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-5 pb-24 lg:pb-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -246,7 +281,7 @@ export default function ReportsPage() {
             </div>
             Reports & Analytics
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Real data from your billing, patients & consultations</p>
+          <p className="text-sm text-gray-500 mt-1">Real data from your billing, patients & prescriptions</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={downloadCSV} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
@@ -255,7 +290,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-gray-200">
         <div className="flex gap-1 -mb-px overflow-x-auto">
           {[
@@ -272,7 +306,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* ═══════ REVENUE TAB ═══════ */}
       {activeTab === 'revenue' && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -299,7 +332,6 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Monthly Revenue Trend */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Monthly Revenue Trend</h3>
@@ -317,7 +349,6 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* Revenue by Clinic (Pie) */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Revenue by Clinic</h3>
@@ -342,7 +373,6 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Revenue by Service + Payment Methods */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
@@ -369,7 +399,6 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* Payment Methods */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Payment Methods</h3>
@@ -396,7 +425,6 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* ═══════ PATIENTS TAB ═══════ */}
       {activeTab === 'patients' && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -419,7 +447,6 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Age Distribution */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Age Distribution</h3>
@@ -437,7 +464,6 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* Patients by Clinic */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Patients by Clinic</h3>
@@ -456,7 +482,6 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Gender Distribution */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-5 py-3.5 border-b border-gray-100">
               <h3 className="font-semibold text-gray-900 text-sm">Gender Distribution</h3>
@@ -482,26 +507,24 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* ═══════ CLINICAL TAB ═══════ */}
       {activeTab === 'clinical' && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <p className="text-xs font-medium text-gray-500 mb-1">Total Consultations</p>
-              <p className="text-3xl font-bold text-gray-900">{clinicalData.totalConsultations}</p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <p className="text-xs font-medium text-gray-500 mb-1">Prescriptions Issued</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Total Prescriptions</p>
               <p className="text-3xl font-bold text-gray-900">{clinicalData.totalPrescriptions}</p>
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
-              <p className="text-xs font-medium text-gray-500 mb-1">Lab Tests Ordered</p>
-              <p className="text-3xl font-bold text-gray-900">{clinicalData.totalLabOrders}</p>
+              <p className="text-xs font-medium text-gray-500 mb-1">Unique Diagnoses</p>
+              <p className="text-3xl font-bold text-gray-900">{clinicalData.sortedDiags.length}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <p className="text-xs font-medium text-gray-500 mb-1">Medicine Categories</p>
+              <p className="text-3xl font-bold text-gray-900">{clinicalData.prescriptionsByCategory.length}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Common Diagnoses */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Most Common Diagnoses</h3>
@@ -513,7 +536,7 @@ export default function ReportsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-gray-900">{dx.name}</span>
-                        <span className="text-xs text-gray-500">{dx.count} patients</span>
+                        <span className="text-xs text-gray-500">{dx.count} prescriptions</span>
                       </div>
                       <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-primary-500 rounded-full" style={{ width: `${dx.percentage}%` }} />
@@ -525,7 +548,6 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* Prescriptions by Category */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Prescriptions by Category</h3>
@@ -549,28 +571,6 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-center h-full text-gray-400 text-sm">No prescription data yet</div>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Lab Test Frequency */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900 text-sm">Lab Test Frequency</h3>
-            </div>
-            <div className="p-4 h-[280px]">
-              {clinicalData.labTestFrequency.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={clinicalData.labTestFrequency} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="test" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={60} />
-                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={chartTooltipStyle} />
-                    <Bar dataKey="count" name="Tests Ordered" fill="#06B6D4" radius={[6, 6, 0, 0]} maxBarSize={28} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm">No lab data yet</div>
-              )}
             </div>
           </div>
         </div>

@@ -91,6 +91,7 @@ export default function PatientDetailPage() {
   const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
   const [localBookings, setLocalBookings] = useState<any[]>([]);
   const [localConsultations, setLocalConsultations] = useState<EMRConsultation[]>([]);
+  const [apiPatient, setApiPatient] = useState<EMRPatient | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -103,8 +104,55 @@ export default function PatientDetailPage() {
       try {
         setLocalConsultations((await getItem('emr-consultations')) as EMRConsultation[] || []);
       } catch { /* ignore */ }
+
+      if (patientId && !patientId.startsWith('p') && patientId.length > 10) {
+        try {
+          const res = await fetch(`/api/patients?id=${encodeURIComponent(patientId)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.id) {
+              setApiPatient({
+                id: data.id,
+                firstName: data.first_name || '',
+                lastName: data.last_name || '',
+                phone: data.phone || '',
+                email: data.email || '',
+                dateOfBirth: data.date_of_birth || '',
+                gender: data.gender || 'Other',
+                bloodGroup: data.blood_group || '',
+                uhid: data.uhid || '',
+                clinicId: data.primary_clinic_id || '',
+                source: 'emr',
+                abhaNumber: data.abha_number || '',
+                address: '',
+                city: '',
+                state: '',
+                pincode: '',
+                allergies: (data.allergies || []).map((a: any) => a.allergen || a.name || ''),
+                medicalHistory: data.medical_history || '',
+                isChronic: data.is_chronic || false,
+                isActive: data.is_active !== false,
+                createdAt: data.created_at || '',
+                lastVisit: data.last_visit_date || '',
+                totalVisits: data.total_visits || 0,
+                familyMembers: (data.family_members || []).map((fm: any) => ({
+                  id: fm.id || '',
+                  name: fm.name || '',
+                  relation: fm.relation || '',
+                  phone: fm.phone || '',
+                })),
+                insuranceProvider: data.insurance_provider || '',
+                insuranceNumber: data.insurance_number || '',
+                emergencyContactName: data.emergency_contacts?.[0]?.name || '',
+                emergencyContactPhone: data.emergency_contacts?.[0]?.phone || '',
+                emergencyContactRelation: data.emergency_contacts?.[0]?.relationship || '',
+              });
+            }
+          }
+        } catch { /* ignore */ }
+      }
     })();
-  }, []);
+  }, [patientId]);
 
   const allPatients = useMemo(() => {
     let dynamic: EMRPatient[] = [...addedPatients];
@@ -133,8 +181,12 @@ export default function PatientDetailPage() {
         }
       }
     } catch { /* ignore */ }
-    return [...patients, ...dynamic];
-  }, [addedPatients, localBookings]);
+    const result = [...patients, ...dynamic];
+    if (apiPatient && !result.some(p => p.id === apiPatient.id)) {
+      result.push(apiPatient);
+    }
+    return result;
+  }, [addedPatients, localBookings, apiPatient]);
 
   const patient = useMemo(() => {
     const found = allPatients.find((p) => p.id === patientId) || null;

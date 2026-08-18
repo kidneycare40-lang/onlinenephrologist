@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createOtp } from '@/lib/patient-auth-server';
+import { sendOtpEmail } from '@/lib/email';
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +14,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error }, { status: 429 });
     }
 
-    // Only log OTP in development — never log in production
+    // Send OTP via email using Resend
+    const emailResult = await sendOtpEmail(email, result.otp);
+    if (!emailResult.success) {
+      return NextResponse.json({ error: emailResult.error || 'Failed to send email.' }, { status: 500 });
+    }
+
+    // Dev-only: also log OTP to console for testing
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[PATIENT OTP] ${email}: ${result.otp}`);
     }

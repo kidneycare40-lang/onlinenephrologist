@@ -1139,7 +1139,7 @@ function BookingForm() {
                 <p className="text-xs text-slate-500">Faster booking with saved information</p>
               </div>
             </div>
-            <Link href="/patient/login" className="px-5 py-2.5 bg-[#0A75BB] text-white text-sm font-semibold rounded-xl hover:bg-[#085a94] transition-colors whitespace-nowrap flex items-center gap-2">
+            <Link href="/patient/login?redirect=/book-appointment" className="px-5 py-2.5 bg-[#0A75BB] text-white text-sm font-semibold rounded-xl hover:bg-[#085a94] transition-colors whitespace-nowrap flex items-center gap-2">
               <LogIn className="h-4 w-4" /> Sign In
             </Link>
           </div>
