@@ -16,7 +16,7 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
     return { success: false, error: 'Email service not configured.' };
   }
 
-  const from = 'KCC <onboarding@resend.dev>';
+  const from = 'KCC <no-reply@onlinenephrologist.com>';
 
   try {
     await resend.emails.send({
