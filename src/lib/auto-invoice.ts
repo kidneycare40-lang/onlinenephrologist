@@ -1,6 +1,12 @@
 /**
  * Auto-generate invoice + payment record when a booking is paid.
  * Called from Razorpay verify, webhook, and offline booking flows.
+ *
+ * DB schema (migrations/001):
+ *   invoices: clinic_id UUID refs clinics(id), doctor_id UUID refs users(id),
+ *             grand_total, gst_rate, gst_amount, total_tax, balance
+ *   invoice_items: description, rate, amount, total, gst_rate, gst_amount
+ *   payments: method (payment_method enum), reference, status (payment_status enum)
  */
 
 import { getDb } from './db/client';
@@ -18,92 +24,59 @@ interface BookingInvoiceData {
   currency?: string;
   date?: string;
   reason?: string;
-  // Payment details
-  paymentMethod: string;        // 'Razorpay', 'CASH', 'UPI', 'CARD', etc.
-  transactionId?: string;       // Razorpay payment ID
-  orderId?: string;             // Razorpay order ID
-  paymentStatus: string;        // 'COMPLETED', 'PENDING'
-  // Optional
+  paymentMethod: string;
+  transactionId?: string;
+  orderId?: string;
+  paymentStatus: string;
   doctorId?: string;
 }
 
-async function generateInvoiceNumber(db: ReturnType<typeof getDb>): Promise<string> {
-  const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-  const prefix = `INV-${dateStr}-`;
+let clinicUuidCache: Record<string, string> = {};
+let clinicsLoaded = false;
+let defaultDoctorId: string | null = null;
 
-  // Get the latest invoice number for today
-  const { data } = await db
-    .from('invoices')
-    .select('invoice_number')
-    .like('invoice_number', `${prefix}%`)
-    .order('invoice_number', { ascending: false })
-    .limit(1);
+async function resolveClinicUuid(db: ReturnType<typeof getDb>, shortName: string): Promise<string> {
+  if (clinicUuidCache[shortName]) return clinicUuidCache[shortName];
 
-  if (data && data.length > 0) {
-    const lastNum = parseInt(data[0].invoice_number.replace(prefix, ''), 10);
-    return `${prefix}${String(lastNum + 1).padStart(4, '0')}`;
+  if (!clinicsLoaded) {
+    const { data: clinics } = await db.from('clinics').select('id, short_name, name');
+    if (clinics) {
+      for (const c of clinics) {
+        if (c.short_name) clinicUuidCache[c.short_name] = c.id;
+        if (c.name) clinicUuidCache[c.name] = c.id;
+      }
+    }
+    clinicsLoaded = true;
   }
-  return `${prefix}0001`;
+
+  if (clinicUuidCache[shortName]) return clinicUuidCache[shortName];
+
+  const { data: match } = await db.from('clinics').select('id').eq('short_name', shortName).limit(1);
+  if (match && match.length > 0) {
+    clinicUuidCache[shortName] = match[0].id;
+    return match[0].id;
+  }
+
+  const { data: first } = await db.from('clinics').select('id').limit(1);
+  return first && first.length > 0 ? first[0].id : '';
 }
 
-/**
- * Find or create a patient in the patients table for an online booking.
- * Returns the patient UUID.
- */
-async function findOrCreatePatient(
-  db: ReturnType<typeof getDb>,
-  data: BookingInvoiceData
-): Promise<string | null> {
-  // Try to find existing patient by phone
-  if (data.patientPhone) {
-    const cleanPhone = data.patientPhone.replace(/\D/g, '').replace(/^91/, '');
-    const { data: existing } = await db
-      .from('patients')
-      .select('id')
-      .eq('phone', cleanPhone)
-      .limit(1);
-
-    if (existing && existing.length > 0) return existing[0].id;
-
-    // Also try with full phone
-    const { data: existing2 } = await db
-      .from('patients')
-      .select('id')
-      .eq('phone', data.patientPhone)
-      .limit(1);
-
-    if (existing2 && existing2.length > 0) return existing2[0].id;
-  }
-
-  // Create new patient
-  const [firstName, ...lastParts] = data.patientName.split(' ');
-  const lastName = lastParts.join(' ') || '';
-
-  const { data: newPatient, error } = await db
-    .from('patients')
-    .insert({
-      first_name: firstName,
-      last_name: lastName,
-      phone: data.patientPhone.replace(/\D/g, '').replace(/^91/, ''),
-      email: data.patientEmail || null,
-      gender: data.gender || null,
-      uhid: `OB-${data.bookingId.slice(-6).toUpperCase()}`,
-      source: 'website',
-      is_active: true,
-      clinic_id: mapClinicId(data.clinicId),
-    })
+async function resolveDoctorId(db: ReturnType<typeof getDb>): Promise<string> {
+  if (defaultDoctorId) return defaultDoctorId;
+  const { data: doctors } = await db
+    .from('users')
     .select('id')
-    .single();
-
-  if (error) {
-    console.error('[auto-invoice] Failed to create patient:', error);
-    return null;
+    .eq('role', 'doctor')
+    .eq('is_active', true)
+    .limit(1);
+  if (doctors && doctors.length > 0) {
+    defaultDoctorId = doctors[0].id;
+    return defaultDoctorId!;
   }
-  return newPatient?.id || null;
+  return '';
 }
 
-function mapClinicId(clinicId: string): string {
+function mapClinicShortName(clinicId: string): string {
   const map: Record<string, string> = {
     'online': 'online', 'online-intl': 'online', 'online_intl': 'online',
     'faridabad': 'kcc-faridabad', 'kcc-faridabad': 'kcc-faridabad',
@@ -124,14 +97,72 @@ function getConsultationLabel(consultationType: string, clinicId: string): strin
   return 'In-Clinic Consultation';
 }
 
-function getPaymentMethodForRazorpay(): string {
-  return 'ONLINE';
+async function generateInvoiceNumber(db: ReturnType<typeof getDb>): Promise<string> {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const prefix = `INV-${dateStr}-`;
+
+  const { data } = await db
+    .from('invoices')
+    .select('invoice_number')
+    .like('invoice_number', `${prefix}%`)
+    .order('invoice_number', { ascending: false })
+    .limit(1);
+
+  if (data && data.length > 0) {
+    const lastNum = parseInt(data[0].invoice_number.replace(prefix, ''), 10);
+    return `${prefix}${String(lastNum + 1).padStart(4, '0')}`;
+  }
+  return `${prefix}0001`;
 }
 
-/**
- * Auto-create an invoice + payment record for a booking.
- * Idempotent: skips if an invoice with this bookingId already exists.
- */
+async function findOrCreatePatient(
+  db: ReturnType<typeof getDb>,
+  data: BookingInvoiceData
+): Promise<string | null> {
+  if (data.patientPhone) {
+    const cleanPhone = data.patientPhone.replace(/\D/g, '').replace(/^91/, '');
+    const { data: existing } = await db
+      .from('patients')
+      .select('id')
+      .eq('phone', cleanPhone)
+      .limit(1);
+    if (existing && existing.length > 0) return existing[0].id;
+
+    const { data: existing2 } = await db
+      .from('patients')
+      .select('id')
+      .eq('phone', data.patientPhone)
+      .limit(1);
+    if (existing2 && existing2.length > 0) return existing2[0].id;
+  }
+
+  const [firstName, ...lastParts] = data.patientName.split(' ');
+  const lastName = lastParts.join(' ') || '';
+  const clinicUuid = await resolveClinicUuid(db, mapClinicShortName(data.clinicId));
+
+  const { data: newPatient, error } = await db
+    .from('patients')
+    .insert({
+      first_name: firstName,
+      last_name: lastName,
+      phone: data.patientPhone.replace(/\D/g, '').replace(/^91/, ''),
+      email: data.patientEmail || null,
+      gender: data.gender || null,
+      uhid: `OB-${data.bookingId.slice(-6).toUpperCase()}`,
+      primary_clinic_id: clinicUuid || null,
+      is_active: true,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('[auto-invoice] Failed to create patient:', error);
+    return null;
+  }
+  return newPatient?.id || null;
+}
+
 export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promise<string | null> {
   const db = getDb();
 
@@ -153,42 +184,41 @@ export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promis
     return null;
   }
 
-  const clinicId = mapClinicId(data.clinicId);
-  const doctorId = data.doctorId || 'doctor-default';
+  // Resolve UUIDs for clinic and doctor
+  const clinicShortName = mapClinicShortName(data.clinicId);
+  const clinicUuid = await resolveClinicUuid(db, clinicShortName);
+  const doctorUuid = await resolveDoctorId(db);
   const invoiceNumber = await generateInvoiceNumber(db);
   const amount = data.consultationFee;
-  const currency = data.currency || 'INR';
   const isPaid = data.paymentStatus === 'COMPLETED';
   const consultLabel = getConsultationLabel(data.consultationType, data.clinicId);
 
-  // Determine payment method for the invoices table
-  let paymentMethod: string | null = null;
-  if (data.paymentMethod === 'Razorpay') {
-    paymentMethod = 'ONLINE';
-  } else if (data.paymentMethod) {
-    paymentMethod = data.paymentMethod;
-  }
+  // Determine payment method
+  let payMethod = 'ONLINE';
+  if (data.paymentMethod === 'CASH') payMethod = 'CASH';
+  else if (data.paymentMethod === 'UPI') payMethod = 'UPI';
+  else if (data.paymentMethod === 'CARD') payMethod = 'CARD';
 
-  // Create invoice
+  // Create invoice — using correct column names from migration 001
   const { data: invoice, error: invoiceError } = await db
     .from('invoices')
     .insert({
       invoice_number: invoiceNumber,
       patient_id: patientId,
-      doctor_id: doctorId,
-      clinic_id: clinicId,
+      doctor_id: doctorUuid || null,
+      clinic_id: clinicUuid,
       invoice_date: data.date || new Date().toISOString().slice(0, 10),
       due_date: data.date || new Date().toISOString().slice(0, 10),
       subtotal: amount,
-      tax_rate: 0,
-      tax_amount: 0,
       discount: 0,
-      total_amount: amount,
+      gst_rate: 0,
+      gst_amount: 0,
+      total_tax: 0,
+      grand_total: amount,
       paid_amount: isPaid ? amount : 0,
-      payment_method: paymentMethod,
+      balance: isPaid ? 0 : amount,
       status: isPaid ? 'PAID' : 'PENDING',
       notes: `Auto-generated from booking ${data.bookingId}`,
-      created_by: 'system',
     })
     .select('id')
     .single();
@@ -198,36 +228,39 @@ export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promis
     return null;
   }
 
-  // Create invoice item
-  await db.from('invoice_items').insert({
+  // Create invoice item — correct columns: description, rate, amount, total
+  const { error: itemError } = await db.from('invoice_items').insert({
     invoice_id: invoice.id,
-    item_name: consultLabel,
-    description: `${consultLabel} — ${data.reason || 'General'}`,
+    description: consultLabel,
     quantity: 1,
-    unit_price: amount,
-    total_price: amount,
+    rate: amount,
+    amount: amount,
+    gst_rate: 0,
+    gst_amount: 0,
+    total: amount,
     sort_order: 0,
   });
+  if (itemError) {
+    console.error('[auto-invoice] Failed to create invoice item:', itemError);
+  }
 
-  // Create payment record if paid
+  // Create payment record if paid — correct columns: method, reference
   if (isPaid) {
-    let payMethod: string = 'ONLINE';
-    if (data.paymentMethod === 'CASH') payMethod = 'CASH';
-    else if (data.paymentMethod === 'UPI') payMethod = 'UPI';
-    else if (data.paymentMethod === 'CARD') payMethod = 'CARD';
-
-    await db.from('payments').insert({
+    const { error: payError } = await db.from('payments').insert({
       invoice_id: invoice.id,
       patient_id: patientId,
       amount: amount,
-      payment_method: payMethod,
-      reference_number: data.transactionId || data.orderId || null,
+      method: payMethod,
+      reference: data.transactionId || data.orderId || null,
       transaction_id: data.transactionId || null,
       gateway: data.paymentMethod === 'Razorpay' ? 'razorpay' : null,
       status: 'COMPLETED',
       payment_date: new Date().toISOString(),
       notes: `Booking: ${data.bookingId}${data.transactionId ? ` | Txn: ${data.transactionId}` : ''}${data.orderId ? ` | Order: ${data.orderId}` : ''}`,
     });
+    if (payError) {
+      console.error('[auto-invoice] Failed to create payment record:', payError);
+    }
   }
 
   console.log(`[auto-invoice] Created ${isPaid ? 'PAID' : 'PENDING'} invoice ${invoiceNumber} for booking ${data.bookingId}`);
