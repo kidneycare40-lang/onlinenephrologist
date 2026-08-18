@@ -112,7 +112,7 @@ export default function PatientDetailPage() {
       if (Array.isArray(localBookings)) {
         for (const b of localBookings) {
           if (b.firstName) {
-            const id = 'obp-' + b.bookingId;
+            const id = b.bookingId;
             if (!dynamic.some(p => p.id === id) && !patients.some(p => p.id === id)) {
               dynamic.push({
                 id, firstName: b.firstName || '', lastName: b.lastName || '',
