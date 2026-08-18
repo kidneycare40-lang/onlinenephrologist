@@ -276,6 +276,16 @@ function BookingForm() {
       .then(data => {
         if (data?.patient?.patientId && data.patient.patientId !== 'pending') {
           setPatientAccountId(data.patient.patientId);
+          // Set currentPatient so "Already a patient? Sign in" banner hides
+          setCurrentPatientState({
+            id: data.patient.patientId,
+            name: data.patient.name || '',
+            phone: data.patient.phone || '',
+            email: data.patient.email || '',
+            isInternational: false,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+          });
           // Pre-fill form from server-side patient profile
           setFormData(prev => ({
             ...prev,
