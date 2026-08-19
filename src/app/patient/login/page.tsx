@@ -159,12 +159,12 @@ function LoginForm() {
                 <User className="h-8 w-8 text-[#0A75BB]" />
               </div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {step === 'register' ? 'Complete Registration' : 'Patient Login'}
+                {step === 'register' ? 'Complete Your Profile' : 'Patient Portal'}
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                {step === 'email' && 'Enter your email to login or register'}
+                {step === 'email' && 'Access your appointments, prescriptions, reports and consultations.'}
                 {step === 'otp' && `Verification code sent to ${email}`}
-                {step === 'register' && 'Create your patient account'}
+                {step === 'register' && 'Your email is verified. Please complete your profile to continue.'}
               </p>
             </div>
 
@@ -192,10 +192,10 @@ function LoginForm() {
                   className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-all disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                  {loading ? 'Sending...' : 'Send Verification Code'}
+                  {loading ? 'Sending...' : 'Continue with Email'}
                 </button>
                 <p className="text-xs text-gray-400 text-center">
-                  No SMS charges — code sent to your email
+                  New here? Your patient account will be created automatically after email verification.
                 </p>
               </div>
             )}
@@ -247,7 +247,7 @@ function LoginForm() {
             {step === 'register' && (
               <div className="space-y-4">
                 <p className="text-sm text-gray-500">
-                  Your email is verified. Please complete your profile to continue.
+                  Your email is verified. Just one more step to access your patient portal.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -335,11 +335,8 @@ function LoginForm() {
           </div>
 
           <div className="mt-6 text-center space-y-2">
-            <Link href={redirectTo === '/book-appointment' ? '/book-appointment' : '/patient/dashboard'} className="text-sm text-[#0A75BB] hover:underline block">
-              &larr; {redirectTo === '/book-appointment' ? 'Back to Book Appointment' : 'Go to Dashboard'}
-            </Link>
-            <Link href="/patient/dashboard" className="text-sm text-gray-400 hover:text-gray-600 block">
-              Go to Dashboard &rarr;
+            <Link href={redirectTo === '/book-appointment' ? '/book-appointment' : '/'} className="text-sm text-[#0A75BB] hover:underline block">
+              &larr; {redirectTo === '/book-appointment' ? 'Back to Book Appointment' : 'Back to Home'}
             </Link>
           </div>
         </div>

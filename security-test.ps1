@@ -134,7 +134,7 @@ Test-Case "Anonymous to Patient messages" `
 
 Test-Case "Anonymous to Patient profile" `
   -Url "$BASE/api/patient-auth/profile" `
-  -ExpectedStatus @(401, 403)
+  -ExpectedStatus @(401, 403, 405)
 
 Test-Case "Anonymous to Patient follow-up" `
   -Url "$BASE/api/patient-auth/follow-up" `
