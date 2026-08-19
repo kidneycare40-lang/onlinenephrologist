@@ -7,7 +7,7 @@ interface RateLimitConfig {
 
 const DEFAULTS: Record<string, RateLimitConfig> = {
   login: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
-  otp: { windowMs: 60 * 1000, maxRequests: 3 },
+  otp: { windowMs: 15 * 60 * 1000, maxRequests: 5 },
   booking: { windowMs: 60 * 1000, maxRequests: 10 },
   notify: { windowMs: 60 * 1000, maxRequests: 5 },
   kv: { windowMs: 60 * 1000, maxRequests: 30 },
