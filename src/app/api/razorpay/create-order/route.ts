@@ -109,11 +109,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('CREATE ORDER error:', error);
+    const detail = error instanceof Error ? error.message : String(error);
     // Determine if this was an international payment attempt
     const isIntl = consultationType === 'online_intl';
     if (isIntl) {
-      return apiError('International payment is temporarily unavailable. International card payments are currently under approval with our payment provider. Please try again later or contact us for assistance.', 503);
+      return apiError('International payment is temporarily unavailable. International card payments are currently under approval with our payment provider. Please try again later or contact us for assistance.', 503, { detail });
     }
-    return apiError('Payment could not be started. Please try again. If the problem continues, contact support.', 500);
+    return apiError('Payment could not be started. Please try again. If the problem continues, contact support.', 500, { detail });
   }
 }
