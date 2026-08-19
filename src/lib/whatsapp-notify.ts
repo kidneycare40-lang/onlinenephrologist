@@ -80,8 +80,8 @@ export async function sendBookingWhatsApp(n: BookingNotification): Promise<void>
 
   const failures = results.filter(r => r.status === 'rejected');
   if (failures.length === DOCTOR_PHONES.length) {
-    console.error('[whatsapp-notify] All WhatsApp sends failed');
+    throw new Error('All WhatsApp sends failed');
   } else if (failures.length > 0) {
-    console.warn(`[whatsapp-notify] ${failures.length}/${DOCTOR_PHONES.length} WhatsApp sends failed`);
+    throw new Error(`${failures.length}/${DOCTOR_PHONES.length} WhatsApp sends failed`);
   }
 }
