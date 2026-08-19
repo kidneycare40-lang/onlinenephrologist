@@ -109,16 +109,42 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('CREATE ORDER error:', error);
-    const detail = error instanceof Error
-      ? error.message
-      : typeof error === 'object' && error !== null
-        ? JSON.stringify(error)
-        : String(error);
+    const e = error as any;
+    console.error('Razorpay create-order error:', {
+      message: e?.message,
+      code: e?.code,
+      description: e?.description,
+      field: e?.field,
+      source: e?.source,
+      step: e?.step,
+      reason: e?.reason,
+      metadata: e?.metadata,
+      error: e?.error,
+    });
+    const razorpayError = e?.error ?? error;
     // Determine if this was an international payment attempt
     const isIntl = consultationType === 'online_intl';
     if (isIntl) {
-      return apiError('International payment is temporarily unavailable. International card payments are currently under approval with our payment provider. Please try again later or contact us for assistance.', 503, { detail });
+      return apiError('International payment is temporarily unavailable. International card payments are currently under approval with our payment provider. Please try again later or contact us for assistance.', 503, {
+        detail: {
+          code: razorpayError?.code ?? null,
+          description: razorpayError?.description ?? null,
+          field: razorpayError?.field ?? null,
+          source: razorpayError?.source ?? null,
+          step: razorpayError?.step ?? null,
+          reason: razorpayError?.reason ?? null,
+        }
+      });
     }
-    return apiError('Payment could not be started. Please try again. If the problem continues, contact support.', 500, { detail });
+    return apiError('Payment could not be started. Please try again. If the problem continues, contact support.', 500, {
+      detail: {
+        code: razorpayError?.code ?? null,
+        description: razorpayError?.description ?? null,
+        field: razorpayError?.field ?? null,
+        source: razorpayError?.source ?? null,
+        step: razorpayError?.step ?? null,
+        reason: razorpayError?.reason ?? null,
+      }
+    });
   }
 }
