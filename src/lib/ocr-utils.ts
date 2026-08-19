@@ -1,5 +1,4 @@
 import Tesseract from 'tesseract.js';
-import { getItem } from '@/lib/client-storage';
 
 const TESSERACT_OPTIONS = {
   workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@v7.0.0/dist/worker.min.js',
@@ -823,69 +822,21 @@ export async function extractWithOpenAI(file: File): Promise<OCRResult | null> {
     const base64 = await fileToBase64(file);
     const mimeType = file.type || 'image/jpeg';
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('/api/ocr/openai', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? (await getItem('openai-api-key')) || '' : process.env.OPENAI_API_KEY || ''}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a medical lab report OCR assistant. Extract lab test values from this medical report image. 
-
-IMPORTANT: Only extract values that are HIGHLIGHTED (yellow/orange background), BOLD, or shown in RED/abnormal color. Ignore normal/unhighlighted values.
-
-Return a JSON object with:
-- "rawText": the full text you can read from the image
-- "labValues": array of { "testName": "...", "value": "...", "unit": "...", "normalRange": "..." } - ONLY for highlighted/bold/abnormal values
-- "vitals": { "systolic": "...", "diastolic": "...", "pulse": "...", "temperature": "...", "spo2": "...", "weight": "...", "height": "..." }
-- "diagnoses": array of diagnosis strings found
-- "medicines": array of medicine name strings found
-- "complaints": array of complaint strings found
-- "reportDate": the report/collection date in YYYY-MM-DD format (look for "COL.Date", "Report Date", "Collection Date", "Sample Date", etc.)
-
-Focus on extracting ONLY the highlighted/bold/abnormal values from the report.
-
-Return ONLY valid JSON, no markdown formatting.`
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64}`,
-                  detail: 'high',
-                },
-              },
-              {
-                type: 'text',
-                text: 'Extract ONLY the highlighted, bold, or abnormal (red-colored) lab values from this medical report. Ignore normal/unhighlighted values.',
-              },
-            ],
-          },
-        ],
-        max_tokens: 4000,
-        temperature: 0.1,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: base64, mimeType }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
+      console.error('OCR proxy error:', response.status);
       return null;
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) return null;
+    if (!data.result) return null;
 
-    // Parse JSON from response (handle markdown code blocks)
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-    const parsed = JSON.parse(jsonMatch[1] || content);
-
+    const parsed = data.result;
     return {
       rawText: parsed.rawText || '',
       labValues: (parsed.labValues || []).map((v: any) => ({

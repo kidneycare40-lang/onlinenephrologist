@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { applyRateLimit, apiError } from '@/lib/auth/middleware';
+import { authenticateRequest, applyRateLimit, apiError } from '@/lib/auth/middleware';
 
 const BUCKET = 'booking-reports';
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB per file
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_FILES = 10;
+const SIGNED_URL_EXPIRY = 60 * 60 * 24; // 24 hours
 const ALLOWED_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif',
   'application/pdf',
@@ -15,8 +16,13 @@ const ALLOWED_TYPES = new Set([
 async function ensureBucket() {
   const db = getDb();
   const { data } = await db.storage.getBucket(BUCKET);
-  if (data) return;
-  const { error } = await db.storage.createBucket(BUCKET, { public: true });
+  if (data) {
+    if (data.public) {
+      await db.storage.updateBucket(BUCKET, { public: false });
+    }
+    return;
+  }
+  const { error } = await db.storage.createBucket(BUCKET, { public: false });
   if (error) throw error;
 }
 
@@ -24,11 +30,20 @@ function safeName(name: string): string {
   return encodeURIComponent(name.replace(/[/\\]/g, '_'));
 }
 
-// POST — public (rate-limited): upload the booking's report files to Supabase Storage
+async function createSignedUrl(db: any, path: string): Promise<string | null> {
+  const { data, error } = await db.storage.from(BUCKET).createSignedUrl(path, SIGNED_URL_EXPIRY);
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
+// POST — requires EMR auth: upload booking report files
 export async function POST(request: NextRequest) {
   try {
     const rlError = applyRateLimit(request, 'booking');
     if (rlError) return rlError;
+
+    const { user, error: authError } = await authenticateRequest(request);
+    if (authError) return apiError('Authentication required', 401);
 
     const body = await request.json();
     const bookingId = body?.bookingId;
@@ -57,8 +72,8 @@ export async function POST(request: NextRequest) {
         upsert: true,
       });
       if (error) continue;
-      const { data: pub } = db.storage.from(BUCKET).getPublicUrl(path);
-      if (pub?.publicUrl) urls.push({ name: f.name, url: pub.publicUrl });
+      const signedUrl = await createSignedUrl(db, path);
+      if (signedUrl) urls.push({ name: f.name, url: signedUrl });
     }
 
     if (urls.length === 0) return apiError('No files could be uploaded', 500);
@@ -96,6 +111,7 @@ function htmlPage(bookingId: string, files: { name: string; url: string }[]) {
     .btn { font-size: 12px; font-weight: 600; color: #0A75BB; text-decoration: none; border: 1px solid #0A75BB; border-radius: 6px; padding: 4px 10px; flex-shrink: 0; }
     .btn:hover { background: #0A75BB; color: #fff; }
     .empty { color: #64748b; font-size: 14px; }
+    .note { color: #94a3b8; font-size: 11px; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -103,17 +119,19 @@ function htmlPage(bookingId: string, files: { name: string; url: string }[]) {
     <h1>Uploaded Reports</h1>
     <div class="sub">Booking ${bookingId} — ${files.length} file(s)</div>
     ${rows}
+    <p class="note">Links expire in 24 hours. Contact the clinic if you need to re-access these files.</p>
   </div>
 </body>
 </html>`;
 }
 
-// GET — public: HTML page listing the booking's uploaded reports (linked from WhatsApp)
+// GET — public page with signed URLs (linked from WhatsApp to patients)
 export async function GET(request: NextRequest) {
   try {
     const bookingId = new URL(request.url).searchParams.get('bookingId');
     if (!bookingId) return apiError('bookingId is required', 400);
 
+    await ensureBucket();
     const db = getDb();
     const { data: list, error } = await db.storage.from(BUCKET).list(bookingId);
     if (error || !list || list.length === 0) {
@@ -122,12 +140,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const files = list
-      .filter((i) => !(i.id ?? '').endsWith('/'))
-      .map((i) => {
-        const { data } = db.storage.from(BUCKET).getPublicUrl(`${bookingId}/${i.name}`);
-        return { name: decodeURIComponent(i.name), url: data.publicUrl };
-      });
+    const files: { name: string; url: string }[] = [];
+    for (const item of list) {
+      if ((item.id ?? '').endsWith('/')) continue;
+      const signedUrl = await createSignedUrl(db, `${bookingId}/${item.name}`);
+      if (signedUrl) {
+        files.push({ name: decodeURIComponent(item.name), url: signedUrl });
+      }
+    }
 
     return new NextResponse(htmlPage(bookingId, files), {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
