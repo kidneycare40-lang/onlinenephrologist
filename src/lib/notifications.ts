@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db/client';
-import { sendBookingWhatsApp, type BookingNotification } from '@/lib/whatsapp-notify';
+import { DOCTOR_PHONES, buildDoctorMessage, type BookingNotification } from '@/lib/whatsapp-notify';
 import { sendBookingConfirmationEmail, sendTeamBookingEmail } from '@/lib/email';
 
 const CALLMEBOT_API_URL = 'https://api.callmebot.com/whatsapp.php';
@@ -168,14 +168,18 @@ export async function sendBookingNotifications(
     localTimeDisplay: ctx.localTimeDisplay,
   };
 
-  // 1. Team WhatsApp (to doctors)
-  if (await claimNotification(ctx.bookingId, 'team_whatsapp', 'doctors')) {
-    try {
-      await sendBookingWhatsApp(bookingNotif);
-      await updateNotificationStatus(ctx.bookingId, 'team_whatsapp', 'doctors', 'sent');
-      result.teamWhatsApp = true;
-    } catch (err) {
-      await updateNotificationStatus(ctx.bookingId, 'team_whatsapp', 'doctors', 'failed', undefined, err instanceof Error ? err.message : 'Unknown');
+  // 1. Team WhatsApp — per-doctor independent tracking
+  const doctorMessage = buildDoctorMessage(bookingNotif);
+  for (const phone of DOCTOR_PHONES) {
+    if (await claimNotification(ctx.bookingId, 'team_whatsapp', phone)) {
+      const result_wa = await sendWhatsAppDirect(phone, doctorMessage);
+      await updateNotificationStatus(
+        ctx.bookingId, 'team_whatsapp', phone,
+        result_wa.ok ? 'sent' : 'failed',
+        result_wa.messageId,
+        result_wa.error
+      );
+      if (result_wa.ok) result.teamWhatsApp = true;
     }
   }
 
