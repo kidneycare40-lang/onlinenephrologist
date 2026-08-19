@@ -109,7 +109,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('CREATE ORDER error:', error);
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null
+        ? JSON.stringify(error)
+        : String(error);
     // Determine if this was an international payment attempt
     const isIntl = consultationType === 'online_intl';
     if (isIntl) {
