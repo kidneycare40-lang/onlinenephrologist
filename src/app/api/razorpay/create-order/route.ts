@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { getDb } from '@/lib/db/client';
-import { getConsultationPricing, toRazorpayAmount } from '@/lib/pricing';
+import { getConsultationPricing } from '@/lib/pricing';
 import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 
 // Server-side only — never expose the secret to the browser
@@ -13,12 +13,14 @@ function getRazorpay(): Razorpay | null {
 }
 
 export async function POST(request: NextRequest) {
+  let consultationType: string | undefined;
   try {
     const rlError = applyRateLimit(request, 'booking');
     if (rlError) return rlError;
 
     const body = await request.json();
-    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType, amount: clientAmount, currency: clientCurrency } = body;
+    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType: ct, amount: clientAmount } = body;
+    consultationType = ct;
 
     if (!bookingId || !patientName) {
       return apiError('bookingId and patientName are required', 400);
@@ -32,10 +34,14 @@ export async function POST(request: NextRequest) {
     // Use the actual clinic-specific fee sent by the client (from KV store settings),
     // validated against known base pricing to prevent abuse
     const pricing = getConsultationPricing(consultationType);
+    const isInternational = pricing.currency === 'USD';
+
+    // Server-side amount validation: client amount must be within 5x of server price
     const amount = (typeof clientAmount === 'number' && clientAmount > 0 && clientAmount <= pricing.amount * 5)
       ? clientAmount
       : pricing.amount;
-    const currency = clientCurrency || pricing.currency;
+    // Currency always comes from server-side pricing — never from client
+    const currency = pricing.currency;
     const amountPaise = amount * 100;
 
     // Check for existing captured payment to prevent duplicates
@@ -103,7 +109,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('CREATE ORDER error:', error);
-    const detail = error instanceof Error ? error.message : String(error);
-    return apiError('Failed to create payment order. If you are an international patient, please ensure your Razorpay account supports USD payments.', 500, { detail });
+    // Determine if this was an international payment attempt
+    const isIntl = consultationType === 'online_intl';
+    if (isIntl) {
+      return apiError('International payment is temporarily unavailable. International card payments are currently under approval with our payment provider. Please try again later or contact us for assistance.', 503);
+    }
+    return apiError('Payment could not be started. Please try again. If the problem continues, contact support.', 500);
   }
 }
