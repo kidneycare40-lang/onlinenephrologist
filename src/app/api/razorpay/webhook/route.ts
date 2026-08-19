@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { getDb } from '@/lib/db/client';
-import { sendBookingWhatsApp } from '@/lib/whatsapp-notify';
+import { sendBookingNotifications } from '@/lib/notifications';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
 import { autoBridgeFromBooking, createFollowUpEntitlement } from '@/lib/patient-portal-server';
 
@@ -166,18 +166,18 @@ export async function POST(request: NextRequest) {
 
       if (booking) {
         try {
-          await sendBookingWhatsApp({
+          await sendBookingNotifications({
             bookingId: booking.booking_id || bookingId,
             clinicName: booking.clinic_name || booking.clinic_id || '',
             patientName: booking.patient_name || `${booking.first_name || ''} ${booking.last_name || ''}`.trim(),
             patientPhone: booking.patient_phone || booking.phone || '',
+            patientEmail: booking.patient_email || booking.email || undefined,
             ageGender: `${booking.age || ''} / ${booking.gender || ''}`,
-            date: booking.date || '',
-            time: booking.time || '',
+            date: booking.booking_date || booking.date || '',
+            time: booking.booking_time || booking.time || '',
             consultationType: booking.consultation_type || '',
             reason: booking.reason || '',
             fee: booking.fee || '',
-            paymentStatus: 'PAID via Razorpay',
             paymentId: razorpayPaymentId || undefined,
             country: booking.country || undefined,
             timezone: booking.timezone || undefined,
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
             notes: booking.notes || undefined,
           });
         } catch (notifyErr) {
-          console.error('[webhook] WhatsApp notify error:', notifyErr);
+          console.error('[webhook] Notification error:', notifyErr);
         }
       }
     }

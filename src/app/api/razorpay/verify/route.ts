@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db/client';
 import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
 import { autoBridgeFromBooking, createFollowUpEntitlement } from '@/lib/patient-portal-server';
+import { sendBookingNotifications } from '@/lib/notifications';
 
 function getRazorpay(): Razorpay | null {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -179,6 +180,40 @@ export async function POST(request: NextRequest) {
       });
     } catch (invErr) {
       console.error('[verify] Auto-invoice error:', invErr);
+    }
+
+    // Send notifications (idempotent — deduplication via notification_log)
+    try {
+      const { data: fullBooking } = await db
+        .from('bookings')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .limit(1)
+        .single();
+
+      if (fullBooking) {
+        await sendBookingNotifications({
+          bookingId,
+          clinicName: fullBooking.clinic_name || fullBooking.clinic_id || '',
+          patientName: fullBooking.patient_name || `${fullBooking.first_name || ''} ${fullBooking.last_name || ''}`.trim(),
+          patientPhone: fullBooking.patient_phone || fullBooking.phone || '',
+          patientEmail: fullBooking.patient_email || fullBooking.email || undefined,
+          ageGender: `${fullBooking.age || ''} / ${fullBooking.gender || ''}`,
+          date: fullBooking.booking_date || fullBooking.date || '',
+          time: fullBooking.booking_time || fullBooking.time || '',
+          consultationType: fullBooking.consultation_type || '',
+          reason: fullBooking.reason || '',
+          fee: fullBooking.fee || '',
+          paymentId: razorpayPaymentId || undefined,
+          country: fullBooking.country || undefined,
+          timezone: fullBooking.timezone || undefined,
+          complaints: fullBooking.complaints || undefined,
+          medicines: fullBooking.medicines || fullBooking.current_medications || undefined,
+          notes: fullBooking.notes || undefined,
+        });
+      }
+    } catch (notifyErr) {
+      console.error('[verify] Notification error:', notifyErr);
     }
 
     return NextResponse.json({ success: true, payment: paymentData });
