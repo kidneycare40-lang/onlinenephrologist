@@ -64,7 +64,7 @@ const sidebarSections = [
 function SidebarContent({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   const { clinic } = useClinic();
-  const unreadCount = useEMRUnreadCount(30000);
+  const unreadCount = useEMRUnreadCount();
 
   return (
     <div className="flex flex-col h-full">

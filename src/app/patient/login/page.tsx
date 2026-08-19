@@ -20,7 +20,8 @@ export default function PatientLoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/patient/dashboard';
+  const rawRedirect = searchParams.get('redirect') || '/patient/dashboard';
+  const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/patient/dashboard';
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');

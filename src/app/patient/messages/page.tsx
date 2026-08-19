@@ -48,7 +48,7 @@ export default function PatientMessagesPage() {
           });
         })
         .catch(() => {});
-    }, 10000);
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 

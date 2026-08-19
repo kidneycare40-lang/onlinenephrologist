@@ -6,5 +6,7 @@ export async function GET() {
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const reports = await getPatientReports(auth.patientAccountId);
-  return NextResponse.json({ reports });
+  const res = NextResponse.json({ reports });
+  res.headers.set('Cache-Control', 'no-store, private');
+  return res;
 }

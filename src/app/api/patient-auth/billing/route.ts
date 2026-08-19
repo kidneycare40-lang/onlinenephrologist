@@ -10,5 +10,7 @@ export async function GET() {
     getPatientBookingPayments(auth.patientAccountId),
   ]);
 
-  return NextResponse.json({ invoices, bookingPayments });
+  return NextResponse.json({ invoices, bookingPayments }, {
+    headers: { 'Cache-Control': 'no-store, private' },
+  });
 }

@@ -7,14 +7,20 @@ export async function GET() {
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const conversation = await getOrCreateConversation(auth.patientAccountId);
-  const messages = await getMessages(conversation.id);
 
-  // Mark doctor messages as read
-  await markAsRead(conversation.id, 'patient');
-
+  // Only fetch messages and mark as read if there are unread doctor messages
   const unreadCount = await getPatientUnreadCount(auth.patientAccountId);
+  let messages;
+  if (unreadCount > 0) {
+    messages = await getMessages(conversation.id);
+    await markAsRead(conversation.id, 'patient');
+  } else {
+    messages = await getMessages(conversation.id);
+  }
 
-  return NextResponse.json({ conversation, messages, unreadCount });
+  const response = NextResponse.json({ conversation, messages, unreadCount });
+  response.headers.set('Cache-Control', 'no-store, private');
+  return response;
 }
 
 /** POST: Send a message */

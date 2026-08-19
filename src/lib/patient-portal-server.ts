@@ -367,10 +367,11 @@ export async function createFollowUpEntitlement(
 /** Use a follow-up entitlement (mark as USED, link to follow-up booking). */
 export async function useFollowUpEntitlement(
   entitlementId: string,
+  patientAccountId: string,
   followUpBookingId: string
 ): Promise<boolean> {
   const db = getDb();
-  // Atomic: only update if still ACTIVE
+  // Atomic: only update if still ACTIVE and belongs to this patient
   const { data, error } = await db
     .from('follow_up_entitlements')
     .update({
@@ -380,6 +381,7 @@ export async function useFollowUpEntitlement(
       updated_at: new Date().toISOString(),
     })
     .eq('id', entitlementId)
+    .eq('patient_account_id', patientAccountId)
     .eq('status', 'ACTIVE')
     .select()
     .maybeSingle();
@@ -456,10 +458,10 @@ export async function getFullPatientProfile(patientAccountId: string): Promise<{
 }> {
   const db = getDb();
 
-  // Get account
+  // Get account (exclude sensitive fields)
   const { data: account } = await db
     .from('patient_accounts')
-    .select('*')
+    .select('id, email, email_verified, first_name, last_name, phone, gender, country, timezone, is_international, preferred_language, created_at, updated_at, last_login_at')
     .eq('id', patientAccountId)
     .maybeSingle();
 
@@ -471,22 +473,14 @@ export async function getFullPatientProfile(patientAccountId: string): Promise<{
     emrPatientId = await getEmrPatientId(patientAccountId);
   }
 
-  // Auto-link existing bookings by email (bookings made before patient_account_id was added)
-  if (account?.email) {
-    await db
-      .from('bookings')
-      .update({ patient_account_id: patientAccountId })
-      .eq('email', account.email)
-      .is('patient_account_id', null);
-  }
-
-  // Get bookings
+  // Get bookings (limited to most recent 50)
   const now = new Date().toISOString().split('T')[0];
   const { data: allBookings } = await db
     .from('bookings')
     .select('*')
     .eq('patient_account_id', patientAccountId)
-    .order('booking_date', { ascending: false });
+    .order('booking_date', { ascending: false })
+    .limit(50);
 
   const upcomingBookings = (allBookings || []).filter(
     (b: any) => b.booking_date >= now && !['cancelled', 'completed'].includes(b.status)

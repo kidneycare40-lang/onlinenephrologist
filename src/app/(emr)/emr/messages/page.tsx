@@ -47,7 +47,7 @@ export default function EMRMessagesPage() {
         .then(r => r.json())
         .then(d => { setConversations(d.conversations || []); })
         .catch(() => {});
-    }, 10000);
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -69,7 +69,7 @@ export default function EMRMessagesPage() {
         .then(r => r.json())
         .then(d => { if (d.messages) setMessages(d.messages); })
         .catch(() => {});
-    }, 8000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [selected?.id]);
 

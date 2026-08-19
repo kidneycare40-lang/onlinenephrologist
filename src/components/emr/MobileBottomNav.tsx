@@ -26,7 +26,7 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { can } = useAuth();
-  const unreadCount = useEMRUnreadCount(30000);
+  const unreadCount = useEMRUnreadCount();
 
   const filteredItems = NAV_ITEMS.filter((item) => can(item.permission as any, 'view'));
 

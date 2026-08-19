@@ -6,5 +6,7 @@ export async function GET() {
   if (!patient || patient.patientId === 'pending') {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
-  return NextResponse.json({ patient });
+  const res = NextResponse.json({ patient });
+  res.headers.set('Cache-Control', 'no-store, private');
+  return res;
 }

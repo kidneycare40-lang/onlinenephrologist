@@ -6,5 +6,7 @@ export async function GET() {
   if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const prescriptions = await getPatientPrescriptions(auth.patientAccountId);
-  return NextResponse.json({ prescriptions });
+  const res = NextResponse.json({ prescriptions });
+  res.headers.set('Cache-Control', 'no-store, private');
+  return res;
 }

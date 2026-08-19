@@ -54,7 +54,7 @@ export default function TopNav() {
   const appsRef = useRef<HTMLDivElement>(null);
 
   const [showAddPatient, setShowAddPatient] = useState(false);
-  const unreadCount = useEMRUnreadCount(30000);
+  const unreadCount = useEMRUnreadCount();
   const [patientPrefix, setPatientPrefix] = useState('Mr');
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
