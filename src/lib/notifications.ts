@@ -4,24 +4,62 @@ import { sendBookingConfirmationEmail, sendTeamBookingEmail } from '@/lib/email'
 
 const CALLMEBOT_API_URL = 'https://api.callmebot.com/whatsapp.php';
 
-async function hasNotificationBeenSent(
+/**
+ * Claim a notification slot. Returns true if this caller won the race.
+ * Uses INSERT with unique constraint + ON CONFLICT DO NOTHING so only
+ * one concurrent request can claim each (booking, type, recipient).
+ * If a previous attempt failed, allows retry by resetting status.
+ */
+async function claimNotification(
   bookingId: string,
   notificationType: string,
   recipient: string
 ): Promise<boolean> {
   const db = getDb();
-  const { data } = await db
+
+  // Try to insert a new claim
+  const { error } = await db
     .from('notification_log')
-    .select('id')
-    .eq('booking_id', bookingId)
-    .eq('notification_type', notificationType)
-    .eq('recipient', recipient)
-    .eq('status', 'sent')
-    .limit(1);
-  return !!(data && data.length > 0);
+    .insert({
+      booking_id: bookingId,
+      notification_type: notificationType,
+      recipient,
+      status: 'sending',
+    })
+    .select()
+    .single();
+
+  if (!error) return true; // Won the race
+
+  // Unique constraint violation — check if we can retry a failed attempt
+  if (error.code === '23505') {
+    const { data: existing } = await db
+      .from('notification_log')
+      .select('status')
+      .eq('booking_id', bookingId)
+      .eq('notification_type', notificationType)
+      .eq('recipient', recipient)
+      .limit(1)
+      .single();
+
+    if (existing && (existing.status === 'failed' || existing.status === 'sending')) {
+      // Reset to 'sending' so this caller can retry
+      await db
+        .from('notification_log')
+        .update({ status: 'sending', error: null, provider_message_id: null })
+        .eq('booking_id', bookingId)
+        .eq('notification_type', notificationType)
+        .eq('recipient', recipient);
+      return true;
+    }
+    return false; // Already sent or being sent by another request
+  }
+
+  console.error('[notifications] claim error:', error);
+  return false;
 }
 
-async function logNotification(
+async function updateNotificationStatus(
   bookingId: string,
   notificationType: string,
   recipient: string,
@@ -30,14 +68,18 @@ async function logNotification(
   error?: string
 ): Promise<void> {
   const db = getDb();
-  await db.from('notification_log').insert({
-    booking_id: bookingId,
-    notification_type: notificationType,
-    recipient,
-    status,
-    provider_message_id: providerMessageId || null,
-    error: error || null,
-  });
+  await db
+    .from('notification_log')
+    .update({
+      status,
+      provider_message_id: providerMessageId || null,
+      error: error || null,
+      sent_at: status === 'sent' ? new Date().toISOString() : null,
+    })
+    .eq('booking_id', bookingId)
+    .eq('notification_type', notificationType)
+    .eq('recipient', recipient)
+    .eq('status', 'sending');
 }
 
 async function sendWhatsAppDirect(
@@ -127,18 +169,18 @@ export async function sendBookingNotifications(
   };
 
   // 1. Team WhatsApp (to doctors)
-  if (!(await hasNotificationBeenSent(ctx.bookingId, 'team_whatsapp', 'doctors'))) {
+  if (await claimNotification(ctx.bookingId, 'team_whatsapp', 'doctors')) {
     try {
       await sendBookingWhatsApp(bookingNotif);
-      await logNotification(ctx.bookingId, 'team_whatsapp', 'doctors', 'sent');
+      await updateNotificationStatus(ctx.bookingId, 'team_whatsapp', 'doctors', 'sent');
       result.teamWhatsApp = true;
     } catch (err) {
-      await logNotification(ctx.bookingId, 'team_whatsapp', 'doctors', 'failed', undefined, err instanceof Error ? err.message : 'Unknown');
+      await updateNotificationStatus(ctx.bookingId, 'team_whatsapp', 'doctors', 'failed', undefined, err instanceof Error ? err.message : 'Unknown');
     }
   }
 
   // 2. Team email
-  if (!(await hasNotificationBeenSent(ctx.bookingId, 'team_email', 'doctors'))) {
+  if (await claimNotification(ctx.bookingId, 'team_email', 'doctors')) {
     try {
       await sendTeamBookingEmail({
         bookingId: ctx.bookingId,
@@ -151,18 +193,18 @@ export async function sendBookingNotifications(
         reason: ctx.reason,
         paymentId: ctx.paymentId,
       });
-      await logNotification(ctx.bookingId, 'team_email', 'doctors', 'sent');
+      await updateNotificationStatus(ctx.bookingId, 'team_email', 'doctors', 'sent');
       result.teamEmail = true;
     } catch (err) {
-      await logNotification(ctx.bookingId, 'team_email', 'doctors', 'failed', undefined, err instanceof Error ? err.message : 'Unknown');
+      await updateNotificationStatus(ctx.bookingId, 'team_email', 'doctors', 'failed', undefined, err instanceof Error ? err.message : 'Unknown');
     }
   }
 
   // 3. Patient WhatsApp confirmation
-  if (ctx.patientPhone && !(await hasNotificationBeenSent(ctx.bookingId, 'patient_whatsapp', ctx.patientPhone))) {
+  if (ctx.patientPhone && await claimNotification(ctx.bookingId, 'patient_whatsapp', ctx.patientPhone)) {
     const patientMsg = buildPatientConfirmationMessage(bookingNotif);
     const waResult = await sendWhatsAppDirect(ctx.patientPhone, patientMsg);
-    await logNotification(
+    await updateNotificationStatus(
       ctx.bookingId, 'patient_whatsapp', ctx.patientPhone,
       waResult.ok ? 'sent' : 'failed',
       waResult.messageId,
@@ -172,7 +214,7 @@ export async function sendBookingNotifications(
   }
 
   // 4. Patient email confirmation
-  if (ctx.patientEmail && !(await hasNotificationBeenSent(ctx.bookingId, 'patient_email', ctx.patientEmail))) {
+  if (ctx.patientEmail && await claimNotification(ctx.bookingId, 'patient_email', ctx.patientEmail)) {
     try {
       await sendBookingConfirmationEmail({
         to: ctx.patientEmail,
@@ -184,10 +226,10 @@ export async function sendBookingNotifications(
         fee: ctx.fee,
         paymentId: ctx.paymentId,
       });
-      await logNotification(ctx.bookingId, 'patient_email', ctx.patientEmail, 'sent');
+      await updateNotificationStatus(ctx.bookingId, 'patient_email', ctx.patientEmail, 'sent');
       result.patientEmail = true;
     } catch (err) {
-      await logNotification(ctx.bookingId, 'patient_email', ctx.patientEmail, 'failed', undefined, err instanceof Error ? err.message : 'Unknown');
+      await updateNotificationStatus(ctx.bookingId, 'patient_email', ctx.patientEmail, 'failed', undefined, err instanceof Error ? err.message : 'Unknown');
     }
   }
 
