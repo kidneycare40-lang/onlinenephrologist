@@ -21,17 +21,13 @@ export async function GET(
 
     const db = getDb();
 
-    // 1. Fetch the booking
-    const { data: booking, error: bookingError } = await db
+    // 1. Fetch the booking (may not exist for failed/incomplete payments)
+    const { data: booking } = await db
       .from('bookings')
       .select('*')
       .eq('booking_id', bookingId)
       .limit(1)
-      .single();
-
-    if (bookingError || !booking) {
-      return apiError('Booking not found', 404);
-    }
+      .maybeSingle();
 
     // 2. Fetch the actual EMR patient (if linked)
     let emrPatient = null;
@@ -69,15 +65,14 @@ export async function GET(
     {
       const { data } = await db
         .from('booking_payments')
-        .select('id, booking_id, patient_name, patient_phone, patient_country, amount, currency, razorpay_order_id, razorpay_payment_id, payment_status, consultation_type, created_at')
+        .select('id, booking_id, patient_name, patient_phone, patient_email, patient_country, amount, currency, razorpay_order_id, razorpay_payment_id, payment_status, consultation_type, created_at')
         .eq('booking_id', bookingId)
-        .limit(1)
-        .maybeSingle?.() ?? { data: null };
-      paymentRecord = data;
+        .limit(1);
+      paymentRecord = data && data.length > 0 ? data[0] : null;
     }
 
     return NextResponse.json({
-      booking: {
+      booking: booking ? {
         bookingId: booking.booking_id,
         firstName: booking.first_name,
         lastName: booking.last_name,
@@ -111,7 +106,7 @@ export async function GET(
         relationship: booking.relationship,
         createdAt: booking.created_at,
         updatedAt: booking.updated_at,
-      },
+      } : null,
       emrPatient: emrPatient ? {
         id: emrPatient.id,
         uhid: emrPatient.uhid,
