@@ -29,16 +29,24 @@ async function findOrCreateEmrPatientForRelative(data: {
     if (existing && existing.length > 0) return existing[0].id;
   }
 
-  // 2. Try match by phone (if provided)
-  if (data.phone) {
+  // 2. Try match by phone — ONLY when DOB was also provided (phone as supporting evidence, not sole identity)
+  // If DOB is missing, we skip phone-only matching to avoid false merges on shared/family numbers.
+  if (data.phone && data.dateOfBirth) {
     const cleanPhone = data.phone.replace(/\D/g, '');
     const { data: byPhone } = await db
       .from('patients')
-      .select('id')
+      .select('id, first_name, last_name, date_of_birth')
       .or(`phone.eq.${cleanPhone},phone.eq.${data.phone}`)
       .eq('is_deleted', false)
-      .limit(1);
-    if (byPhone && byPhone.length > 0) return byPhone[0].id;
+      .limit(5);
+    // Only match if the phone-based result also matches the name (fuzzy)
+    if (byPhone && byPhone.length > 0) {
+      const match = byPhone.find((p: any) =>
+        p.first_name?.toLowerCase().trim() === data.firstName.toLowerCase().trim() &&
+        p.last_name?.toLowerCase().trim() === data.lastName.toLowerCase().trim()
+      );
+      if (match) return match.id;
+    }
   }
 
   // 3. Create new EMR patient record
