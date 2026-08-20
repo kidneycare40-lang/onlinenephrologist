@@ -275,21 +275,45 @@ function BookingForm() {
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.patient?.patientId && data.patient.patientId !== 'pending') {
-          setPatientAccountId(data.patient.patientId);
+          const p = data.patient;
+          setPatientAccountId(p.patientId);
           setCurrentPatientState({
-            id: data.patient.patientId,
-            name: data.patient.name || '',
-            phone: data.patient.phone || '',
-            email: data.patient.email || '',
-            isInternational: false,
+            id: p.patientId,
+            name: p.name || '',
+            phone: p.phone || '',
+            email: p.email || '',
+            isInternational: p.isInternational || false,
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
           });
+
+          // Calculate age from DOB
+          let ageStr = '';
+          if (p.dateOfBirth) {
+            const dob = new Date(p.dateOfBirth);
+            const now = new Date();
+            let age = now.getFullYear() - dob.getFullYear();
+            const m = now.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+            if (age > 0 && age <= 120) ageStr = age.toString();
+          }
+
+          const first = p.firstName || p.name?.split(' ')[0] || '';
+          const last = p.lastName || p.name?.split(' ').slice(1).join(' ') || '';
+
           setFormData(prev => ({
             ...prev,
-            firstName: data.patient.name?.split(' ')[0] || prev.firstName,
-            lastName: data.patient.name?.split(' ').slice(1).join(' ') || prev.lastName,
-            email: data.patient.email || prev.email,
+            firstName: first || prev.firstName,
+            lastName: last || prev.lastName,
+            phone: p.phone || prev.phone,
+            whatsappNumber: p.phone || prev.whatsappNumber,
+            email: p.email || prev.email,
+            age: ageStr || prev.age,
+            gender: p.gender ? p.gender.charAt(0).toUpperCase() + p.gender.slice(1) : prev.gender,
+            isInternational: p.isInternational || prev.isInternational,
+            country: p.country || prev.country,
+            countryCode: p.countryCode || prev.countryCode,
+            timezone: p.timezone || prev.timezone,
           }));
         }
       })
