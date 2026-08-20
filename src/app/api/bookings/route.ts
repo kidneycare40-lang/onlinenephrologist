@@ -258,10 +258,24 @@ export async function POST(request: NextRequest) {
         console.error('[bookings] Failed to create EMR patient for relative:', e);
       }
     } else if (body.patientAccountId) {
-      // Self-booking: resolve EMR patient via bridge
+      // Self-booking: resolve EMR patient via bridge, create if missing
       try {
         await autoBridgeFromBooking(body.patientAccountId, body.phone || '');
-        const emrPatientId = await getEmrPatientId(body.patientAccountId);
+        let emrPatientId = await getEmrPatientId(body.patientAccountId);
+        if (!emrPatientId) {
+          // No bridge exists — create EMR patient from the booking/account data
+          emrPatientId = await findOrCreateEmrPatientForRelative({
+            firstName: body.firstName,
+            lastName: body.lastName,
+            dateOfBirth: body.patientDateOfBirth || undefined,
+            gender: body.gender || undefined,
+            phone: body.phone || undefined,
+            countryCode: body.countryCode || undefined,
+          });
+          if (emrPatientId) {
+            await ensureEmrBridge(body.patientAccountId, emrPatientId);
+          }
+        }
         if (emrPatientId) {
           await db.from('bookings').update({ actual_patient_id: emrPatientId }).eq('booking_id', body.bookingId);
         }
