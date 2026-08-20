@@ -192,6 +192,21 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (fullBooking) {
+        let bookedByPatientName: string | undefined;
+        if (fullBooking.booked_by_patient_account_id && fullBooking.relationship && fullBooking.relationship !== 'self') {
+          try {
+            const { data: bookerAcct } = await db
+              .from('patient_accounts')
+              .select('first_name, last_name')
+              .eq('id', fullBooking.booked_by_patient_account_id)
+              .limit(1)
+              .single();
+            if (bookerAcct) {
+              bookedByPatientName = `${bookerAcct.first_name || ''} ${bookerAcct.last_name || ''}`.trim() || undefined;
+            }
+          } catch {}
+        }
+
         await sendBookingNotifications({
           bookingId,
           clinicName: fullBooking.clinic_name || fullBooking.clinic_id || '',
@@ -199,6 +214,8 @@ export async function POST(request: NextRequest) {
           patientPhone: fullBooking.patient_phone || fullBooking.phone || '',
           patientEmail: fullBooking.patient_email || fullBooking.email || undefined,
           ageGender: `${fullBooking.age || ''} / ${fullBooking.gender || ''}`,
+          age: fullBooking.age || undefined,
+          gender: fullBooking.gender || undefined,
           date: fullBooking.booking_date || fullBooking.date || '',
           time: fullBooking.booking_time || fullBooking.time || '',
           consultationType: fullBooking.consultation_type || '',
@@ -210,6 +227,11 @@ export async function POST(request: NextRequest) {
           complaints: fullBooking.complaints || undefined,
           medicines: fullBooking.medicines || fullBooking.current_medications || undefined,
           notes: fullBooking.notes || undefined,
+          relationship: fullBooking.relationship || undefined,
+          bookedByPatientName,
+          doctorName: fullBooking.doctor_name || undefined,
+          reportsUploaded: !!(fullBooking.report_files && (Array.isArray(fullBooking.report_files) ? fullBooking.report_files.length : true)),
+          ultrasoundUploaded: !!fullBooking.ultrasound_file,
         });
       }
     } catch (notifyErr) {

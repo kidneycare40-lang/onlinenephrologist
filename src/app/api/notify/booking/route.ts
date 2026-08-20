@@ -15,6 +15,8 @@ export async function POST(req: NextRequest) {
       patientPhone: body.patientPhone || '',
       patientEmail: body.patientEmail || undefined,
       ageGender: body.ageGender || '',
+      age: body.age || undefined,
+      gender: body.gender || undefined,
       date: body.date || '',
       time: body.time || '',
       consultationType: body.consultationType || '',
@@ -27,6 +29,12 @@ export async function POST(req: NextRequest) {
       medicines: body.medicines || undefined,
       notes: body.notes || undefined,
       localTimeDisplay: body.localTimeDisplay || undefined,
+      relationship: body.relationship || undefined,
+      bookedByPatientName: body.bookedByPatientName || undefined,
+      doctorName: body.doctorName || undefined,
+      clinicCity: body.clinicCity || undefined,
+      reportsUploaded: body.reportsUploaded || false,
+      ultrasoundUploaded: body.ultrasoundUploaded || false,
     });
 
     return NextResponse.json({ ok: true, result });

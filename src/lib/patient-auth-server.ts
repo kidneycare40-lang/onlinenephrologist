@@ -276,6 +276,7 @@ export interface BookingRecord {
   last_name: string;
   phone: string;
   email: string | null;
+  current_location: string | null;
   consultation_type: string;
   clinic_id: string | null;
   booking_date: string | null;

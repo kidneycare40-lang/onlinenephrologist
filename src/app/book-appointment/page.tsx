@@ -18,7 +18,7 @@ import { getItem, setItem } from '@/lib/client-storage';
 import PaymentGateway, { type PaymentData } from '@/components/emr/PaymentGateway';
 import { getConsultationPricing, formatPricing, isInternationalConsultation } from '@/lib/pricing';
 
-type ClinicSlot = { id: string; name: string; shortName: string; address: string; timing: string; fee: number; icon: typeof Video; color: string; features: string[]; slots: string[] };
+type ClinicSlot = { id: string; name: string; shortName: string; address: string; city: string; timing: string; fee: number; icon: typeof Video; color: string; features: string[]; slots: string[] };
 
 const TIMEZONES: Record<string, string> = {
   IST: 'IST (India, UTC+5:30)',
@@ -190,8 +190,8 @@ async function buildClinicsFromSettings(settings: BookingSettings): Promise<Clin
   return settings.schedules.filter(s => s.enabled).map(s => {
     const clinicDetail = allClinics.find(c => c.id === s.clinicId);
     const info = clinicDetail
-      ? { name: clinicDetail.name, shortName: clinicDetail.shortName, address: clinicDetail.address, fee: clinicDetail.fee, color: clinicDetail.color, features: clinicDetail.features }
-      : { name: s.clinicName, shortName: s.clinicName, address: '', fee: 500, color: 'blue', features: [] };
+      ? { name: clinicDetail.name, shortName: clinicDetail.shortName, address: clinicDetail.address, city: clinicDetail.city || '', fee: clinicDetail.fee, color: clinicDetail.color, features: clinicDetail.features }
+      : { name: s.clinicName, shortName: s.clinicName, address: '', city: '', fee: 500, color: 'blue', features: [] };
     const sorted = [...s.workingDays].sort((a, b) => a - b);
     let dayStr: string;
     if (sorted.length === 7) {
@@ -242,10 +242,11 @@ function BookingForm() {
   const [step, setStep] = useState(forceInternational ? 2 : 1);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
-    consultationType: initialType,
+    consultationType: forceInternational ? 'online' : initialType,
     clinicId: (initialType === 'online' || initialType === 'online_intl') ? 'online' : '',
     date: '', time: '', reason: '', previousKidneyIssue: 'no',
     currentMedications: '', notes: '', complaints: '', medicines: '',
+    currentLocation: forceInternational ? 'outside_india' as 'india' | 'outside_india' : 'india' as 'india' | 'outside_india',
     isInternational: forceInternational, country: '', countryCode: '', timezone: '', passportNumber: '',
     whatsappNumber: '', preferredLanguage: 'English', interpreterRequired: false,
   });
@@ -312,6 +313,7 @@ function BookingForm() {
             email: p.email || prev.email,
             age: ageStr || prev.age,
             gender: p.gender ? p.gender.charAt(0).toUpperCase() + p.gender.slice(1) : prev.gender,
+            currentLocation: p.isInternational ? 'outside_india' : (prev.currentLocation || 'india'),
             isInternational: p.isInternational || prev.isInternational,
             country: p.country || prev.country,
             countryCode: p.countryCode || prev.countryCode,
@@ -333,6 +335,7 @@ function BookingForm() {
           email: patient.email || prev.email,
           age: patient.age?.toString() || prev.age,
           gender: patient.gender ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1) : prev.gender,
+          currentLocation: patient.isInternational ? 'outside_india' : (prev.currentLocation || 'india'),
           isInternational: patient.isInternational || prev.isInternational,
           country: patient.country || prev.country,
           countryCode: patient.countryCode || prev.countryCode,
@@ -392,7 +395,7 @@ function BookingForm() {
     e.preventDefault();
 
     // Validate phone & email before anything else
-    const isIntlBooking = formData.consultationType === 'online_intl';
+    const isIntlBooking = isOutsideIndia;
     const cleanPhone = formData.phone.replace(/[\s-]/g, '').replace(/^\+?91/, '');
     if (isIntlBooking && !formData.countryCode) {
       alert('Please select your country code for the WhatsApp number.');
@@ -476,7 +479,7 @@ function BookingForm() {
 
     // Normalize phone: intl bookings store full international number (country code + digits)
     // so EMR lookup, WhatsApp links, and doctor messages all work correctly.
-    const isIntl = formData.consultationType === 'online_intl';
+    const isIntl = isOutsideIndia;
     const fullPhone = isIntl && formData.countryCode
       ? `${formData.countryCode}${formData.phone.replace(/[\s-]/g, '')}`
       : formData.phone;
@@ -490,7 +493,7 @@ function BookingForm() {
       bookingId: id, createdAt: new Date().toISOString(),
       status: 'pending', paymentStatus: pData ? 'paid' : 'unpaid', doctorName: 'Dr Rajesh Goel',
       consultationFee: consultFee,
-      consultationFeeCurrency: formData.consultationType === 'online_intl' ? 'USD' : 'INR',
+      consultationFeeCurrency: consultCurrency,
       reportFiles: reportFilesData.length > 0 ? reportFilesData : undefined,
       ultrasoundFile: ultrasoundData || undefined,
       bookingMedicines: bookingMedicines.filter(m => m.name.trim()),
@@ -616,9 +619,9 @@ function BookingForm() {
     // Notify the doctor on WhatsApp with all booking details (every booking type)
     const reportNames = reportFiles.map(f => f.name).join(', ') || 'None';
     const usName = ultrasoundFile?.name || 'None';
-    const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
-    const bookingTypeLabel = isIntl ? 'International Online Consultation' : isOnline ? 'Online Consultation' : 'Clinic/Hospital Visit';
-    const localTimeDisplay = isIntl && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : '';
+    const isOnline = formData.consultationType === 'online' || isOutsideIndia;
+    const bookingTypeLabel = isOutsideIndia ? 'International Online Consultation' : isOnline ? 'Online Consultation' : 'Clinic/Hospital Visit';
+    const localTimeDisplay = isOutsideIndia && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : '';
 
     // Server-side WhatsApp notification to doctor (both numbers)
     fetch('/api/notify/booking', {
@@ -629,7 +632,10 @@ function BookingForm() {
         clinicName: selectedClinic?.name || '',
         patientName: `${formData.firstName} ${formData.lastName}`,
         patientPhone: fullPhone,
+        patientEmail: formData.email || undefined,
         ageGender: `${formData.age} / ${formData.gender}`,
+        age: formData.age || undefined,
+        gender: formData.gender || undefined,
         date: formData.date,
         time: formData.time,
         consultationType: formData.consultationType,
@@ -637,18 +643,24 @@ function BookingForm() {
         fee: formatPricing(getConsultationPricing(formData.consultationType)),
         paymentStatus: pData ? `PAID via Razorpay` : 'UNPAID',
         paymentId: pData?.paymentId || undefined,
-        country: isIntl ? formData.country : undefined,
-        timezone: isIntl ? formData.timezone : undefined,
+        country: isOutsideIndia ? formData.country : undefined,
+        timezone: isOutsideIndia ? formData.timezone : undefined,
         complaints: formData.complaints || undefined,
         medicines: formData.medicines || formData.currentMedications || undefined,
         notes: formData.notes || undefined,
         localTimeDisplay: localTimeDisplay || undefined,
+        relationship: patientAccountId ? (bookingFor === 'family' ? relationship : 'self') : 'self',
+        bookedByPatientName: bookingFor === 'family' && currentPatient ? currentPatient.name : undefined,
+        doctorName: 'Dr Rajesh Goel',
+        clinicCity: selectedClinic?.city || undefined,
+        reportsUploaded: reportFiles.length > 0,
+        ultrasoundUploaded: !!ultrasoundFile,
       }),
     }).catch(() => {});
 
     // Also open WhatsApp from patient's browser as backup
     const doctorMsg = encodeURIComponent(
-      `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(formData.consultationType))}\n${isIntl ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
+      `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(isOutsideIndia ? 'online_intl' : formData.consultationType))}\n${isOutsideIndia ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
     );
     // Open WhatsApp to doctor (number 1) with full booking details — patient clicks Send
     window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
@@ -669,19 +681,31 @@ function BookingForm() {
     if (name === 'clinicId' || name === 'consultationType') {
       if (name === 'consultationType') {
         let clinicId = '';
-        let isIntl = false;
         if (value === 'online') clinicId = 'online';
-        else if (value === 'online_intl') { clinicId = 'online'; isIntl = true; }
         else if (value === 'hospital') clinicId = 'psri';
-        setFormData(prev => ({ ...prev, [name]: value, clinicId, time: '', isInternational: isIntl }));
+        setFormData(prev => ({ ...prev, [name]: value, clinicId, time: '' }));
       } else {
         setFormData(prev => ({ ...prev, [name]: value, time: '' }));
       }
-    } else if (name === 'isInternational') {
+    } else if (name === 'currentLocation') {
+      const isOutside = value === 'outside_india';
       setFormData(prev => ({
         ...prev,
-        isInternational: value === 'yes',
-        consultationType: value === 'yes' && prev.consultationType === 'online' ? 'online_intl' : prev.consultationType,
+        currentLocation: value as 'india' | 'outside_india',
+        isInternational: isOutside,
+        consultationType: isOutside ? 'online_intl' : (prev.consultationType === 'online_intl' ? 'online' : prev.consultationType),
+        time: '',
+        country: isOutside ? prev.country : '',
+        countryCode: isOutside ? prev.countryCode : '',
+        timezone: isOutside ? prev.timezone : '',
+      }));
+    } else if (name === 'isInternational') {
+      const isOutside = value === 'yes';
+      setFormData(prev => ({
+        ...prev,
+        currentLocation: isOutside ? 'outside_india' : 'india',
+        isInternational: isOutside,
+        consultationType: isOutside ? 'online_intl' : (prev.consultationType === 'online_intl' ? 'online' : prev.consultationType),
         time: '',
       }));
     } else if (name === 'interpreterRequired') {
@@ -716,11 +740,12 @@ function BookingForm() {
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const selectedClinic = clinics.find(c => c.id === formData.clinicId);
-  const isOnline = formData.consultationType === 'online' || formData.consultationType === 'online_intl';
-  const consultPricing = getConsultationPricing(formData.consultationType === 'online_intl' ? 'online_intl' : formData.consultationType === 'hospital' ? 'hospital' : formData.consultationType === 'offline' ? 'offline' : 'online');
-  const consultFee = formData.consultationType === 'online_intl' ? consultPricing.amount : (selectedClinic?.fee || consultPricing.amount);
-  const consultCurrency = formData.consultationType === 'online_intl' ? 'USD' : 'INR';
-  const isIntlBooking = isInternationalConsultation(formData.consultationType);
+  const isOutsideIndia = formData.currentLocation === 'outside_india';
+  const isOnline = formData.consultationType === 'online' || isOutsideIndia;
+  const consultPricing = getConsultationPricing(isOutsideIndia ? 'online_intl' : formData.consultationType === 'hospital' ? 'hospital' : formData.consultationType === 'offline' ? 'offline' : 'online');
+  const consultFee = isOutsideIndia ? consultPricing.amount : (selectedClinic?.fee || consultPricing.amount);
+  const consultCurrency = isOutsideIndia ? 'USD' : 'INR';
+  const isIntlBooking = isOutsideIndia;
 
   const isToday = formData.date === today;
 
@@ -743,9 +768,9 @@ function BookingForm() {
     return bookingSettings.holidays.some(h => h.date === today);
   }, [bookingSettings, today]);
 
-  const intlTz = formData.consultationType === 'online_intl' ? formData.timezone : '';
+  const intlTz = isOutsideIndia ? formData.timezone : '';
   // Full phone with country code for intl patients (used by PaymentGateway, WhatsApp, EMR)
-  const fullPatientPhone = formData.consultationType === 'online_intl' && formData.countryCode
+  const fullPatientPhone = isOutsideIndia && formData.countryCode
     ? `${formData.countryCode}${formData.phone.replace(/[\s-]/g, '')}`.replace(/[^0-9]/g, '').replace(/^\+/, '')
     : `91${formData.phone.replace(/[\s-]/g, '')}`;
 
@@ -805,7 +830,7 @@ function BookingForm() {
     if (step === 2) return !!formData.clinicId;
     if (step === 3) {
       if (!formData.firstName || !formData.phone || !formData.age) return false;
-      if (formData.isInternational && !formData.country) return false;
+      if (isOutsideIndia && !formData.country) return false;
       if (bookingFor === 'family' && !relationship) return false;
       return true;
     }
@@ -861,7 +886,7 @@ function BookingForm() {
               <div className="space-y-0.5">
                 <p className="text-xs text-slate-500">Consultation Fee</p>
                 <p className="font-bold text-[#0A75BB] text-lg">
-                  {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${consultFee}`}
+                  {isOutsideIndia ? `$${consultFee} USD` : `₹${consultFee}`}
                 </p>
               </div>
               {paymentData && (
@@ -886,7 +911,7 @@ function BookingForm() {
                 </div>
               </div>
             </div>
-          ) : formData.consultationType === 'online_intl' ? (
+          ) : isOutsideIndia ? (
             <div className="bg-white rounded-2xl shadow-lg border p-6 mb-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Payment</h2>
               {paymentData ? (
@@ -961,7 +986,7 @@ function BookingForm() {
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a href={`https://wa.me/${fullPatientPhone}?text=${encodeURIComponent(
-              `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${bookingId}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${formData.consultationType === 'online_intl' && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : formData.time}\nFee: ${formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${consultFee}`}\n\nFor any queries, call +91 98182 35613`
+              `Appointment Confirmation\n\nHi ${formData.firstName}! Your appointment with Dr Rajesh Goel has been booked.\n\nBooking ID: ${bookingId}\nClinic: ${selectedClinic?.name}\nDate: ${formData.date}\nTime: ${isOutsideIndia && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : formData.time}\nFee: ${isOutsideIndia ? `$${consultFee} USD` : `₹${consultFee}`}\n\nFor any queries, call +91 98182 35613`
             )}`} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 flex items-center justify-center gap-2">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               Send Confirmation on WhatsApp
@@ -1091,7 +1116,7 @@ function BookingForm() {
                   : 'bg-blue-100 text-blue-700 border border-blue-200'
               )}>
                 {isOnline ? <Video className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
-                {formData.consultationType === 'online_intl' ? 'International Video' :
+                {isOutsideIndia ? 'International Video' :
                  isOnline ? 'Online Video Consultation' : 'In-Clinic Visit'}
               </span>
               {step > 2 && selectedClinic && (
@@ -1100,7 +1125,7 @@ function BookingForm() {
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-[#0A75BB]/10 text-[#0A75BB] border border-[#0A75BB]/20">
                     <MapPin className="h-3 w-3" />
                     {formData.consultationType === 'hospital' ? 'PSRI Hospital' : (selectedClinic.shortName || selectedClinic.name)}
-                    <span className="text-[#0A75BB]/60">• {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${consultFee}`}</span>
+                    <span className="text-[#0A75BB]/60">• {isOutsideIndia ? `$${consultFee} USD` : `₹${consultFee}`}</span>
                   </span>
                 </>
               )}
@@ -1215,29 +1240,30 @@ function BookingForm() {
           {step === 1 && (
             <div className="space-y-6">
               {forceInternational ? (
-                <div className="border-2 border-purple-500 bg-purple-50 rounded-2xl p-6 shadow-lg shadow-purple-100">
+                <div className="border-2 border-blue-500 bg-blue-50 rounded-2xl p-6 shadow-lg shadow-blue-100">
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-purple-500 text-white flex items-center justify-center shrink-0">
+                    <div className="w-14 h-14 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0">
                       <Globe className="h-7 w-7" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-bold text-gray-900 text-lg">International Video Consultation</h3>
-                        <CheckCircle2 className="h-5 w-5 text-purple-500" />
+                        <CheckCircle2 className="h-5 w-5 text-blue-500" />
                       </div>
                       <p className="text-sm text-slate-500 mb-3">Video consultation for patients outside India</p>
                       <div className="flex flex-wrap gap-2">
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium">Mon-Sun 7AM-11PM IST</span>
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full font-medium">${getConsultationPricing('online_intl').amount} USD</span>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">Mon-Sun 7AM-11PM IST</span>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium">${getConsultationPricing('online_intl').amount} USD</span>
                       </div>
                       <ul className="mt-3 space-y-1.5">
-                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-purple-500 shrink-0" /> Timezone-adjusted scheduling</li>
-                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-purple-500 shrink-0" /> English, Hindi, Urdu and more languages</li>
-                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-purple-500 shrink-0" /> Reports review + prescription + WhatsApp follow-up</li>
+                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-blue-500 shrink-0" /> Timezone-adjusted scheduling</li>
+                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-blue-500 shrink-0" /> English, Hindi, Urdu and more languages</li>
+                        <li className="flex items-center gap-2 text-sm text-slate-600"><CheckCircle2 className="h-4 w-4 text-blue-500 shrink-0" /> Reports review + prescription + WhatsApp follow-up</li>
                       </ul>
                     </div>
                   </div>
-                  <input type="hidden" name="consultationType" value="online_intl" />
+                  <input type="hidden" name="consultationType" value="online" />
+                  <input type="hidden" name="currentLocation" value="outside_india" />
                 </div>
               ) : (
               <>
@@ -1247,9 +1273,8 @@ function BookingForm() {
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 {[
-                  { value: 'online', icon: Video, title: 'Online Video (India)', desc: 'Consult from home via video call — for patients in India', badge: 'Starting ₹500', color: 'emerald' },
+                  { value: 'online', icon: Video, title: 'Online Video Consultation', desc: 'Consult from home via video call', badge: 'Starting ₹500', color: 'emerald' },
                   { value: 'offline', icon: Building2, title: 'In-Clinic Visit', desc: 'Visit doctor at clinic in person — 2 locations in Delhi', badge: '2 Locations', color: 'blue' },
-                  { value: 'online_intl', icon: Globe, title: 'International Video', desc: 'Video consultation for patients outside India', badge: `$${getConsultationPricing('online_intl').amount} USD`, color: 'purple' },
                   { value: 'hospital', icon: Hospital, title: 'Hospital Visit', desc: 'In-person visit at PSRI Hospital', badge: 'Pay at Hospital', color: 'amber' },
                 ].map((opt) => (
                   <label key={opt.value} className={cn(
@@ -1319,11 +1344,11 @@ function BookingForm() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">
-                  {formData.consultationType === 'online' || formData.consultationType === 'online_intl' ? 'Confirm Online Consultation' :
+                  {formData.consultationType === 'online' || isOutsideIndia ? 'Confirm Online Consultation' :
                    formData.consultationType === 'hospital' ? 'Hospital Visit — PSRI Hospital' : 'Select a Clinic'}
                 </h2>
                 <p className="text-sm text-slate-500">
-                  {formData.consultationType === 'online' || formData.consultationType === 'online_intl'
+                  {formData.consultationType === 'online' || isOutsideIndia
                     ? 'You will receive a video call link after booking'
                     : formData.consultationType === 'hospital'
                     ? 'Consultation at PSRI Hospital, New Delhi'
@@ -1331,32 +1356,32 @@ function BookingForm() {
                 </p>
               </div>
 
-              {(formData.consultationType === 'online' || formData.consultationType === 'online_intl') ? (
+              {(formData.consultationType === 'online' || isOutsideIndia) ? (
                 <div className="border-2 border-emerald-500 bg-emerald-50 rounded-2xl p-6 shadow-lg shadow-emerald-100">
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                      {formData.consultationType === 'online_intl' ? <Globe className="h-7 w-7" /> : <Video className="h-7 w-7" />}
+                      {isOutsideIndia ? <Globe className="h-7 w-7" /> : <Video className="h-7 w-7" />}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-bold text-gray-900 text-lg">
-                          {formData.consultationType === 'online_intl' ? 'International Video Consultation' : 'Online Video Consultation'}
+                          {isOutsideIndia ? 'International Video Consultation' : 'Online Video Consultation'}
                         </h3>
                         <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                       </div>
                       <p className="text-sm text-slate-500 mb-3">
-                        {formData.consultationType === 'online_intl'
+                        {isOutsideIndia
                           ? 'Consult from anywhere in the world via secure video call'
                           : 'Consult from anywhere in India via secure video call'}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">
-                          {formData.consultationType === 'online_intl'
+                          {isOutsideIndia
                             ? intlTz ? convertRangeToTz('Mon-Sun 7:00 AM - 11:00 PM', intlTz) : 'Mon-Sun 7AM-11PM IST'
                             : (clinics.find(c => c.id === 'online')?.timing || '')}
                         </span>
                         <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">
-                          {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${selectedClinic?.fee || 500}`}
+                          {isOutsideIndia ? `$${consultFee} USD` : `₹${selectedClinic?.fee || 500}`}
                         </span>
                       </div>
                       <ul className="mt-3 space-y-1.5">
@@ -1507,29 +1532,35 @@ function BookingForm() {
                 </div>
               )}
 
-              {/* International Patient Toggle */}
-              {(formData.consultationType === 'online_intl' || formData.consultationType === 'online') && (
-                <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Are you an international patient?</label>
-                  {forceInternational ? (
-                    <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-purple-500 bg-purple-50 rounded-xl text-sm font-medium text-purple-700">
-                      <Globe className="h-4 w-4" /> Yes — Outside India (locked for this booking)
-                    </div>
-                  ) : (
-                    <div className="flex gap-3">
-                      {[{ v: 'yes', l: 'Yes — Outside India' }, { v: 'no', l: 'No — In India' }].map(o => (
-                        <label key={o.v} className={cn(
-                          'flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-medium',
-                          (formData.isInternational ? 'yes' : 'no') === o.v ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                        )}>
-                          <input type="radio" name="isInternational" value={o.v} checked={(formData.isInternational ? 'yes' : 'no') === o.v} onChange={handleChange} className="sr-only" />
-                          {o.l}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Where are you located? — determines currency and payment methods */}
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Where are you currently located?</label>
+                <p className="text-xs text-slate-500 mb-3">This determines your consultation fee and available payment methods.</p>
+                {forceInternational ? (
+                  <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-blue-500 bg-blue-50 rounded-xl text-sm font-medium text-blue-700">
+                    <Globe className="h-4 w-4" /> Outside India (locked for this booking)
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    {[
+                      { v: 'india', l: 'India', sub: 'Pay in INR (₹500)', icon: '🇮🇳' },
+                      { v: 'outside_india', l: 'Outside India', sub: 'Pay in USD ($25)', icon: '🌎' },
+                    ].map(o => (
+                      <label key={o.v} className={cn(
+                        'flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-medium flex-1',
+                        formData.currentLocation === o.v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                      )}>
+                        <input type="radio" name="currentLocation" value={o.v} checked={formData.currentLocation === o.v} onChange={handleChange} className="sr-only" />
+                        <span className="text-lg">{o.icon}</span>
+                        <div>
+                          <div>{o.l}</div>
+                          <div className="text-[11px] text-slate-400 font-normal">{o.sub}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -1545,10 +1576,10 @@ function BookingForm() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      {formData.isInternational ? 'WhatsApp Number *' : 'WhatsApp Number *'}
+                      WhatsApp Number *
                     </label>
                     <div className="relative">
-                      {formData.isInternational ? (
+                      {isOutsideIndia ? (
                         <select name="countryCode" value={formData.countryCode} onChange={handleChange}
                           className="absolute left-0 top-0 bottom-0 w-20 border-0 border-r border-slate-300 rounded-l-xl bg-slate-50 text-sm px-2 focus:ring-0 focus:border-[#0A75BB] appearance-auto">
                           <option value="">Code</option>
@@ -1620,8 +1651,8 @@ function BookingForm() {
                       <input type="tel" name="phone" required value={formData.phone} onChange={handleChange}
                         className={cn(
                           "w-full border border-slate-300 rounded-xl py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors",
-                          formData.isInternational ? 'pl-24 pr-4' : 'pl-12 pr-4'
-                        )} placeholder={formData.isInternational ? 'WhatsApp number with country code' : '98182 35613'} />
+                          isOutsideIndia ? 'pl-24 pr-4' : 'pl-12 pr-4'
+                        )} placeholder={isOutsideIndia ? 'WhatsApp number with country code' : '98182 35613'} />
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">Booking confirmation will be sent on this WhatsApp</p>
                   </div>
@@ -1665,8 +1696,8 @@ function BookingForm() {
                   </div>
                 )}
 
-                {/* International Patient Fields */}
-                {formData.isInternational && (
+                {/* International Patient Fields — shown when outside India */}
+                {isOutsideIndia && (
                   <div className="border-t border-slate-200 pt-4 mt-4 space-y-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Globe className="h-5 w-5 text-purple-500" />
@@ -1823,12 +1854,12 @@ function BookingForm() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm">{selectedClinic.name}</p>
-                    <p className="text-xs text-slate-500">{intlTz ? convertRangeToTz(selectedClinic.timing, intlTz) : selectedClinic.timing} • {formData.consultationType === 'online_intl' ? `$${consultFee} USD` : `₹${selectedClinic.fee}`}</p>
+                    <p className="text-xs text-slate-500">{intlTz ? convertRangeToTz(selectedClinic.timing, intlTz) : selectedClinic.timing} • {isOutsideIndia ? `$${consultFee} USD` : `₹${selectedClinic.fee}`}</p>
                   </div>
                 </div>
               )}
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
-                {formData.consultationType === 'online_intl' && (
+                {isOutsideIndia && (
                   intlTz ? (
                     <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-sm text-purple-700 flex items-center gap-2">
                       <Globe className="h-4 w-4 shrink-0" />
@@ -1945,7 +1976,7 @@ function BookingForm() {
               </div>
 
               {/* Medical Details (online consultations only — offline patients bring reports in person) */}
-              {(formData.consultationType === 'online' || formData.consultationType === 'online_intl') && (
+              {(formData.consultationType === 'online' || isOutsideIndia) && (
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
                 <div className="flex items-center gap-2 mb-1">
                   <FileText className="h-5 w-5 text-[#0A75BB]" />
@@ -1954,9 +1985,9 @@ function BookingForm() {
                 <p className="text-xs text-slate-500 -mt-3">Helps Dr Goel prepare for your visit — reports go straight to the doctor</p>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">1. Patient&apos;s Complaints {formData.consultationType === 'online' || formData.consultationType === 'online_intl' ? '*' : ''}</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">1. Patient&apos;s Complaints {formData.consultationType === 'online' || isOutsideIndia ? '*' : ''}</label>
                   <p className="text-xs text-slate-400 mb-2">Describe symptoms, when they started, and triggers</p>
-                  <textarea name="complaints" required={formData.consultationType === 'online' || formData.consultationType === 'online_intl'} value={formData.complaints} onChange={handleChange} rows={4}
+                  <textarea name="complaints" required={formData.consultationType === 'online' || isOutsideIndia} value={formData.complaints} onChange={handleChange} rows={4}
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors resize-none"
                       placeholder="e.g. Swelling in legs since 2 weeks, reduced urine output, fatigue..." />
                   </div>
@@ -2109,10 +2140,10 @@ function BookingForm() {
               <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] rounded-2xl p-5 text-white">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-white/80 font-medium">Consultation Fee</span>
-                  <span className="text-3xl font-bold">{formData.consultationType === 'online_intl' ? `$${consultFee}` : `₹${consultFee}`}</span>
+                  <span className="text-3xl font-bold">{isOutsideIndia ? `$${consultFee}` : `₹${consultFee}`}</span>
                 </div>
                 <p className="text-xs text-white/60">
-                  {formData.consultationType === 'online_intl' ? 'Pay via Razorpay (USD)' :
+                  {isOutsideIndia ? 'Pay via Razorpay (USD)' :
                    'Pay now via Razorpay'}
                 </p>
               </div>

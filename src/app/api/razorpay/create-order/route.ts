@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { getDb } from '@/lib/db/client';
-import { getConsultationPricing } from '@/lib/pricing';
 import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 
 // Server-side only — never expose the secret to the browser
@@ -12,6 +11,35 @@ function getRazorpay(): Razorpay | null {
   return new Razorpay({ key_id: keyId, key_secret: keySecret });
 }
 
+// Map consultationType (from booking form) to booking_services.slug
+function consultationTypeToSlug(consultationType?: string | null, clinicId?: string | null): string | null {
+  if (clinicId) {
+    // clinic_id is already stored as the slug by the booking form
+    return clinicId;
+  }
+  if (consultationType === 'online') return 'online';
+  if (consultationType === 'online_intl') return 'online-intl';
+  if (consultationType === 'hospital') return 'psri-delhi';
+  if (consultationType === 'offline') return 'kcc-faridabad';
+  return null;
+}
+
+// Read authoritative fee + currency from booking_services table.
+// NEVER trust the client-supplied amount.
+async function getServerPricing(slug: string): Promise<{ fee: number; currency: string } | null> {
+  const db = getDb();
+  const { data } = await db
+    .from('booking_services')
+    .select('fee, currency')
+    .eq('slug', slug)
+    .eq('enabled', true)
+    .limit(1);
+  if (data && data.length > 0) {
+    return { fee: Number(data[0].fee), currency: data[0].currency };
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   let consultationType: string | undefined;
   try {
@@ -19,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (rlError) return rlError;
 
     const body = await request.json();
-    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType: ct, amount: clientAmount } = body;
+    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType: ct, clinicId } = body;
     consultationType = ct;
 
     if (!bookingId || !patientName) {
@@ -31,16 +59,25 @@ export async function POST(request: NextRequest) {
       return apiError('Razorpay is not configured. Contact the clinic.', 503);
     }
 
-    // Use the actual clinic-specific fee sent by the client (from KV store settings),
-    // validated against known base pricing to prevent abuse
-    const pricing = getConsultationPricing(consultationType);
-    const isInternational = pricing.currency === 'USD';
+    // Server-side authoritative pricing: read from booking_services table
+    const slug = consultationTypeToSlug(consultationType, clinicId);
+    let pricing: { fee: number; currency: string };
 
-    // Server-side amount validation: client amount must be within 5x of server price
-    const amount = (typeof clientAmount === 'number' && clientAmount > 0 && clientAmount <= pricing.amount * 5)
-      ? clientAmount
-      : pricing.amount;
-    // Currency always comes from server-side pricing — never from client
+    if (slug) {
+      const dbPricing = await getServerPricing(slug);
+      if (dbPricing) {
+        pricing = dbPricing;
+      } else {
+        // Fallback: service not found or disabled — reject
+        return apiError('This consultation type is not currently available.', 400);
+      }
+    } else {
+      // Unknown consultation type — reject
+      return apiError('Invalid consultation type.', 400);
+    }
+
+    // Amount ALWAYS comes from DB — client-supplied amount is IGNORED
+    const amount = pricing.fee;
     const currency = pricing.currency;
     const amountPaise = amount * 100;
 
@@ -121,30 +158,10 @@ export async function POST(request: NextRequest) {
       metadata: e?.metadata,
       error: e?.error,
     });
-    const razorpayError = e?.error ?? error;
-    // Determine if this was an international payment attempt
     const isIntl = consultationType === 'online_intl';
     if (isIntl) {
-      return apiError('International payment is temporarily unavailable. International card payments are currently under approval with our payment provider. Please try again later or contact us for assistance.', 503, {
-        detail: {
-          code: razorpayError?.code ?? null,
-          description: razorpayError?.description ?? null,
-          field: razorpayError?.field ?? null,
-          source: razorpayError?.source ?? null,
-          step: razorpayError?.step ?? null,
-          reason: razorpayError?.reason ?? null,
-        }
-      });
+      return apiError('International payment is temporarily unavailable. Please try again later or contact us for assistance.', 503);
     }
-    return apiError('Payment could not be started. Please try again. If the problem continues, contact support.', 500, {
-      detail: {
-        code: razorpayError?.code ?? null,
-        description: razorpayError?.description ?? null,
-        field: razorpayError?.field ?? null,
-        source: razorpayError?.source ?? null,
-        step: razorpayError?.step ?? null,
-        reason: razorpayError?.reason ?? null,
-      }
-    });
+    return apiError('Payment could not be started. Please try again. If the problem continues, contact support.', 500);
   }
 }

@@ -5,22 +5,22 @@ import Link from 'next/link';
 import { Globe, Video, Clock, Shield, Award, Heart, Phone, CheckCircle2, MapPin, FileText, ChevronRight, Star, Stethoscope, Building2 } from 'lucide-react';
 
 const countries = [
-  { name: 'United States', flag: '🇺🇸', timezone: 'EST/PST', fee: '$25 USD', lang: 'English' },
-  { name: 'United Kingdom', flag: '🇬🇧', timezone: 'GMT', fee: '£18 GBP', lang: 'English' },
-  { name: 'UAE', flag: '🇦🇪', timezone: 'GST', fee: 'AED 75', lang: 'English, Hindi, Urdu' },
-  { name: 'Saudi Arabia', flag: '🇸🇦', timezone: 'AST', fee: 'SAR 75', lang: 'English, Hindi, Urdu' },
-  { name: 'Australia', flag: '🇦🇺', timezone: 'AEST', fee: 'AUD 30', lang: 'English' },
-  { name: 'Canada', flag: '🇨🇦', timezone: 'EST/PST', fee: 'CAD 28', lang: 'English' },
-  { name: 'Singapore', flag: '🇸🇬', timezone: 'SGT', fee: 'SGD 28', lang: 'English, Hindi' },
-  { name: 'Pakistan', flag: '🇵🇰', timezone: 'PKT', fee: '$25 USD', lang: 'English, Hindi, Urdu' },
-  { name: 'Bangladesh', flag: '🇧🇩', timezone: 'BDT', fee: '$25 USD', lang: 'English, Hindi, Bengali' },
-  { name: 'Sri Lanka', flag: '🇱🇰', timezone: 'SLST', fee: '$25 USD', lang: 'English, Hindi, Sinhala' },
-  { name: 'Nepal', flag: '🇳🇵', timezone: 'NPT', fee: '$25 USD', lang: 'English, Hindi, Nepali' },
-  { name: 'South Africa', flag: '🇿🇦', timezone: 'SAST', fee: 'ZAR 380', lang: 'English' },
-  { name: 'Kenya', flag: '🇰🇪', timezone: 'EAT', fee: '$25 USD', lang: 'English' },
-  { name: 'Nigeria', flag: '🇳🇬', timezone: 'WAT', fee: '$25 USD', lang: 'English' },
-  { name: 'Germany', flag: '🇩🇪', timezone: 'CET', fee: '€18 EUR', lang: 'English' },
-  { name: 'Japan', flag: '🇯🇵', timezone: 'JST', fee: '$25 USD', lang: 'English' },
+  { name: 'United States', flag: '🇺🇸', lang: 'English' },
+  { name: 'United Kingdom', flag: '🇬🇧', lang: 'English' },
+  { name: 'UAE', flag: '🇦🇪', lang: 'English, Hindi, Urdu' },
+  { name: 'Saudi Arabia', flag: '🇸🇦', lang: 'English, Hindi, Urdu' },
+  { name: 'Australia', flag: '🇦🇺', lang: 'English' },
+  { name: 'Canada', flag: '🇨🇦', lang: 'English' },
+  { name: 'Singapore', flag: '🇸🇬', lang: 'English, Hindi' },
+  { name: 'Pakistan', flag: '🇵🇰', lang: 'English, Hindi, Urdu' },
+  { name: 'Bangladesh', flag: '🇧🇩', lang: 'English, Hindi, Bengali' },
+  { name: 'Sri Lanka', flag: '🇱🇰', lang: 'English, Hindi, Sinhala' },
+  { name: 'Nepal', flag: '🇳🇵', lang: 'English, Hindi, Nepali' },
+  { name: 'South Africa', flag: '🇿🇦', lang: 'English' },
+  { name: 'Kenya', flag: '🇰🇪', lang: 'English' },
+  { name: 'Nigeria', flag: '🇳🇬', lang: 'English' },
+  { name: 'Germany', flag: '🇩🇪', lang: 'English' },
+  { name: 'Japan', flag: '🇯🇵', lang: 'English' },
 ];
 
 const conditions = [
@@ -106,9 +106,9 @@ export default function InternationalPatientsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { icon: Shield, label: '100% Confidential', sub: 'HIPAA-compliant data security' },
-              { icon: Award, label: '15+ Years Experience', sub: '5000+ patients treated' },
-              { icon: Globe, label: '20+ Countries', sub: 'Patients from worldwide' },
+              { icon: Shield, label: '100% Confidential', sub: 'Secure and confidential handling of your medical information' },
+              { icon: Award, label: '18+ Years Experience', sub: '5000+ patients treated' },
+              { icon: Globe, label: 'Patients Worldwide', sub: 'From 20+ countries' },
               { icon: Clock, label: 'Flexible Timings', sub: 'Slots for all timezones' },
             ].map((item, i) => (
               <div key={i} className="flex flex-col items-center gap-2">
@@ -123,6 +123,20 @@ export default function InternationalPatientsPage() {
         </div>
       </div>
 
+      {/* Already in India Notice */}
+      <div className="bg-amber-50 border-b border-amber-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🇮🇳</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Already in India?</p>
+              <p className="text-sm text-amber-700 mt-0.5">If you are an international patient currently visiting India, you can book a clinic appointment or online consultation using our India booking flow. Consultation fees will be displayed in INR.</p>
+              <Link href="/book-appointment" className="inline-block mt-2 text-sm font-semibold text-amber-800 underline hover:text-amber-900">Book with India pricing →</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
         {/* Why International Patients Trust Us */}
         <section>
@@ -133,7 +147,7 @@ export default function InternationalPatientsPage() {
           <div className="grid md:grid-cols-3 gap-6">
             {[
               { icon: Stethoscope, title: 'Expert Nephrologist', desc: 'Dr Rajesh Goel is a Senior Nephrologist & Kidney Transplant Physician with 18+ years of experience treating complex kidney conditions worldwide.', color: 'emerald' },
-              { icon: Video, title: 'Secure Video Consultation', desc: 'High-definition video consultations from the comfort of your home. HIPAA-compliant platform ensuring complete privacy of your medical data.', color: 'blue' },
+              { icon: Video, title: 'Secure Video Consultation', desc: 'High-definition video consultations from the comfort of your home. Secure platform ensuring complete privacy of your medical data.', color: 'blue' },
               { icon: FileText, title: 'Comprehensive Treatment Plans', desc: 'Detailed treatment plans including medication, diet advice, lifestyle modifications, and follow-up schedules delivered via WhatsApp or email.', color: 'purple' },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg transition-shadow">
@@ -189,8 +203,8 @@ export default function InternationalPatientsPage() {
         {/* Countries Served */}
         <section>
           <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Patients from 20+ Countries</h2>
-            <p className="text-slate-500 max-w-2xl mx-auto">Dr Goel regularly consults with patients from these countries</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Patients Worldwide</h2>
+            <p className="text-slate-500 max-w-2xl mx-auto">Dr Goel regularly consults with patients from these countries and more</p>
           </div>
           <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
             {countries.map((country, i) => (
@@ -199,11 +213,7 @@ export default function InternationalPatientsPage() {
                   <span className="text-2xl">{country.flag}</span>
                   <span className="font-semibold text-gray-900 text-sm">{country.name}</span>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-slate-500">Timezone: {country.timezone}</p>
-                  <p className="text-xs text-slate-500">Fee: {country.fee}</p>
-                  <p className="text-xs text-slate-500">Languages: {country.lang}</p>
-                </div>
+                <p className="text-xs text-slate-500">Languages: {country.lang}</p>
               </div>
             ))}
           </div>
@@ -216,7 +226,7 @@ export default function InternationalPatientsPage() {
               <h2 className="text-2xl md:text-3xl font-bold mb-4">International Consultation Fee</h2>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8">
                 <p className="text-5xl font-bold mb-2">$25 USD</p>
-                <p className="text-white/70">approximately ₹2,000 INR | AED 95 | SAR 95 | £20 GBP | €23 EUR</p>
+                <p className="text-white/70">Your final payable amount and available payment methods will be displayed at checkout</p>
                 <p className="text-sm text-white/60 mt-3">Includes: Video consultation, written treatment plan, prescription, and follow-up guidance</p>
               </div>
               <div className="grid sm:grid-cols-3 gap-4 mb-8 text-left">
@@ -326,12 +336,12 @@ export default function InternationalPatientsPage() {
           </div>
           <div className="max-w-3xl mx-auto space-y-4">
             {[
-              { q: 'How do I book an international nephrology consultation?', a: 'Click "Book International Consultation" above, select your preferred date and time slot (adjusted to your timezone), upload your medical reports, and pay the $25 USD fee. Dr Goel will send you a video call link via WhatsApp.' },
-              { q: 'What payment methods do you accept for international patients?', a: 'We accept international bank transfers, PayPal, and credit/debit cards. The consultation fee is $25 USD (approximately ₹2,000 INR). Payment details are provided after booking.' },
-              { q: 'What timezones do you offer consultations for?', a: 'Dr Goel is available Mon-Sun from 7 AM to 11 PM IST. This covers most timezones: morning in the US/Canada, afternoon in UK/Europe/UAE, and evening in Australia/Singapore/Japan.' },
-              { q: 'Can I get a prescription after the consultation?', a: 'Yes. After the video consultation, Dr Goel will provide a detailed treatment plan and prescription via WhatsApp or email. You can share this with your local pharmacy or doctor.' },
+              { q: 'How do I book an international nephrology consultation?', a: 'Click "Book International Consultation" above, select "Outside India" as your location, fill in your details, upload your medical reports, and complete payment via secure Razorpay Checkout. Your appointment time will be automatically shown in your local timezone.' },
+              { q: 'What payment methods do you accept for international patients?', a: 'Secure payment through Razorpay. Available payment methods are displayed at checkout based on your location, currency, and eligibility. The consultation fee is $25 USD.' },
+              { q: 'What timezones do you offer consultations for?', a: 'Dr Goel is available Mon-Sun from 7 AM to 11 PM IST. Your appointment time is automatically shown in your local timezone when you book.' },
+              { q: 'Can I get a prescription after the consultation?', a: 'Yes. After the video consultation, Dr Goel will provide a detailed treatment plan and prescription via WhatsApp or email. You can share this with your local pharmacy or doctor. Prescription and treatment recommendations are subject to applicable local laws and regulations. Patients may need to consult a local licensed physician for prescriptions or treatment that must be provided locally.' },
               { q: 'Do you offer interpreter services?', a: 'Yes. Dr Goel and his team can provide consultations in English, Hindi, Urdu, Bengali, Tamil, Telugu, Nepali, Sinhala, and Arabic. Please mention your language preference when booking.' },
-              { q: 'Is my medical data secure?', a: 'Absolutely. We use HIPAA-compliant video platforms and store all medical records securely. Your data is never shared with third parties and is used only for your medical care.' },
+              { q: 'Is my medical data secure?', a: 'Absolutely. We use secure video platforms and store all medical records with industry-standard encryption. Your data is never shared with third parties and is used only for your medical care.' },
               { q: 'Can you help with kidney transplant evaluation?', a: 'Yes. Dr Goel can conduct an initial evaluation via video consultation, review your reports, and advise on whether you are a candidate for kidney transplant. He can also coordinate with transplant centers in India if needed.' },
               { q: 'What if I need a follow-up consultation?', a: 'After your initial consultation, you get 7 days of free WhatsApp follow-up. Additional video consultations can be booked at the same $25 USD fee.' },
             ].map((faq, i) => (

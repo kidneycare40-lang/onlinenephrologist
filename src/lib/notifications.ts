@@ -101,24 +101,48 @@ async function sendWhatsAppDirect(
 
 function buildPatientConfirmationMessage(n: BookingNotification): string {
   const typeLabel =
-    n.consultationType === 'online_intl' ? 'International Online' :
-    n.consultationType === 'online' ? 'Online' :
-    n.consultationType === 'hospital' ? 'Hospital' : 'In-Clinic';
-  return [
-    `*Booking Confirmed — Kidney Care Centre*`,
+    n.consultationType === 'online_intl' ? 'International Online Video Consultation' :
+    n.consultationType === 'online' ? 'Online Video Consultation' :
+    n.consultationType === 'hospital' ? 'Hospital Visit' : 'In-Clinic Consultation';
+
+  const doctor = n.doctorName || 'Dr. Rajesh Goel';
+  const isOnline = n.consultationType === 'online' || n.consultationType === 'online_intl';
+
+  const lines = [
+    `*APPOINTMENT CONFIRMED*`,
     ``,
-    `Hi ${n.patientName},`,
-    `Your ${typeLabel} consultation has been confirmed.`,
+    `Dear ${n.patientName},`,
+    ``,
+    `Your appointment with ${doctor} — Nephrologist is confirmed.`,
     ``,
     `Booking ID: ${n.bookingId}`,
-    `Date: ${n.date} at ${n.time} IST${n.localTimeDisplay ? ` (local: ${n.localTimeDisplay})` : ''}`,
+    `Date: ${n.date}`,
+    `Time: ${n.time} IST${n.localTimeDisplay ? ` (local: ${n.localTimeDisplay})` : ''}`,
+    `Consultation: ${typeLabel}`,
     `Fee: ${n.fee}`,
-    `Payment: Confirmed`,
-    n.paymentId ? `Payment ID: ${n.paymentId}` : '',
+    `Payment: Paid`,
+  ];
+
+  if (isOnline) {
+    lines.push(
+      ``,
+      `Video consultation link will be sent to your WhatsApp before the appointment.`,
+    );
+  } else if (n.clinicName) {
+    lines.push(
+      ``,
+      `Clinic: ${n.clinicName}`,
+    );
+  }
+
+  lines.push(
     ``,
-    `We'll send you the consultation link before your appointment.`,
-    `For questions, reply to this message.`,
-  ].filter(Boolean).join('\n');
+    `Please keep your Booking ID for reference.`,
+    ``,
+    `Kidney Care Centre`,
+  );
+
+  return lines.join('\n');
 }
 
 export interface BookingNotificationContext {
@@ -128,6 +152,8 @@ export interface BookingNotificationContext {
   patientPhone: string;
   patientEmail?: string;
   ageGender: string;
+  age?: string;
+  gender?: string;
   date: string;
   time: string;
   consultationType: string;
@@ -140,6 +166,12 @@ export interface BookingNotificationContext {
   medicines?: string;
   notes?: string;
   localTimeDisplay?: string;
+  relationship?: string;
+  bookedByPatientName?: string;
+  doctorName?: string;
+  clinicCity?: string;
+  reportsUploaded?: boolean;
+  ultrasoundUploaded?: boolean;
 }
 
 export async function sendBookingNotifications(
@@ -152,13 +184,16 @@ export async function sendBookingNotifications(
     clinicName: ctx.clinicName,
     patientName: ctx.patientName,
     patientPhone: ctx.patientPhone,
+    patientEmail: ctx.patientEmail,
     ageGender: ctx.ageGender,
+    age: ctx.age,
+    gender: ctx.gender,
     date: ctx.date,
     time: ctx.time,
     consultationType: ctx.consultationType,
     reason: ctx.reason,
     fee: ctx.fee,
-    paymentStatus: 'PAID via Razorpay',
+    paymentStatus: 'CAPTURED',
     paymentId: ctx.paymentId,
     country: ctx.country,
     timezone: ctx.timezone,
@@ -166,6 +201,11 @@ export async function sendBookingNotifications(
     medicines: ctx.medicines,
     notes: ctx.notes,
     localTimeDisplay: ctx.localTimeDisplay,
+    relationship: ctx.relationship,
+    bookedByPatientName: ctx.bookedByPatientName,
+    doctorName: ctx.doctorName,
+    reportsUploaded: ctx.reportsUploaded,
+    ultrasoundUploaded: ctx.ultrasoundUploaded,
   };
 
   // 1. Team WhatsApp — per-doctor independent tracking
@@ -190,12 +230,23 @@ export async function sendBookingNotifications(
         bookingId: ctx.bookingId,
         patientName: ctx.patientName,
         patientPhone: ctx.patientPhone,
+        patientEmail: ctx.patientEmail,
         consultationType: ctx.consultationType,
         date: ctx.date,
         time: ctx.time,
         fee: ctx.fee,
         reason: ctx.reason,
         paymentId: ctx.paymentId,
+        relationship: ctx.relationship,
+        bookedByPatientName: ctx.bookedByPatientName,
+        doctorName: ctx.doctorName,
+        clinicName: ctx.clinicName,
+        clinicCity: ctx.clinicCity,
+        age: ctx.age,
+        gender: ctx.gender,
+        localTimeDisplay: ctx.localTimeDisplay,
+        reportsUploaded: ctx.reportsUploaded,
+        ultrasoundUploaded: ctx.ultrasoundUploaded,
       });
       await updateNotificationStatus(ctx.bookingId, 'team_email', 'doctors', 'sent');
       result.teamEmail = true;
@@ -229,6 +280,11 @@ export async function sendBookingNotifications(
         time: ctx.time,
         fee: ctx.fee,
         paymentId: ctx.paymentId,
+        relationship: ctx.relationship,
+        bookedByPatientName: ctx.bookedByPatientName,
+        doctorName: ctx.doctorName,
+        clinicName: ctx.clinicName,
+        localTimeDisplay: ctx.localTimeDisplay,
       });
       await updateNotificationStatus(ctx.bookingId, 'patient_email', ctx.patientEmail, 'sent');
       result.patientEmail = true;

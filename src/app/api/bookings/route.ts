@@ -97,6 +97,7 @@ function toRow(body: any) {
     email: body.email || null,
     age: body.age || null,
     gender: body.gender || null,
+    current_location: body.currentLocation || null,
     country: body.country || null,
     timezone: body.timezone || null,
     preferred_language: body.preferredLanguage || null,
@@ -133,6 +134,7 @@ function rowToBooking(row: any) {
     email: row.email || '',
     age: row.age || '',
     gender: row.gender || '',
+    currentLocation: row.current_location || 'india',
     country: row.country || '',
     timezone: row.timezone || '',
     preferredLanguage: row.preferred_language || '',
@@ -187,12 +189,147 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, bookingId: body.bookingId, alreadyExists: true });
     }
 
-    // Server-side duplicate booking prevention
-    // Check by patient_account_id (logged-in patients) OR by phone + date + clinic (guests)
-    const cleanPhone = (body.phone || '').replace(/\D/g, '').replace(/^0+/, '').replace(/^91/, '');
     const effectiveClinicId = body.clinicId || null;
     const effectiveDate = body.date || null;
     const effectiveTime = body.time || null;
+
+    // ─── SERVER-SIDE BOOKING VALIDATIONS ───────────────────────────
+
+    // TEST 16: current_location outside_india + consultationType online → rejected
+    // TEST 15: current_location india + consultationType online_intl → rejected
+    if (body.currentLocation && body.consultationType) {
+      const loc = body.currentLocation; // 'india' or 'outside_india'
+      const ct = body.consultationType; // 'online', 'online_intl', 'offline', 'hospital'
+
+      if (loc === 'outside_india' && ct !== 'online_intl') {
+        return apiError('Patients currently outside India must select International Video Consultation.', 400);
+      }
+      if (loc === 'india' && ct === 'online_intl') {
+        return apiError('International consultation is only available for patients currently located outside India.', 400);
+      }
+    }
+
+    // Validate service exists and is enabled (TEST 7, 8: disabled/invalid service)
+    if (effectiveClinicId) {
+      const { data: svc } = await db
+        .from('booking_services')
+        .select('id, max_advance_days, min_advance_minutes, max_appointments_per_day')
+        .eq('slug', effectiveClinicId)
+        .eq('enabled', true)
+        .limit(1);
+
+      if (!svc || svc.length === 0) {
+        return apiError('This consultation service is not currently available.', 400);
+      }
+      const service = svc[0];
+
+      // TEST 13: Beyond maxAdvance — reject if date exceeds max_advance_days from today
+      if (effectiveDate) {
+        const bookingDate = new Date(effectiveDate + 'T12:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const maxDate = new Date(today);
+        maxDate.setDate(maxDate.getDate() + service.max_advance_days);
+
+        if (bookingDate < today) {
+          return apiError('Cannot book appointments in the past.', 400);
+        }
+        if (bookingDate > maxDate) {
+          return apiError(`Cannot book more than ${service.max_advance_days} days in advance.`, 400);
+        }
+      }
+
+      // TEST 12: Past slot + TEST 11: Unavailable slot + TEST 14: Max appointments
+      if (effectiveDate && effectiveTime) {
+        // Check holiday
+        const { data: holidays } = await db
+          .from('booking_holidays')
+          .select('id')
+          .eq('enabled', true)
+          .lte('start_date', effectiveDate)
+          .gte('end_date', effectiveDate);
+
+        const blocked = (holidays || []).some(
+          (h: any) => h.scope === 'all' || h.service_id === service.id
+        );
+        if (blocked) {
+          return apiError('This date is blocked (holiday). Please choose another date.', 400);
+        }
+
+        // Check schedule exists for this day of week
+        const dateObj = new Date(effectiveDate + 'T12:00:00');
+        const dayOfWeek = dateObj.getDay();
+
+        const { data: schedules } = await db
+          .from('booking_service_schedules')
+          .select('id')
+          .eq('service_id', service.id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('enabled', true)
+          .limit(1);
+
+        if (!schedules || schedules.length === 0) {
+          return apiError('This service is not available on the selected day.', 400);
+        }
+
+        // Check slot exists in the schedule periods (TEST 11: unavailable slot)
+        const { data: periodRows } = await db
+          .from('booking_service_schedule_periods')
+          .select('start_time, end_time, slot_interval_minutes')
+          .eq('schedule_id', schedules[0].id)
+          .order('sort_order', { ascending: true });
+
+        const validSlots = new Set<string>();
+        for (const period of periodRows || []) {
+          const [startH, startM] = (period.start_time as string).split(':').map(Number);
+          const [endH, endM] = (period.end_time as string).split(':').map(Number);
+          const startMin = startH * 60 + startM;
+          const endMin = endH * 60 + endM;
+          const interval = period.slot_interval_minutes;
+          let t = startMin;
+          while (t < endMin) {
+            const h24 = Math.floor(t / 60);
+            const m = t % 60;
+            const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
+            const ampm = h24 >= 12 ? 'PM' : 'AM';
+            validSlots.add(`${h12}:${m.toString().padStart(2, '0')} ${ampm}`);
+            t += interval;
+          }
+        }
+
+        if (!validSlots.has(effectiveTime)) {
+          return apiError('The selected time slot is not available for this service.', 400);
+        }
+
+        // TEST 12: Past slot — reject if today + time has already passed
+        const now = new Date();
+        const isToday = effectiveDate === now.toISOString().split('T')[0];
+        if (isToday) {
+          const slotDate = parseSlotToDate(effectiveTime, effectiveDate);
+          if (slotDate.getTime() < now.getTime()) {
+            return apiError('Cannot book appointments in the past.', 400);
+          }
+        }
+
+        // TEST 14: Max appointments per day
+        const { count } = await db
+          .from('bookings')
+          .select('id', { count: 'exact', head: true })
+          .eq('clinic_id', effectiveClinicId)
+          .eq('booking_date', effectiveDate)
+          .in('status', ['pending', 'confirmed', 'booked']);
+
+        if ((count || 0) >= service.max_appointments_per_day) {
+          return apiError('This date is fully booked. Please choose another date.', 400);
+        }
+      }
+    }
+
+    // ─── SERVER-SIDE BOOKING VALIDATIONS END ───────────────────────
+
+    // Server-side duplicate booking prevention
+    // Check by patient_account_id (logged-in patients) OR by phone + date + clinic (guests)
+    const cleanPhone = (body.phone || '').replace(/\D/g, '').replace(/^0+/, '').replace(/^91/, '');
 
     if (effectiveClinicId && effectiveDate && effectiveTime) {
       // Build OR conditions: account match OR phone match
@@ -360,4 +497,19 @@ export async function PUT(request: NextRequest) {
     console.error('PUT /api/bookings error:', error);
     return apiError('Internal server error', 500);
   }
+}
+
+// Parse a "h:mm AM/PM" slot string to a Date object on the given date
+function parseSlotToDate(slotTime: string, date: string): Date {
+  const match = slotTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return new Date(date + 'T00:00:00');
+
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+
+  if (ampm === 'PM' && hours !== 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+
+  return new Date(`${date}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`);
 }

@@ -203,6 +203,8 @@ export default function BillingPage() {
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [clearingMocks, setClearingMocks] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const [selectedBookingDetail, setSelectedBookingDetail] = useState<any>(null);
+  const [bookingDetailLoading, setBookingDetailLoading] = useState(false);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
@@ -491,6 +493,20 @@ export default function BillingPage() {
 
   const totalBilled = useMemo(() => invoices.reduce((s, i) => s + i.grandTotal, 0), [invoices]);
 
+  const fetchBookingDetail = useCallback(async (bookingId: string) => {
+    setBookingDetailLoading(true);
+    try {
+      const res = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`);
+      if (!res.ok) throw new Error('Failed to load booking details');
+      const data = await res.json();
+      setSelectedBookingDetail(data);
+    } catch (err: any) {
+      alert(err?.message || 'Failed to load booking details');
+    } finally {
+      setBookingDetailLoading(false);
+    }
+  }, []);
+
   const todayStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const todayInvoices = invoices.filter((inv) => inv.date === today);
@@ -752,6 +768,7 @@ export default function BillingPage() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Razorpay ID</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Date</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -784,6 +801,15 @@ export default function BillingPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-sm text-gray-500 hidden md:table-cell">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <button
+                            onClick={() => fetchBookingDetail(p.booking_id)}
+                            disabled={bookingDetailLoading}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#0A75BB] bg-[#0A75BB]/10 rounded-lg hover:bg-[#0A75BB]/20 transition-colors min-h-[36px]"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> View
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -1108,6 +1134,251 @@ export default function BillingPage() {
           <BillingInvoice ref={invoiceRef} invoice={selectedInvoice} clinicId={selectedInvoice.clinicId} />
         )}
       </div>
+
+      {/* Booking Detail Modal */}
+      {selectedBookingDetail && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-8 sm:pt-16 px-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedBookingDetail(null)} />
+          <div className="relative w-full max-w-3xl max-h-[85vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Booking {selectedBookingDetail.booking?.bookingId}</h2>
+                <p className="text-sm text-gray-500">
+                  {selectedBookingDetail.booking?.firstName} {selectedBookingDetail.booking?.lastName}
+                </p>
+              </div>
+              <button onClick={() => setSelectedBookingDetail(null)} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {bookingDetailLoading ? (
+                <div className="py-12 text-center text-gray-400 text-sm">Loading booking details...</div>
+              ) : (
+                <>
+                  {/* Booking Info */}
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Booking Information</h3>
+                    <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Booking ID</span>
+                        <p className="font-mono font-medium text-[#0A75BB]">{selectedBookingDetail.booking?.bookingId}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Status</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.status}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Doctor</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.doctorName}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Consultation Type</span>
+                        <p className="font-medium capitalize">{selectedBookingDetail.booking?.consultationType?.replace('_', ' ')}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Date</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.bookingDate}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Time</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.bookingTime}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Clinic</span>
+                        <p className="font-medium">{clinicLabels[selectedBookingDetail.booking?.clinicId] || selectedBookingDetail.booking?.clinicId || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Created</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.createdAt ? new Date(selectedBookingDetail.booking.createdAt).toLocaleString() : '—'}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Patient Info */}
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Patient Details</h3>
+                    <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Name</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.firstName} {selectedBookingDetail.booking?.lastName}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Phone</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.phone}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Email</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.email || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Gender</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.gender || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Age</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.age || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Country</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.country || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Timezone</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.timezone || '—'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Location</span>
+                        <p className="font-medium capitalize">{selectedBookingDetail.booking?.currentLocation?.replace('_', ' ') || '—'}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Relationship / Booked By */}
+                  {(selectedBookingDetail.booking?.relationship && selectedBookingDetail.booking.relationship !== 'self') && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Booked By</h3>
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-amber-700">Relationship</span>
+                          <p className="font-medium text-amber-900 capitalize">{selectedBookingDetail.booking.relationship}</p>
+                        </div>
+                        {selectedBookingDetail.booker && (
+                          <>
+                            <div>
+                              <span className="text-amber-700">Booked By</span>
+                              <p className="font-medium text-amber-900">{selectedBookingDetail.booker.firstName} {selectedBookingDetail.booker.lastName}</p>
+                            </div>
+                            <div>
+                              <span className="text-amber-700">Booker Email</span>
+                              <p className="font-medium text-amber-900">{selectedBookingDetail.booker.email}</p>
+                            </div>
+                            <div>
+                              <span className="text-amber-700">Booker Phone</span>
+                              <p className="font-medium text-amber-900">{selectedBookingDetail.booker.phone || '—'}</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* EMR Patient */}
+                  {selectedBookingDetail.emrPatient && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">EMR Patient Record</h3>
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-blue-700">UHID</span>
+                          <p className="font-mono font-medium text-blue-900">{selectedBookingDetail.emrPatient.uhid}</p>
+                        </div>
+                        <div>
+                          <span className="text-blue-700">Name</span>
+                          <p className="font-medium text-blue-900">{selectedBookingDetail.emrPatient.firstName} {selectedBookingDetail.emrPatient.lastName}</p>
+                        </div>
+                        <div>
+                          <span className="text-blue-700">Phone</span>
+                          <p className="font-medium text-blue-900">{selectedBookingDetail.emrPatient.phone || '—'}</p>
+                        </div>
+                        <div>
+                          <span className="text-blue-700">Gender</span>
+                          <p className="font-medium text-blue-900">{selectedBookingDetail.emrPatient.gender || '—'}</p>
+                        </div>
+                        <div>
+                          <span className="text-blue-700">Active</span>
+                          <p className="font-medium text-blue-900">{selectedBookingDetail.emrPatient.isActive ? 'Yes' : 'No'}</p>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Payment Info */}
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Payment</h3>
+                    <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Payment Status</span>
+                        <p className={cn('font-semibold', selectedBookingDetail.booking?.paymentStatus === 'CAPTURED' ? 'text-green-700' : selectedBookingDetail.booking?.paymentStatus === 'FAILED' ? 'text-red-700' : 'text-amber-700')}>
+                          {selectedBookingDetail.booking?.paymentStatus || 'unpaid'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Amount</span>
+                        <p className="font-semibold">
+                          {selectedBookingDetail.booking?.consultationFeeCurrency === 'USD' ? '$' : '₹'}
+                          {selectedBookingDetail.booking?.consultationFee || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Currency</span>
+                        <p className="font-medium">{selectedBookingDetail.booking?.consultationFeeCurrency || 'INR'}</p>
+                      </div>
+                      {selectedBookingDetail.booking?.razorpayOrderId && (
+                        <div>
+                          <span className="text-gray-500">Razorpay Order ID</span>
+                          <p className="font-mono text-xs font-medium">{selectedBookingDetail.booking.razorpayOrderId}</p>
+                        </div>
+                      )}
+                      {selectedBookingDetail.booking?.paymentId && (
+                        <div className="col-span-2">
+                          <span className="text-gray-500">Razorpay Payment ID</span>
+                          <p className="font-mono text-xs font-medium">{selectedBookingDetail.booking.paymentId}</p>
+                        </div>
+                      )}
+                      {selectedBookingDetail.paymentRecord && (
+                        <>
+                          <div>
+                            <span className="text-gray-500">Razorpay Order (Payment Record)</span>
+                            <p className="font-mono text-xs font-medium">{selectedBookingDetail.paymentRecord.razorpayOrderId || '—'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Razorpay Payment (Payment Record)</span>
+                            <p className="font-mono text-xs font-medium">{selectedBookingDetail.paymentRecord.razorpayPaymentId || '—'}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* Notifications */}
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                      Notifications ({(selectedBookingDetail.notifications || []).length})
+                    </h3>
+                    {(selectedBookingDetail.notifications || []).length === 0 ? (
+                      <p className="text-sm text-gray-400 bg-gray-50 rounded-xl p-4">No notifications sent yet</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedBookingDetail.notifications.map((n: any) => (
+                          <div key={n.id} className={cn('flex items-center justify-between p-3 rounded-lg border text-sm', n.status === 'sent' ? 'bg-green-50 border-green-200' : n.status === 'failed' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200')}>
+                            <div className="flex items-center gap-3">
+                              {n.status === 'sent' ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" /> : n.status === 'failed' ? <X className="h-4 w-4 text-red-600 shrink-0" /> : <Clock className="h-4 w-4 text-amber-600 shrink-0" />}
+                              <div>
+                                <p className="font-medium text-gray-900">{n.type}</p>
+                                <p className="text-xs text-gray-500">{n.recipient}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className={cn('text-xs font-semibold', n.status === 'sent' ? 'text-green-700' : n.status === 'failed' ? 'text-red-700' : 'text-amber-700')}>
+                                {n.status.toUpperCase()}
+                              </span>
+                              {n.sentAt && <p className="text-[10px] text-gray-400">{new Date(n.sentAt).toLocaleString()}</p>}
+                              {n.error && <p className="text-[10px] text-red-500 max-w-[200px] truncate">{n.error}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </RequirePermission>
   );

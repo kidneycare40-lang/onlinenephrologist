@@ -166,6 +166,21 @@ export async function POST(request: NextRequest) {
 
       if (booking) {
         try {
+          let bookedByPatientName: string | undefined;
+          if (booking.booked_by_patient_account_id && booking.relationship && booking.relationship !== 'self') {
+            try {
+              const { data: bookerAcct } = await db
+                .from('patient_accounts')
+                .select('first_name, last_name')
+                .eq('id', booking.booked_by_patient_account_id)
+                .limit(1)
+                .single();
+              if (bookerAcct) {
+                bookedByPatientName = `${bookerAcct.first_name || ''} ${bookerAcct.last_name || ''}`.trim() || undefined;
+              }
+            } catch {}
+          }
+
           await sendBookingNotifications({
             bookingId: booking.booking_id || bookingId,
             clinicName: booking.clinic_name || booking.clinic_id || '',
@@ -173,6 +188,8 @@ export async function POST(request: NextRequest) {
             patientPhone: booking.patient_phone || booking.phone || '',
             patientEmail: booking.patient_email || booking.email || undefined,
             ageGender: `${booking.age || ''} / ${booking.gender || ''}`,
+            age: booking.age || undefined,
+            gender: booking.gender || undefined,
             date: booking.booking_date || booking.date || '',
             time: booking.booking_time || booking.time || '',
             consultationType: booking.consultation_type || '',
@@ -184,6 +201,11 @@ export async function POST(request: NextRequest) {
             complaints: booking.complaints || undefined,
             medicines: booking.medicines || booking.current_medications || undefined,
             notes: booking.notes || undefined,
+            relationship: booking.relationship || undefined,
+            bookedByPatientName,
+            doctorName: booking.doctor_name || undefined,
+            reportsUploaded: !!(booking.report_files && (Array.isArray(booking.report_files) ? booking.report_files.length : true)),
+            ultrasoundUploaded: !!booking.ultrasound_file,
           });
         } catch (notifyErr) {
           console.error('[webhook] Notification error:', notifyErr);
