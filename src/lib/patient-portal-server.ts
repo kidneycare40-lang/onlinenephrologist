@@ -255,7 +255,7 @@ export async function getPatientBookingPayments(patientAccountId: string): Promi
   const { data: bookings } = await db
     .from('bookings')
     .select('booking_id')
-    .eq('patient_account_id', patientAccountId);
+    .or(`patient_account_id.eq.${patientAccountId},booked_by_patient_account_id.eq.${patientAccountId}`);
 
   if (!bookings || bookings.length === 0) return [];
 
@@ -473,12 +473,12 @@ export async function getFullPatientProfile(patientAccountId: string): Promise<{
     emrPatientId = await getEmrPatientId(patientAccountId);
   }
 
-  // Get bookings (limited to most recent 50)
+  // Get bookings — both self-bookings AND family bookings made by this account
   const now = new Date().toISOString().split('T')[0];
   const { data: allBookings } = await db
     .from('bookings')
     .select('*')
-    .eq('patient_account_id', patientAccountId)
+    .or(`patient_account_id.eq.${patientAccountId},booked_by_patient_account_id.eq.${patientAccountId}`)
     .order('booking_date', { ascending: false })
     .limit(50);
 

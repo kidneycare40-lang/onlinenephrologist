@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { SITE_CONFIG } from '@/lib/constants';
 import {
   Video, Building2, CheckCircle2, MapPin, Clock, IndianRupee, AlertTriangle,
-  Phone, Calendar, User, FileText, ChevronRight, Star, Info,
+  Phone, Calendar, User, Users, FileText, ChevronRight, Star, Info,
   Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital, Plus, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -264,6 +264,8 @@ function BookingForm() {
   const [showPaymentGateway, setShowPaymentGateway] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [bookingSettingsState, setBookingSettingsState] = useState<BookingSettings | null>(null);
+  const [bookingFor, setBookingFor] = useState<'self' | 'family'>('self');
+  const [relationship, setRelationship] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -483,6 +485,8 @@ function BookingForm() {
       ...formData,
       phone: fullPhone,
       patientAccountId: patientAccountId || undefined,
+      bookedByPatientAccountId: patientAccountId || undefined,
+      relationship: patientAccountId ? (bookingFor === 'family' ? relationship : 'self') : 'self',
       bookingId: id, createdAt: new Date().toISOString(),
       status: 'pending', paymentStatus: pData ? 'paid' : 'unpaid', doctorName: 'Dr Rajesh Goel',
       consultationFee: consultFee,
@@ -802,6 +806,7 @@ function BookingForm() {
     if (step === 3) {
       if (!formData.firstName || !formData.phone || !formData.age) return false;
       if (formData.isInternational && !formData.country) return false;
+      if (bookingFor === 'family' && !relationship) return false;
       return true;
     }
     if (step === 4) return !!formData.date && !!formData.time && !isHoliday;
@@ -1183,17 +1188,24 @@ function BookingForm() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-slate-900">Welcome back, {currentPatient.name}!</p>
-              <p className="text-xs text-slate-500">Your details have been auto-filled. <button onClick={async () => {
-                try { await fetch('/api/patient-auth/logout', { method: 'POST' }); } catch {}
-                localStorage.removeItem('current-patient');
-                localStorage.removeItem('patient-accounts');
-                setCurrentPatientState(null);
-                setPatientAccountId(null);
-                setFormData(prev => ({
-                  ...prev,
-                  firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
-                }));
-              }} className="text-[#0A75BB] underline">Switch patient</button></p>
+              <p className="text-xs text-slate-500">
+                {bookingFor === 'self'
+                  ? 'Your details have been auto-filled. You can book for yourself or a family member below.'
+                  : 'Booking for a family member. Fill in their details in the patient information step.'}
+                {' '}<button onClick={async () => {
+                  try { await fetch('/api/patient-auth/logout', { method: 'POST' }); } catch {}
+                  localStorage.removeItem('current-patient');
+                  localStorage.removeItem('patient-accounts');
+                  setCurrentPatientState(null);
+                  setPatientAccountId(null);
+                  setBookingFor('self');
+                  setRelationship('');
+                  setFormData(prev => ({
+                    ...prev,
+                    firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
+                  }));
+                }} className="text-[#0A75BB] underline">Switch patient</button>
+              </p>
             </div>
           </div>
         )}
@@ -1450,6 +1462,51 @@ function BookingForm() {
                 <p className="text-sm text-slate-500">Enter your personal details for the appointment</p>
               </div>
 
+              {/* Who is this appointment for? — only when logged in */}
+              {patientAccountId && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Who is this appointment for?</label>
+                  <div className="flex gap-3">
+                    {[
+                      { value: 'self', label: 'Myself', icon: User },
+                      { value: 'family', label: 'Someone else / Family member', icon: Users },
+                    ].map(o => (
+                      <label key={o.value} className={cn(
+                        'flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-medium flex-1 justify-center',
+                        bookingFor === o.value ? 'border-[#0A75BB] bg-[#0A75BB]/5 text-[#0A75BB]' : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                      )}>
+                        <input type="radio" name="bookingFor" value={o.value} checked={bookingFor === o.value}
+                          onChange={(e) => {
+                            const val = e.target.value as 'self' | 'family';
+                            setBookingFor(val);
+                            if (val === 'self' && currentPatient) {
+                              // Restore account holder's details
+                              const first = currentPatient.name?.split(' ')[0] || '';
+                              const last = currentPatient.name?.split(' ').slice(1).join(' ') || '';
+                              setFormData(prev => ({
+                                ...prev,
+                                firstName: first,
+                                lastName: last,
+                                phone: currentPatient.phone || '',
+                                email: currentPatient.email || '',
+                              }));
+                            } else if (val === 'family') {
+                              // Clear patient fields for relative
+                              setFormData(prev => ({
+                                ...prev,
+                                firstName: '', lastName: '', phone: '', email: '', age: '',
+                              }));
+                              setRelationship('');
+                            }
+                          }} className="sr-only" />
+                        <o.icon className="h-4 w-4" />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* International Patient Toggle */}
               {(formData.consultationType === 'online_intl' || formData.consultationType === 'online') && (
                 <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
@@ -1588,6 +1645,25 @@ function BookingForm() {
                     </select>
                   </div>
                 </div>
+
+                {/* Relationship field — only for family bookings */}
+                {bookingFor === 'family' && (
+                  <div className="border-t border-slate-200 pt-4 mt-4">
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Relationship to you *</label>
+                    <select required value={relationship} onChange={(e) => setRelationship(e.target.value)}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors">
+                      <option value="">Select relationship</option>
+                      <option value="father">Father</option>
+                      <option value="mother">Mother</option>
+                      <option value="son">Son</option>
+                      <option value="daughter">Daughter</option>
+                      <option value="spouse">Spouse</option>
+                      <option value="sibling">Sibling</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400 mt-1">This appointment will be booked under your account for your family member.</p>
+                  </div>
+                )}
 
                 {/* International Patient Fields */}
                 {formData.isInternational && (

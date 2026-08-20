@@ -269,6 +269,9 @@ export interface BookingRecord {
   id: string;
   booking_id: string;
   patient_account_id: string | null;
+  booked_by_patient_account_id: string | null;
+  relationship: string;
+  actual_patient_id: string | null;
   first_name: string;
   last_name: string;
   phone: string;
@@ -291,32 +294,36 @@ export interface BookingRecord {
   updated_at: string;
 }
 
-/** Get all bookings for a patient, newest first. */
+/** Get all bookings for a patient — both self-bookings AND family bookings made by this account. */
 export async function getPatientBookings(
   patientId: string,
   filters?: { status?: string; type?: string }
 ): Promise<BookingRecord[]> {
   const db = getDb();
-  let query = db
+
+  // Fetch bookings where patient is the account holder (self) OR the booker (family)
+  const { data, error } = await db
     .from('bookings')
     .select('*')
-    .eq('patient_account_id', patientId)
+    .or(`patient_account_id.eq.${patientId},booked_by_patient_account_id.eq.${patientId}`)
     .order('booking_date', { ascending: false })
     .order('booking_time', { ascending: false });
 
-  if (filters?.status && filters.status !== 'all') {
-    query = query.eq('status', filters.status);
-  }
-  if (filters?.type && filters.type !== 'all') {
-    query = query.eq('consultation_type', filters.type);
-  }
-
-  const { data, error } = await query;
   if (error) {
     console.error('getPatientBookings error:', error);
     return [];
   }
-  return data || [];
+
+  let results = data || [];
+
+  if (filters?.status && filters.status !== 'all') {
+    results = results.filter((b: any) => b.status === filters.status);
+  }
+  if (filters?.type && filters.type !== 'all') {
+    results = results.filter((b: any) => b.consultation_type === filters.type);
+  }
+
+  return results;
 }
 
 /**
@@ -371,7 +378,7 @@ export async function updateBookingStatus(
   return !error;
 }
 
-/** Cancel a booking (soft delete). */
+/** Cancel a booking (soft delete). Allows cancellation by the patient OR the booker. */
 export async function cancelBooking(
   bookingId: string,
   patientId: string
@@ -381,7 +388,7 @@ export async function cancelBooking(
     .from('bookings')
     .update({ status: 'cancelled', updated_at: new Date().toISOString() })
     .eq('booking_id', bookingId)
-    .eq('patient_account_id', patientId)
+    .or(`patient_account_id.eq.${patientId},booked_by_patient_account_id.eq.${patientId}`)
     .in('status', ['pending', 'confirmed', 'booked']);
   return !error;
 }

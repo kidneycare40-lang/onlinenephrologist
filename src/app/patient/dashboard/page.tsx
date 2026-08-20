@@ -205,6 +205,11 @@ export default function PatientDashboardPage() {
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                           {b.status.charAt(0).toUpperCase() + b.status.slice(1)}
                         </span>
+                        {b.relationship && b.relationship !== 'self' && (
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                            {b.first_name} ({b.relationship})
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
                         <span>{b.booking_date ? new Date(b.booking_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</span>

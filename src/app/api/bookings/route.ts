@@ -1,7 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
-import { autoBridgeFromBooking } from '@/lib/patient-portal-server';
+import { autoBridgeFromBooking, getEmrPatientId, ensureEmrBridge } from '@/lib/patient-portal-server';
+
+// Find or create an EMR patient record for a relative.
+// Matches by name + DOB to avoid duplicates; falls back to phone match.
+async function findOrCreateEmrPatientForRelative(data: {
+  firstName: string;
+  lastName: string;
+  dateOfBirth?: string;
+  gender?: string;
+  phone?: string;
+  countryCode?: string;
+}): Promise<string | null> {
+  const db = getDb();
+  const clean = (s: string) => (s || '').trim().toLowerCase();
+
+  // 1. Try match by first_name + last_name + date_of_birth
+  if (data.dateOfBirth) {
+    const { data: existing } = await db
+      .from('patients')
+      .select('id')
+      .ilike('first_name', data.firstName)
+      .ilike('last_name', data.lastName)
+      .eq('date_of_birth', data.dateOfBirth)
+      .eq('is_deleted', false)
+      .limit(1);
+    if (existing && existing.length > 0) return existing[0].id;
+  }
+
+  // 2. Try match by phone (if provided)
+  if (data.phone) {
+    const cleanPhone = data.phone.replace(/\D/g, '');
+    const { data: byPhone } = await db
+      .from('patients')
+      .select('id')
+      .or(`phone.eq.${cleanPhone},phone.eq.${data.phone}`)
+      .eq('is_deleted', false)
+      .limit(1);
+    if (byPhone && byPhone.length > 0) return byPhone[0].id;
+  }
+
+  // 3. Create new EMR patient record
+  const uhidNum = String(Math.floor(Math.random() * 9000) + 1000);
+  const uhid = `ONLINE-${new Date().getFullYear()}/${uhidNum}`;
+
+  const patientRow: Record<string, unknown> = {
+    uhid,
+    first_name: data.firstName.trim(),
+    last_name: data.lastName.trim(),
+    is_active: true,
+    is_chronic: false,
+    is_international: false,
+    country_code: data.countryCode || '+91',
+    preferred_language: 'English',
+  };
+  if (data.dateOfBirth) patientRow.date_of_birth = data.dateOfBirth;
+  if (data.gender) patientRow.gender = data.gender;
+  if (data.phone) patientRow.phone = data.phone.replace(/\D/g, '');
+
+  const { data: newPatient, error } = await db
+    .from('patients')
+    .insert(patientRow)
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('[findOrCreateEmrPatientForRelative] insert error:', error);
+    return null;
+  }
+  return newPatient?.id || null;
+}
 
 // Map the booking form payload (camelCase) to the bookings table (snake_case)
 // Note: paymentStatus, paymentId, razorpayOrderId are NEVER set by the client.
@@ -11,6 +80,9 @@ function toRow(body: any) {
     booking_id: body.bookingId,
     patient_id: body.patientId || null,
     patient_account_id: body.patientAccountId || null,
+    booked_by_patient_account_id: body.bookedByPatientAccountId || body.patientAccountId || null,
+    relationship: body.relationship || 'self',
+    actual_patient_id: body.actualPatientId || null,
     first_name: body.firstName,
     last_name: body.lastName,
     phone: body.phone,
@@ -78,6 +150,9 @@ function rowToBooking(row: any) {
     doctorName: row.doctor_name || '',
     status: row.status || 'pending',
     createdAt: row.created_at || '',
+    bookedByPatientAccountId: row.booked_by_patient_account_id || null,
+    relationship: row.relationship || 'self',
+    actualPatientId: row.actual_patient_id || null,
   };
 }
 
@@ -153,10 +228,35 @@ export async function POST(request: NextRequest) {
       return apiError('Failed to save booking', 500);
     }
 
-    // Auto-create EMR bridge for logged-in patients
-    if (body.patientAccountId) {
+    // Resolve the actual EMR patient for this booking
+    const relationship = body.relationship || 'self';
+    const isFamilyBooking = relationship !== 'self' && body.patientAccountId;
+
+    if (isFamilyBooking) {
+      // Family booking: create/find EMR patient for the relative
+      try {
+        const emrPatientId = await findOrCreateEmrPatientForRelative({
+          firstName: body.firstName,
+          lastName: body.lastName,
+          dateOfBirth: body.patientDateOfBirth || undefined,
+          gender: body.gender || undefined,
+          phone: body.patientPhone || body.phone || undefined,
+          countryCode: body.countryCode || undefined,
+        });
+        if (emrPatientId) {
+          await db.from('bookings').update({ actual_patient_id: emrPatientId }).eq('booking_id', body.bookingId);
+        }
+      } catch (e) {
+        console.error('[bookings] Failed to create EMR patient for relative:', e);
+      }
+    } else if (body.patientAccountId) {
+      // Self-booking: resolve EMR patient via bridge
       try {
         await autoBridgeFromBooking(body.patientAccountId, body.phone || '');
+        const emrPatientId = await getEmrPatientId(body.patientAccountId);
+        if (emrPatientId) {
+          await db.from('bookings').update({ actual_patient_id: emrPatientId }).eq('booking_id', body.bookingId);
+        }
       } catch {
         // Non-blocking
       }

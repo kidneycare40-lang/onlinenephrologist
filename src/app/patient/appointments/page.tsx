@@ -28,6 +28,9 @@ interface Booking {
   notes: string | null;
   report_files: any[];
   created_at: string;
+  booked_by_patient_account_id: string | null;
+  relationship: string;
+  actual_patient_id: string | null;
 }
 
 const typeConfig: Record<string, { label: string; icon: typeof Video; color: string }> = {
@@ -100,6 +103,11 @@ function AppointmentsContent() {
             <div>
               <h1 className="text-xl font-bold text-gray-900">{tc.label}</h1>
               <p className="text-sm text-gray-500">Booking: {selected.booking_id}</p>
+              {selected.relationship && selected.relationship !== 'self' && (
+                <p className="text-xs text-indigo-600 font-medium mt-0.5">
+                  Patient: {selected.first_name} {selected.last_name} ({selected.relationship})
+                </p>
+              )}
             </div>
             <span className={`ml-auto text-xs font-bold px-3 py-1 rounded-full ${statusColors[selected.status] || 'bg-gray-100 text-gray-600'}`}>
               {selected.status.charAt(0).toUpperCase() + selected.status.slice(1)}
@@ -241,6 +249,11 @@ function AppointmentsContent() {
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColors[b.status] || 'bg-gray-100 text-gray-600'}`}>
                         {b.status.charAt(0).toUpperCase() + b.status.slice(1)}
                       </span>
+                      {b.relationship && b.relationship !== 'self' && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                          {b.first_name} ({b.relationship})
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
