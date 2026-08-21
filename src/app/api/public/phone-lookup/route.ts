@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await db
       .from('patient_accounts')
-      .select('id')
+      .select('id, first_name, email_verified')
       .eq('phone', normalized)
       .limit(1);
 
@@ -39,11 +39,12 @@ export async function POST(request: NextRequest) {
 
     const exists = data && data.length > 0;
 
-    // Generic response only — no patient data exposed
     return NextResponse.json({
       exists,
+      firstName: exists ? data[0].first_name || null : null,
+      emailVerified: exists ? data[0].email_verified || false : false,
       message: exists
-        ? 'We found an existing profile. Continue to access your booking details.'
+        ? 'Welcome back! We found your profile.'
         : 'You can continue as a new patient.',
     });
   } catch (error) {

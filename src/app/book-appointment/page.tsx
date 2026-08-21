@@ -7,7 +7,8 @@ import { SITE_CONFIG } from '@/lib/constants';
 import {
   Video, Building2, CheckCircle2, MapPin, Clock, IndianRupee, AlertTriangle,
   Phone, Calendar, User, Users, FileText, ChevronRight, Star, Info,
-  Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital, Plus, Trash2
+  Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital, Plus, Trash2,
+  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { loadBookingSettings, defaultSettings, type BookingSettings } from '@/lib/booking-settings';
@@ -270,6 +271,10 @@ function BookingForm() {
   const [phoneLookupLoading, setPhoneLookupLoading] = useState(false);
   const [phoneLookupResult, setPhoneLookupResult] = useState<'existing' | 'new' | null>(null);
   const [phoneLookupInput, setPhoneLookupInput] = useState('');
+  const [phoneLookupFirstName, setPhoneLookupFirstName] = useState('');
+  const [phoneLookupEmailVerified, setPhoneLookupEmailVerified] = useState(false);
+  const [phoneCountryCode, setPhoneCountryCode] = useState('+91');
+  const [phoneLookupError, setPhoneLookupError] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -357,6 +362,25 @@ function BookingForm() {
       setPhoneLookupInput(currentPatient.phone || '');
     }
   }, [currentPatient, step, forceInternational]);
+
+  // Auto-detect browser timezone
+  useEffect(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) {
+        const isIndia = tz === 'Asia/Kolkata' || tz === 'Asia/Calcutta';
+        setFormData(prev => ({
+          ...prev,
+          timezone: tz,
+          currentLocation: isIndia ? 'india' : 'outside_india',
+          isInternational: !isIndia,
+        }));
+        if (!isIndia) {
+          setPhoneCountryCode('+1');
+        }
+      }
+    } catch {}
+  }, []);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve) => {
@@ -1063,7 +1087,8 @@ function BookingForm() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section — hidden at step 0 for clean phone-first experience */}
+      {step > 0 && (
       <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
           <div className="flex flex-col md:flex-row items-center gap-6">
@@ -1088,12 +1113,14 @@ function BookingForm() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Progress Steps */}
+      {/* Progress Steps — hidden at step 0 */}
+      {step > 0 && (
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-3xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {steps.map((s, i) => (
+            {steps.filter(s => s.num > 0).map((s, i, arr) => (
               <React.Fragment key={s.num}>
                 <button
                   onClick={() => { if (s.num < step) setStep(s.num); }}
@@ -1106,16 +1133,17 @@ function BookingForm() {
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
                     step === s.num ? 'bg-[#0A75BB] text-white' : step > s.num ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
                   )}>
-                    {step > s.num ? '✓' : s.num === 0 ? <Phone className="h-3.5 w-3.5" /> : s.num}
+                    {step > s.num ? '✓' : s.num}
                   </span>
                   <span className="hidden sm:inline">{s.label}</span>
                 </button>
-                {i < steps.length - 1 && <div className={cn('flex-1 h-0.5 mx-2', step > s.num ? 'bg-emerald-300' : 'bg-slate-200')} />}
+                {i < arr.length - 1 && <div className={cn('flex-1 h-0.5 mx-2', step > s.num ? 'bg-emerald-300' : 'bg-slate-200')} />}
               </React.Fragment>
             ))}
           </div>
         </div>
       </div>
+      )}
 
       {/* Selection Summary Bar */}
       {step > 0 && (
@@ -1126,7 +1154,7 @@ function BookingForm() {
               {formData.phone && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700 border border-slate-300">
                   <Phone className="h-3 w-3" />
-                  {formData.phone}
+                  {phoneCountryCode} {formData.phone}
                   {phoneLookupResult === 'existing' && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
                 </span>
               )}
@@ -1210,82 +1238,195 @@ function BookingForm() {
             <span>{bookingSettings.noticeBoard.message}</span>
           </div>
         )}
-        {/* Step 0: Phone Lookup (pre-step before consultation type) */}
+        {/* Step 0: Phone Lookup — clean, elderly-friendly first screen */}
         {step === 0 && mounted && !currentPatient && (
-          <div className="mb-6 bg-white border border-slate-200 rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#0A75BB]/10 flex items-center justify-center shrink-0">
-                <Phone className="h-5 w-5 text-[#0A75BB]" />
+          <div className="max-w-lg mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+              <div className="text-center mb-6">
+                <img src="/favicon.png" alt="Online Nephrologist" className="h-12 mx-auto mb-3" />
+                <h1 className="text-xl font-bold text-slate-900">Book an Appointment</h1>
+                <p className="text-sm text-slate-500 mt-1">Enter your mobile number to get started</p>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Enter your phone number</h3>
-                <p className="text-xs text-slate-500">We'll check if you've booked with us before</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mobile / WhatsApp Number</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={phoneCountryCode}
+                      onChange={(e) => setPhoneCountryCode(e.target.value)}
+                      className="border border-slate-300 rounded-xl bg-white text-sm px-2 py-2.5 focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors w-24 shrink-0"
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+966">🇸🇦 +966</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+65">🇸🇬 +65</option>
+                      <option value="+60">🇲🇾 +60</option>
+                      <option value="+234">🇳🇬 +234</option>
+                      <option value="+254">🇰🇪 +254</option>
+                      <option value="+880">🇧🇩 +880</option>
+                      <option value="+92">🇵🇰 +92</option>
+                      <option value="+94">🇱🇰 +94</option>
+                      <option value="+977">🇳🇵 +977</option>
+                      <option value="+63">🇵🇭 +63</option>
+                      <option value="+20">🇪🇬 +20</option>
+                      <option value="+27">🇿🇦 +27</option>
+                      <option value="+81">🇯🇵 +81</option>
+                      <option value="+82">🇰🇷 +82</option>
+                      <option value="+86">🇨🇳 +86</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+33">🇫🇷 +33</option>
+                      <option value="+39">🇮🇹 +39</option>
+                      <option value="+34">🇪🇸 +34</option>
+                      <option value="+31">🇳🇱 +31</option>
+                      <option value="+46">🇸🇪 +46</option>
+                      <option value="+47">🇳🇴 +47</option>
+                      <option value="+353">🇮🇪 +353</option>
+                      <option value="+64">🇳🇿 +64</option>
+                    </select>
+                    <input
+                      type="tel"
+                      value={phoneLookupInput}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, phoneCountryCode === '+91' ? 10 : 12);
+                        setPhoneLookupInput(digits);
+                        setPhoneLookupResult(null);
+                      }}
+                      className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
+                      placeholder={phoneCountryCode === '+91' ? '98182 35613' : 'Your number'}
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && phoneLookupInput.length >= 6 && !phoneLookupLoading) {
+                          e.preventDefault();
+                          (document.querySelector('[data-phone-check-btn]') as HTMLButtonElement)?.click();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {phoneLookupError && <p className="text-sm text-red-600">{phoneLookupError}</p>}
+
+                {/* Existing Patient — Welcome Back Panel */}
+                {phoneLookupResult === 'existing' && (
+                  <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-emerald-900">
+                          Welcome back{phoneLookupFirstName ? `, ${phoneLookupFirstName}` : ''}!
+                        </p>
+                        <p className="text-xs text-emerald-600">Existing patient found</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <Phone className="h-4 w-4 text-slate-400" />
+                      <span>{phoneCountryCode} {phoneLookupInput}</span>
+                    </div>
+                    {phoneLookupEmailVerified ? (
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-700">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Account verified
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-amber-600">
+                        <AlertTriangle className="h-3.5 w-3.5" /> Account not verified — verify email after booking
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-500">Your saved details will be used for this booking.</p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors"
+                      >
+                        <Calendar className="h-4 w-4" /> Book New Appointment
+                      </button>
+                      <Link
+                        href="/patient/login"
+                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+                      >
+                        <User className="h-4 w-4" /> View My Dashboard
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {/* New Patient — Continue Panel */}
+                {phoneLookupResult === 'new' && (
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <User className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-blue-900">Welcome to Online Nephrologist</p>
+                        <p className="text-xs text-blue-600">New patient</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-600">
+                      We'll create your patient profile automatically after booking. No separate registration needed.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors"
+                    >
+                      Continue as New Patient <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Check Button — only shown before result */}
+                {!phoneLookupResult && (
+                  <button
+                    type="button"
+                    data-phone-check-btn
+                    disabled={phoneLookupInput.length < 6 || phoneLookupLoading}
+                    onClick={async () => {
+                      setPhoneLookupLoading(true);
+                      setPhoneLookupError('');
+                      try {
+                        const fullPhone = phoneCountryCode + phoneLookupInput;
+                        const res = await fetch('/api/public/phone-lookup', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ phone: fullPhone }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          setPhoneLookupError(data.error || 'Failed to check number');
+                          return;
+                        }
+                        const result = data.exists ? 'existing' as const : 'new' as const;
+                        setPhoneLookupResult(result);
+                        setPhoneLookupFirstName(data.firstName || '');
+                        setPhoneLookupEmailVerified(data.emailVerified || false);
+                        setFormData(prev => ({ ...prev, phone: phoneLookupInput, whatsappNumber: phoneLookupInput }));
+                      } catch {
+                        setPhoneLookupError('Network error. Please try again.');
+                      } finally {
+                        setPhoneLookupLoading(false);
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50"
+                  >
+                    {phoneLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                    {phoneLookupLoading ? 'Checking...' : 'Continue'}
+                  </button>
+                )}
               </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">+91</span>
-                <input
-                  type="tel"
-                  value={phoneLookupInput}
-                  onChange={(e) => {
-                    setPhoneLookupInput(e.target.value.replace(/\D/g, '').slice(0, 10));
-                    setPhoneLookupResult(null);
-                  }}
-                  className="w-full border border-slate-300 rounded-xl pl-12 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
-                  placeholder="98182 35613"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && phoneLookupInput.length >= 10 && !phoneLookupLoading) {
-                      e.preventDefault();
-                      (document.querySelector('[data-phone-check-btn]') as HTMLButtonElement)?.click();
-                    }
-                  }}
-                />
-              </div>
-              <button
-                type="button"
-                data-phone-check-btn
-                disabled={phoneLookupInput.length < 10 || phoneLookupLoading}
-                onClick={async () => {
-                  setPhoneLookupLoading(true);
-                  try {
-                    const res = await fetch('/api/public/phone-lookup', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ phone: phoneLookupInput }),
-                    });
-                    const data = await res.json();
-                    const result = data.exists ? 'existing' as const : 'new' as const;
-                    setPhoneLookupResult(result);
-                    setFormData(prev => ({ ...prev, phone: phoneLookupInput, whatsappNumber: phoneLookupInput }));
-                  } catch {
-                    setPhoneLookupResult(null);
-                  } finally {
-                    setPhoneLookupLoading(false);
-                  }
-                }}
-                className="px-5 py-2.5 bg-[#0A75BB] text-white text-sm font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-              >
-                {phoneLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Check
-              </button>
-            </div>
-            {phoneLookupResult === 'existing' && (
-              <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <p className="text-sm text-emerald-700">
-                  <span className="font-semibold">Welcome back!</span> We found an existing profile. Your details will be pre-filled where possible.
+
+              <div className="mt-4 pt-4 border-t border-slate-100 text-center">
+                <p className="text-xs text-slate-400">
+                  Your data is secure and encrypted. We never share your information.
                 </p>
               </div>
-            )}
-            {phoneLookupResult === 'new' && (
-              <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-2">
-                <Info className="h-4 w-4 text-blue-600 shrink-0" />
-                <p className="text-sm text-blue-700">
-                  <span className="font-semibold">New patient?</span> No problem! You can proceed to book your first appointment.
-                </p>
-              </div>
-            )}
+            </div>
           </div>
         )}
         {currentPatient && (

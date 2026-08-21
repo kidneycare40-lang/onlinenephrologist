@@ -101,6 +101,8 @@ function toRow(body: any) {
     current_location: body.currentLocation || null,
     country: body.country || null,
     timezone: body.timezone || null,
+    is_international: body.isInternational || body.currentLocation === 'outside_india' || false,
+    country_code: body.countryCode || '+91',
     preferred_language: body.preferredLanguage || null,
     interpreter_required: !!body.interpreterRequired,
     consultation_type: body.consultationType || 'online',
