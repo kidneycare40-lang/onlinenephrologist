@@ -1040,7 +1040,7 @@ function BookingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -1202,7 +1202,7 @@ function BookingForm() {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isTodayHoliday && (
           <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 space-y-3">
             <div className="flex items-start gap-3">
