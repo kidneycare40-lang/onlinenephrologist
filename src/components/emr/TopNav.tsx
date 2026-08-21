@@ -52,6 +52,9 @@ export default function TopNav() {
   const [appsOpen, setAppsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const appsRef = useRef<HTMLDivElement>(null);
+  const [emrNotifications, setEmrNotifications] = useState<{ id: string; type: string; title: string; message: string; patient_name?: string; amount?: number; currency?: string; is_read: boolean; created_at: string }[]>([]);
+  const [emrUnreadCount, setEmrUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   const [showAddPatient, setShowAddPatient] = useState(false);
   const unreadCount = useEMRUnreadCount();
@@ -158,6 +161,57 @@ export default function TopNav() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  // Fetch unread notification count on mount and every 30s
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/emr/notifications?unread=true&limit=1');
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setEmrUnreadCount(data.unreadCount || 0);
+        }
+      } catch {}
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  // Fetch full notifications when bell is opened
+  const fetchNotifications = async () => {
+    setNotificationsLoading(true);
+    try {
+      const res = await fetch('/api/emr/notifications?limit=20');
+      if (res.ok) {
+        const data = await res.json();
+        setEmrNotifications(data.notifications || []);
+        setEmrUnreadCount(data.unreadCount || 0);
+      }
+    } catch {}
+    setNotificationsLoading(false);
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await fetch('/api/emr/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ markAll: true }) });
+      setEmrNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setEmrUnreadCount(0);
+    } catch {}
+  };
+
+  const formatNotificationTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    return `${Math.floor(diffHr / 24)}d ago`;
+  };
 
   useEffect(() => {
     const q = searchQuery.trim();
@@ -429,21 +483,54 @@ export default function TopNav() {
           </div>
 
           <div ref={notificationsRef} className="relative">
-            <button onClick={() => { setNotificationsOpen(!notificationsOpen); setAppsOpen(false); }} className="relative p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Notifications">
+            <button onClick={() => { const opening = !notificationsOpen; setNotificationsOpen(opening); setAppsOpen(false); if (opening) fetchNotifications(); }} className="relative p-2.5 rounded-lg hover:bg-white/10 transition-colors" aria-label="Notifications">
               <Bell className="h-4.5 w-4.5 text-white/70" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-[1.5px] ring-[#095187]" />
+              {emrUnreadCount > 0 && <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-[1.5px] ring-[#095187]">{emrUnreadCount > 99 ? '99+' : emrUnreadCount}</span>}
             </button>
             {notificationsOpen && (
-              <div className="absolute top-full right-0 mt-1.5 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
+              <div className="absolute top-full right-0 mt-1.5 w-96 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                  <button className="text-xs text-[#0A75BB] hover:underline">Mark all read</button>
+                  <h3 className="text-sm font-semibold text-gray-900">Notifications {emrUnreadCount > 0 && <span className="text-xs font-normal text-gray-500">({emrUnreadCount} unread)</span>}</h3>
+                  {emrUnreadCount > 0 && <button onClick={handleMarkAllRead} className="text-xs text-[#0A75BB] hover:underline">Mark all read</button>}
                 </div>
-                <div className="max-h-80 overflow-y-auto">
-                  <div className="px-4 py-6 text-center">
-                    <Bell className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No new notifications</p>
-                  </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {notificationsLoading ? (
+                    <div className="px-4 py-8 text-center">
+                      <div className="w-6 h-6 border-2 border-[#0A75BB] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p className="text-xs text-gray-400">Loading...</p>
+                    </div>
+                  ) : emrNotifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <Bell className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">No notifications yet</p>
+                      <p className="text-xs text-gray-400 mt-1">New bookings and payments will appear here</p>
+                    </div>
+                  ) : (
+                    emrNotifications.map((n) => (
+                      <div key={n.id} className={cn('px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors', !n.is_read && 'bg-blue-50/50')}>
+                        <div className="flex items-start gap-3">
+                          <div className={cn('w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5',
+                            n.type === 'booking_created' ? 'bg-blue-100' :
+                            n.type === 'payment_received' ? 'bg-emerald-100' :
+                            n.type === 'booking_cancelled' ? 'bg-red-100' : 'bg-gray-100'
+                          )}>
+                            {n.type === 'booking_created' ? <Calendar className="h-4 w-4 text-blue-600" /> :
+                             n.type === 'payment_received' ? <Receipt className="h-4 w-4 text-emerald-600" /> :
+                             <Bell className="h-4 w-4 text-gray-600" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-gray-900">{n.title}</p>
+                              {!n.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />}
+                            </div>
+                            <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{n.message}</p>
+                            {n.amount != null && <p className="text-xs font-medium text-emerald-600 mt-1">{n.currency === 'USD' ? `$${Number(n.amount).toFixed(2)}` : `₹${Number(n.amount).toFixed(0)}`}</p>}
+                            <p className="text-[10px] text-gray-400 mt-1">{formatNotificationTime(n.created_at)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}

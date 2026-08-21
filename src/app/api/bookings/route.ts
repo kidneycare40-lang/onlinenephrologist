@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db/client';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
 import { autoBridgeFromBooking, getEmrPatientId, ensureEmrBridge } from '@/lib/patient-portal-server';
 import { normalizePhone } from '@/lib/phone';
+import { notifyBookingCreated } from '@/lib/emr-notifications';
 
 // Find or create an EMR patient record for a relative.
 // Matches by name + DOB to avoid duplicates; falls back to phone match.
@@ -478,6 +479,23 @@ export async function POST(request: NextRequest) {
         // Non-blocking
       }
     }
+
+    // Create EMR notification (non-blocking)
+    try {
+      await notifyBookingCreated({
+        bookingId: body.bookingId,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        phone: body.phone,
+        consultationType: body.consultationType,
+        clinicId: body.clinicId,
+        bookingDate: body.date,
+        bookingTime: body.time,
+        consultationFee: body.consultationFee,
+        consultationFeeCurrency: body.consultationFeeCurrency,
+        isInternational: body.isInternational,
+      });
+    } catch { /* non-blocking */ }
 
     return NextResponse.json({ success: true, bookingId: body.bookingId }, { status: 201 });
   } catch (error) {

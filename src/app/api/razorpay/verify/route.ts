@@ -6,6 +6,7 @@ import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
 import { autoBridgeFromBooking, createFollowUpEntitlement } from '@/lib/patient-portal-server';
 import { sendBookingNotifications } from '@/lib/notifications';
+import { notifyPaymentReceived } from '@/lib/emr-notifications';
 
 function getRazorpay(): Razorpay | null {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -236,6 +237,29 @@ export async function POST(request: NextRequest) {
       }
     } catch (notifyErr) {
       console.error('[verify] Notification error:', notifyErr);
+    }
+
+    // EMR in-app notification (non-blocking)
+    try {
+      const { data: bk } = await db
+        .from('bookings')
+        .select('first_name, last_name, phone, consultation_fee, consultation_fee_currency, clinic_id')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+      if (bk) {
+        await notifyPaymentReceived({
+          bookingId,
+          firstName: bk.first_name || 'Patient',
+          lastName: bk.last_name,
+          phone: bk.phone || '',
+          amount: Number(bk.consultation_fee || paymentData?.amount || 0),
+          currency: bk.consultation_fee_currency || paymentData?.currency || 'INR',
+          paymentId: razorpayPaymentId,
+          clinicId: bk.clinic_id,
+        });
+      }
+    } catch (err) {
+      console.error('[verify] EMR notification error:', err);
     }
 
     return NextResponse.json({ success: true, payment: paymentData });

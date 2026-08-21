@@ -103,6 +103,8 @@ export default function EMRDashboardPage() {
   const [recentPatients, setRecentPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dbBookings, setDbBookings] = useState<any[]>([]);
+  const [dbStats, setDbStats] = useState<any>(null);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -120,13 +122,18 @@ export default function EMRDashboardPage() {
       const params = clinicId ? { clinicId } : undefined;
 
       // Fetch stats, today's appointments, and recent patients in parallel
-      const [statsData, appointmentsData] = await Promise.all([
+      const [statsData, appointmentsData, dbBookingsData] = await Promise.all([
         dashboardApi.getStats(params).catch(() => null),
         dashboardApi.getTodayAppointments(params).catch(() => []),
+        fetch(`/api/emr/dashboard/bookings?${clinicId ? `clinicId=${clinicId}&` : ''}period=month`).then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
 
       setStats(statsData);
       setApiAppointments(appointmentsData || []);
+      if (dbBookingsData) {
+        setDbBookings(dbBookingsData.bookings || []);
+        setDbStats(dbBookingsData.stats || null);
+      }
 
       // Use stats.recentPatients if available, otherwise fetch recent patients
       if (statsData?.recentPatients) {
@@ -266,28 +273,27 @@ export default function EMRDashboardPage() {
   const statCards = [
     {
       label: "Today's Patients",
-      value: todayCount,
+      value: dbStats?.todayCount || todayCount,
       icon: Users,
       iconBg: 'bg-blue-500',
     },
     {
-      label: 'Revenue',
-      value: `₹${revenue.toLocaleString('en-IN')}`,
+      label: 'Revenue (30d)',
+      value: dbStats ? (dbStats.totalRevenue > 1000 ? `₹${(dbStats.totalRevenue / 1000).toFixed(1)}k` : `₹${dbStats.totalRevenue}`) : `₹${revenue.toLocaleString('en-IN')}`,
       icon: IndianRupee,
       iconBg: 'bg-emerald-500',
     },
     {
-      label: 'Waiting',
-      value: waitingCount,
-      icon: Clock,
-      iconBg: 'bg-amber-500',
-      pulse: true,
-    },
-    {
-      label: 'Follow-ups',
-      value: followUpCount,
+      label: 'Total Bookings',
+      value: dbStats?.totalBookings || todayCount,
       icon: CalendarCheck,
       iconBg: 'bg-purple-500',
+    },
+    {
+      label: 'Unique Patients',
+      value: dbStats?.uniquePatients || recentPatients.length,
+      icon: Users,
+      iconBg: 'bg-amber-500',
     },
   ];
 
@@ -332,8 +338,7 @@ export default function EMRDashboardPage() {
               </div>
               <div className={cn(
                 'w-10 h-10 rounded-xl flex items-center justify-center',
-                stat.iconBg,
-                stat.pulse && 'animate-pulse'
+                stat.iconBg
               )}>
                 <stat.icon className="h-5 w-5 text-white" />
               </div>
@@ -578,6 +583,83 @@ export default function EMRDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Online Bookings from Database — last 30 days */}
+      {dbBookings.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h2 className="font-semibold text-gray-900 text-sm">Online Bookings <span className="text-gray-400 font-normal">(Last 30 days)</span></h2>
+              {dbStats && (
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-gray-500">{dbStats.totalBookings} total</span>
+                  <span className="text-emerald-600 font-medium">₹{dbStats.totalRevenue?.toLocaleString('en-IN') || 0} collected</span>
+                  {dbStats.pendingPayments > 0 && <span className="text-amber-600">₹{dbStats.pendingPayments?.toLocaleString('en-IN')} pending</span>}
+                  {dbStats.internationalCount > 0 && <span className="text-blue-600">{dbStats.internationalCount} international</span>}
+                </div>
+              )}
+            </div>
+            <Link href="/emr/appointments" className="text-xs text-[#0A75BB] hover:text-[#085D94] font-medium flex items-center gap-1">
+              View All <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left">
+                  <th className="px-4 py-2.5 text-xs font-medium text-gray-500">Patient</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-gray-500">Phone</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-gray-500">Type</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-gray-500">Date & Time</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-gray-500">Payment</th>
+                  <th className="px-4 py-2.5 text-xs font-medium text-gray-500">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {dbBookings.slice(0, 10).map((b) => (
+                  <tr key={b.bookingId} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">{b.firstName} {b.lastName}</div>
+                      {b.isInternational && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">International</span>}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{b.phone}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium',
+                        (b.consultationType === 'online' || b.consultationType === 'online_intl') ? 'bg-blue-100 text-blue-700' :
+                        b.consultationType === 'hospital' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                      )}>
+                        {(b.consultationType === 'online' || b.consultationType === 'online_intl') && <Video className="h-3 w-3" />}
+                        {b.consultationType === 'online_intl' ? 'Intl Video' :
+                         b.consultationType === 'online' ? 'Online Video' :
+                         b.consultationType === 'hospital' ? 'Hospital' : 'In-Clinic'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">
+                      {b.bookingDate} {b.bookingTime}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                        b.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      )}>
+                        {b.paymentStatus === 'paid' ? 'Paid' : 'Pending'} {b.consultationFee ? (b.consultationFeeCurrency === 'USD' ? `$${b.consultationFee}` : `₹${b.consultationFee}`) : ''}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
+                        b.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                        b.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      )}>
+                        {b.status || 'pending'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       {deleteBookingId && (
