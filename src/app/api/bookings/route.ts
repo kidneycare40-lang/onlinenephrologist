@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
 import { autoBridgeFromBooking, getEmrPatientId, ensureEmrBridge } from '@/lib/patient-portal-server';
+import { normalizePhone } from '@/lib/phone';
 
 // Find or create an EMR patient record for a relative.
 // Matches by name + DOB to avoid duplicates; falls back to phone match.
@@ -373,9 +374,64 @@ export async function POST(request: NextRequest) {
       return apiError('Failed to save booking', 500);
     }
 
+    // ─── AUTO-CREATE PATIENT ACCOUNT (race-safe upsert) ─────────────
+    // After successful booking, ensure the patient has an account.
+    // Uses ON CONFLICT to handle concurrent bookings from the same phone.
+    let patientAccountId = body.patientAccountId || null;
+    try {
+      const normalized = normalizePhone(body.phone);
+      if (normalized) {
+        // Check if account already exists
+        const { data: existingAcct } = await db
+          .from('patient_accounts')
+          .select('id')
+          .eq('phone', normalized)
+          .limit(1);
+
+        if (existingAcct && existingAcct.length > 0) {
+          patientAccountId = existingAcct[0].id;
+        } else {
+          // Create new account — race-safe via ON CONFLICT (phone UNIQUE)
+          const firstName = (body.firstName || '').trim();
+          const lastName = (body.lastName || '').trim();
+          const { data: newAcct, error: acctErr } = await db
+            .from('patient_accounts')
+            .upsert({
+              phone: normalized,
+              first_name: firstName || null,
+              last_name: lastName || null,
+              email: body.email || null,
+            }, { onConflict: 'phone', ignoreDuplicates: false })
+            .select('id')
+            .limit(1);
+
+          if (!acctErr && newAcct && newAcct.length > 0) {
+            patientAccountId = newAcct[0].id;
+          } else if (acctErr) {
+            console.error('[bookings] auto-create account error:', acctErr);
+          }
+        }
+
+        // Link account to booking if we have one
+        if (patientAccountId && !body.patientAccountId) {
+          await db
+            .from('bookings')
+            .update({
+              patient_account_id: patientAccountId,
+              booked_by_patient_account_id: patientAccountId,
+            })
+            .eq('booking_id', body.bookingId);
+        }
+      }
+    } catch (e) {
+      console.error('[bookings] auto-create account failed (non-blocking):', e);
+    }
+
+    // ─── AUTO-CREATE PATIENT ACCOUNT END ──────────────────────────
+
     // Resolve the actual EMR patient for this booking
     const relationship = body.relationship || 'self';
-    const isFamilyBooking = relationship !== 'self' && body.patientAccountId;
+    const isFamilyBooking = relationship !== 'self' && patientAccountId;
 
     if (isFamilyBooking) {
       // Family booking: create/find EMR patient for the relative
@@ -394,11 +450,11 @@ export async function POST(request: NextRequest) {
       } catch (e) {
         console.error('[bookings] Failed to create EMR patient for relative:', e);
       }
-    } else if (body.patientAccountId) {
+    } else if (patientAccountId) {
       // Self-booking: resolve EMR patient via bridge, create if missing
       try {
-        await autoBridgeFromBooking(body.patientAccountId, body.phone || '');
-        let emrPatientId = await getEmrPatientId(body.patientAccountId);
+        await autoBridgeFromBooking(patientAccountId, body.phone || '');
+        let emrPatientId = await getEmrPatientId(patientAccountId);
         if (!emrPatientId) {
           // No bridge exists — create EMR patient from the booking/account data
           emrPatientId = await findOrCreateEmrPatientForRelative({
@@ -410,7 +466,7 @@ export async function POST(request: NextRequest) {
             countryCode: body.countryCode || undefined,
           });
           if (emrPatientId) {
-            await ensureEmrBridge(body.patientAccountId, emrPatientId);
+            await ensureEmrBridge(patientAccountId, emrPatientId);
           }
         }
         if (emrPatientId) {
