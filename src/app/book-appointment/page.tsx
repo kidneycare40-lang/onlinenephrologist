@@ -363,22 +363,12 @@ function BookingForm() {
     }
   }, [currentPatient, step, forceInternational]);
 
-  // Auto-detect browser timezone
+  // Auto-detect browser timezone — only sets timezone for scheduling, does NOT change location
   useEffect(() => {
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz) {
-        const isIndia = tz === 'Asia/Kolkata' || tz === 'Asia/Calcutta';
-        setFormData(prev => ({
-          ...prev,
-          timezone: tz,
-          currentLocation: isIndia ? 'india' : 'outside_india',
-          consultationType: isIndia ? prev.consultationType : 'online_intl',
-          isInternational: !isIndia,
-        }));
-        if (!isIndia) {
-          setPhoneCountryCode('+1');
-        }
+        setFormData(prev => ({ ...prev, timezone: tz }));
       }
     } catch {}
   }, []);
@@ -1407,7 +1397,16 @@ function BookingForm() {
                         setPhoneLookupResult(result);
                         setPhoneLookupFirstName(data.firstName || '');
                         setPhoneLookupEmailVerified(data.emailVerified || false);
-                        setFormData(prev => ({ ...prev, phone: phoneLookupInput, whatsappNumber: phoneLookupInput }));
+                        setFormData(prev => ({
+                          ...prev,
+                          phone: phoneLookupInput,
+                          whatsappNumber: phoneLookupInput,
+                          firstName: data.firstName || prev.firstName,
+                          lastName: data.lastName || prev.lastName,
+                          email: data.email || prev.email,
+                          age: data.age?.toString() || prev.age,
+                          gender: data.gender ? data.gender.charAt(0).toUpperCase() + data.gender.slice(1) : prev.gender,
+                        }));
                       } catch {
                         setPhoneLookupError('Network error. Please try again.');
                       } finally {
@@ -1755,7 +1754,7 @@ function BookingForm() {
               <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Where are you currently located?</label>
                 <p className="text-xs text-slate-500 mb-3">This determines your consultation fee and available payment methods.</p>
-                {(forceInternational || formData.currentLocation === 'outside_india') ? (
+                {forceInternational ? (
                   <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-blue-500 bg-blue-50 rounded-xl text-sm font-medium text-blue-700">
                     <Globe className="h-4 w-4" /> Outside India (locked for this booking)
                   </div>
