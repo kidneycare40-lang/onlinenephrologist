@@ -1,10 +1,20 @@
 -- ============================================================
 -- Migration 021: Add international fields to bookings
 -- ============================================================
--- Adds is_international and country_code (phone dialing code)
--- to the bookings table. These were referenced in Migration 018
--- but never created.
+-- Safe migration: adds columns only if they don't exist,
+-- then backfills from existing data.
 -- ============================================================
+
+-- Add current_location (from Migration 018, may not have been applied)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bookings' AND column_name = 'current_location'
+  ) THEN
+    ALTER TABLE bookings ADD COLUMN current_location TEXT DEFAULT 'india';
+  END IF;
+END $$;
 
 -- Add is_international boolean
 DO $$
@@ -31,8 +41,13 @@ END $$;
 -- Backfill is_international from existing data
 UPDATE bookings
 SET is_international = true
+WHERE consultation_type = 'online_intl';
+
+-- Backfill current_location from consultation_type
+UPDATE bookings
+SET current_location = 'outside_india'
 WHERE consultation_type = 'online_intl'
-   OR current_location = 'outside_india';
+  AND (current_location IS NULL OR current_location = 'india');
 
 -- Backfill country_code from patient_accounts where available
 UPDATE bookings b

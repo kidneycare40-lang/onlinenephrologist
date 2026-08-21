@@ -168,6 +168,7 @@ DECLARE
   dup RECORD;
   oldest_id UUID;
   dup_id UUID;
+  i INT;
 BEGIN
   FOR dup IN
     SELECT phone, array_agg(id ORDER BY created_at ASC) AS ids
@@ -178,16 +179,14 @@ BEGIN
     GROUP BY phone
     HAVING COUNT(*) > 1
   LOOP
-    -- Keep the oldest account, update the rest to null (they'll be merged manually if needed)
     oldest_id := dup.ids[1];
-    FOREACH dup_id IN ARRAY dup.ids[2..array_length(dup.ids, 1)]
-    LOOP
-      -- Transfer bookings from duplicate to oldest
+    FOR i IN 2..array_length(dup.ids, 1) LOOP
+      dup_id := dup.ids[i];
+
       UPDATE bookings
       SET patient_account_id = oldest_id
       WHERE patient_account_id = dup_id;
 
-      -- Transfer bridges
       UPDATE patient_emr_bridge
       SET patient_account_id = oldest_id
       WHERE patient_account_id = dup_id
@@ -195,7 +194,6 @@ BEGIN
           SELECT 1 FROM patient_emr_bridge WHERE patient_account_id = oldest_id
         );
 
-      -- Delete the duplicate account (cascade will clean up OTP records)
       DELETE FROM patient_accounts WHERE id = dup_id;
     END LOOP;
   END LOOP;
