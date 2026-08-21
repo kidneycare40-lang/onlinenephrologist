@@ -449,6 +449,7 @@ export async function getPatientConsultations(patientAccountId: string): Promise
 export async function getFullPatientProfile(patientAccountId: string): Promise<{
   account: PatientAccount | null;
   emrPatientId: string | null;
+  uhid: string | null;
   upcomingBookings: any[];
   totalBookings: number;
   activeFollowUp: FollowUpEntitlement | null;
@@ -466,11 +467,22 @@ export async function getFullPatientProfile(patientAccountId: string): Promise<{
     .maybeSingle();
 
   let emrPatientId = await getEmrPatientId(patientAccountId);
+  let uhid: string | null = null;
 
   // Auto-create bridge if missing — find EMR patient by phone
   if (!emrPatientId && account?.phone) {
     await autoBridgeFromBooking(patientAccountId, account.phone);
     emrPatientId = await getEmrPatientId(patientAccountId);
+  }
+
+  // Fetch UHID from EMR patients table
+  if (emrPatientId) {
+    const { data: emrPatient } = await db
+      .from('patients')
+      .select('uhid')
+      .eq('id', emrPatientId)
+      .maybeSingle();
+    uhid = emrPatient?.uhid || null;
   }
 
   // Get bookings — both self-bookings AND family bookings made by this account
@@ -500,6 +512,7 @@ export async function getFullPatientProfile(patientAccountId: string): Promise<{
   return {
     account: account as PatientAccount | null,
     emrPatientId,
+    uhid,
     upcomingBookings,
     totalBookings: allBookings?.length || 0,
     activeFollowUp,

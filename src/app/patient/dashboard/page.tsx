@@ -21,6 +21,7 @@ interface PortalData {
     is_international: boolean;
   } | null;
   emrPatientId: string | null;
+  uhid: string | null;
   upcomingBookings: any[];
   totalBookings: number;
   activeFollowUp: {
@@ -88,6 +89,11 @@ export default function PatientDashboardPage() {
               {data.account?.phone ? ` · ${data.account.phone}` : ''}
               {data.account?.is_international && data.account?.country ? ` · ${data.account.country}` : ''}
             </p>
+            {data.uhid && (
+              <p className="text-xs text-gray-400 mt-1 font-mono">
+                UHID: {data.uhid}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -121,6 +127,35 @@ export default function PatientDashboardPage() {
           <p className="text-sm text-emerald-700 font-medium">
             Email verified — full access to all medical records enabled.
           </p>
+        </div>
+      )}
+
+      {/* Login Details — shows UHID for patients who logged in via Forgot UHID */}
+      {data.uhid && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Lock className="h-4 w-4 text-blue-600" />
+            <p className="text-sm font-semibold text-blue-900">Your Login Details</p>
+          </div>
+          <p className="text-xs text-blue-700 mb-3">Save these details for next time you log in.</p>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <div>
+              <span className="text-xs text-blue-600 font-medium">UHID</span>
+              <p className="font-mono font-bold text-blue-900">{data.uhid}</p>
+            </div>
+            {data.account?.phone && (
+              <div>
+                <span className="text-xs text-blue-600 font-medium">Phone</span>
+                <p className="font-medium text-blue-900">{data.account.phone}</p>
+              </div>
+            )}
+            {data.account?.email && (
+              <div>
+                <span className="text-xs text-blue-600 font-medium">Email</span>
+                <p className="font-medium text-blue-900">{data.account.email}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
