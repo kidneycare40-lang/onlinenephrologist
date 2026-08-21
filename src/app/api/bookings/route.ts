@@ -393,18 +393,38 @@ export async function POST(request: NextRequest) {
 
         if (existingAcct && existingAcct.length > 0) {
           patientAccountId = existingAcct[0].id;
+          // Update account details on every booking (keeps profile fresh)
+          const updateData: Record<string, any> = {};
+          if (body.firstName) updateData.first_name = (body.firstName || '').trim() || null;
+          if (body.lastName) updateData.last_name = (body.lastName || '').trim() || null;
+          if (body.email) updateData.email = body.email;
+          if (body.gender) updateData.gender = body.gender;
+          if (body.age && Number(body.age) > 0 && Number(body.age) <= 120) {
+            const approxYear = new Date().getFullYear() - Number(body.age);
+            updateData.date_of_birth = `${approxYear}-01-01`;
+          }
+          if (Object.keys(updateData).length > 0) {
+            updateData.updated_at = new Date().toISOString();
+            await db.from('patient_accounts').update(updateData).eq('id', patientAccountId);
+          }
         } else {
           // Create new account — race-safe via ON CONFLICT (phone UNIQUE)
           const firstName = (body.firstName || '').trim();
           const lastName = (body.lastName || '').trim();
+          const acctData: Record<string, any> = {
+            phone: normalized,
+            first_name: firstName || null,
+            last_name: lastName || null,
+            email: body.email || null,
+          };
+          if (body.gender) acctData.gender = body.gender;
+          if (body.age && Number(body.age) > 0 && Number(body.age) <= 120) {
+            const approxYear = new Date().getFullYear() - Number(body.age);
+            acctData.date_of_birth = `${approxYear}-01-01`;
+          }
           const { data: newAcct, error: acctErr } = await db
             .from('patient_accounts')
-            .upsert({
-              phone: normalized,
-              first_name: firstName || null,
-              last_name: lastName || null,
-              email: body.email || null,
-            }, { onConflict: 'phone', ignoreDuplicates: false })
+            .upsert(acctData, { onConflict: 'phone', ignoreDuplicates: false })
             .select('id')
             .limit(1);
 
