@@ -425,3 +425,63 @@ export async function sendTeamBookingEmail(
     return { success: false, error: 'Failed to send email.' };
   }
 }
+
+export async function sendLoginDetailsEmail(
+  to: string,
+  details: { firstName: string; uhid: string; phone: string; email: string }
+): Promise<{ success: boolean; error?: string }> {
+  const resend = getResend();
+  if (!resend) {
+    console.error('[email] RESEND_API_KEY not set — login details email not sent');
+    return { success: false, error: 'Email service not configured.' };
+  }
+
+  const from = 'KCC <no-reply@onlinenephrologist.com>';
+
+  try {
+    await resend.emails.send({
+      from,
+      to,
+      subject: 'Your Login Details — Kidney Care Centre',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="font-family:system-ui,-apple-system,sans-serif;background:#f1f5f9;margin:0;padding:24px;">
+          <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+            ${KCC_BRAND}
+            <h2 style="text-align:center;color:#0f172a;margin:0 0 8px;">Your Login Details</h2>
+            <p style="text-align:center;color:#64748b;font-size:14px;margin:0 0 24px;">Kidney Care Centre — Patient Portal</p>
+            <p style="color:#334155;font-size:14px;margin:0 0 16px;">Hi ${details.firstName},</p>
+            <p style="color:#64748b;font-size:13px;margin:0 0 20px;">As requested, here are your login details. Please save them for future logins:</p>
+            <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:20px;margin-bottom:20px;">
+              <table style="width:100%;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:6px 0;color:#64748b;font-size:13px;width:80px;">UHID</td>
+                  <td style="padding:6px 0;color:#0369a1;font-size:14px;font-weight:bold;font-family:monospace;">${details.uhid}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#64748b;font-size:13px;">Phone</td>
+                  <td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600;">${details.phone}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#64748b;font-size:13px;">Email</td>
+                  <td style="padding:6px 0;color:#0f172a;font-size:14px;font-weight:600;">${details.email}</td>
+                </tr>
+              </table>
+            </div>
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
+              <p style="color:#92400e;font-size:12px;margin:0;"><strong>How to log in next time:</strong> Go to <a href="https://onlinenephrologist.com/patient/login" style="color:#0369a1;">Patient Login</a> → Enter your phone number + UHID</p>
+            </div>
+            <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">If you didn't request this, please ignore this email.</p>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error('[email] Failed to send login details:', err.message);
+    return { success: false, error: 'Failed to send email.' };
+  }
+}

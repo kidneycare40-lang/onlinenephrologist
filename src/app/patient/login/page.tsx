@@ -192,6 +192,8 @@ function LoginForm() {
         return;
       }
       setLoading(false);
+      // Auto-send login details email so patient has UHID for next time (non-blocking)
+      fetch('/api/patient-auth/send-login-details', { method: 'POST' }).catch(() => {});
       router.push(redirectTo);
     } catch {
       setError('Network error. Please try again.');
