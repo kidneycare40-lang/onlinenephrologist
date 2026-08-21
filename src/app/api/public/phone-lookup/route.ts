@@ -4,8 +4,9 @@ import { applyRateLimit, apiError } from '@/lib/auth/middleware';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 
 // Public endpoint — no auth required.
-// Returns ONLY whether a patient exists with this phone number.
-// Never returns patient name, email, UHID, DOB, or any profile data.
+// Returns basic profile data for pre-filling booking form (firstName, lastName, age, gender, email).
+// Returns ONLY non-sensitive demographic data the patient would need to enter anyway.
+// Never returns UHID, full medical records, or prescription data.
 // Rate-limited to prevent phone enumeration attacks.
 export async function POST(request: NextRequest) {
   try {
