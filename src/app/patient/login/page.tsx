@@ -7,7 +7,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Phone, Lock, User, ArrowRight, Loader2, CheckCircle, Shield, Mail } from 'lucide-react';
 
-type Step = 'phone' | 'otp';
+type Step = 'phone' | 'otp' | 'forgot-uhid' | 'forgot-otp';
 
 export default function PatientLoginPage() {
   return (
@@ -30,6 +30,10 @@ function LoginForm() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [patientInfo, setPatientInfo] = useState<{ id: string; firstName: string; lastName: string; email: string; emailVerified: boolean } | null>(null);
+  const [forgotPhone, setForgotPhone] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMaskedEmail, setForgotMaskedEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
 
   // Check if already logged in
   useEffect(() => {
@@ -138,6 +142,86 @@ function LoginForm() {
     }
   };
 
+  const handleForgotUhid = async () => {
+    setError('');
+    if (!forgotPhone || forgotPhone.length < 10) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/patient-auth/forgot-uhid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: forgotPhone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to send verification code');
+        setLoading(false);
+        return;
+      }
+      setForgotEmail(data.email);
+      setForgotMaskedEmail(data.maskedEmail);
+      setStep('forgot-otp');
+      setCountdown(60);
+      setLoading(false);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyForgotOtp = async () => {
+    setError('');
+    if (!forgotOtp || forgotOtp.length !== 6) {
+      setError('Please enter the 6-digit code');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/patient-auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail, otp: forgotOtp }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Invalid code');
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+      router.push(redirectTo);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleResendForgotOtp = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/patient-auth/forgot-uhid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: forgotPhone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to resend code');
+        setLoading(false);
+        return;
+      }
+      setCountdown(60);
+      setLoading(false);
+    } catch {
+      setError('Network error. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -146,14 +230,16 @@ function LoginForm() {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-[#0A75BB]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                {step === 'phone' ? <Phone className="h-8 w-8 text-[#0A75BB]" /> : <Mail className="h-8 w-8 text-[#0A75BB]" />}
+                {step === 'phone' ? <Phone className="h-8 w-8 text-[#0A75BB]" /> : step === 'otp' || step === 'forgot-otp' ? <Mail className="h-8 w-8 text-[#0A75BB]" /> : <Lock className="h-8 w-8 text-[#0A75BB]" />}
               </div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {step === 'phone' ? 'Patient Portal' : 'Verify Email'}
+                {step === 'phone' ? 'Patient Portal' : step === 'forgot-uhid' ? 'Forgot UHID?' : 'Verify Email'}
               </h1>
               <p className="text-sm text-gray-500 mt-1">
                 {step === 'phone' && 'Sign in with your phone number and UHID to access your bookings.'}
+                {step === 'forgot-uhid' && 'Enter your phone number. We\'ll send a verification code to your registered email.'}
                 {step === 'otp' && `Enter the code sent to ${patientInfo?.email || ''}`}
+                {step === 'forgot-otp' && `Enter the code sent to ${forgotMaskedEmail}`}
               </p>
             </div>
 
@@ -207,7 +293,11 @@ function LoginForm() {
                   </p>
                 </div>
                 <p className="text-xs text-gray-400 text-center">
-                  Don't have a UHID? <Link href="/book-appointment" className="text-[#0A75BB] hover:underline">Book an appointment first</Link>
+                  Don&apos;t have a UHID? <Link href="/book-appointment" className="text-[#0A75BB] hover:underline">Book an appointment first</Link>
+                </p>
+                <p className="text-xs text-gray-400 text-center">
+                  <button onClick={() => { setStep('forgot-uhid'); setError(''); setForgotPhone(phone); }} className="text-[#0A75BB] hover:underline">Forgot your UHID?</button>
+                  {' '}— Sign in with phone + email OTP instead
                 </p>
               </div>
             )}
@@ -273,6 +363,87 @@ function LoginForm() {
                   className="w-full text-sm text-gray-500 hover:text-gray-700"
                 >
                   &larr; Skip for now, go to dashboard
+                </button>
+              </div>
+            )}
+
+            {step === 'forgot-uhid' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={forgotPhone}
+                      onChange={(e) => setForgotPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="98182 35613"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none"
+                      onKeyDown={(e) => e.key === 'Enter' && handleForgotUhid()}
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">We&apos;ll send a verification code to your registered email</p>
+                </div>
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <button
+                  onClick={handleForgotUhid}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-all disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  {loading ? 'Sending code...' : 'Send Verification Code'}
+                </button>
+                <button
+                  onClick={() => { setStep('phone'); setError(''); }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700"
+                >
+                  &larr; Back to sign in with UHID
+                </button>
+              </div>
+            )}
+
+            {step === 'forgot-otp' && (
+              <div className="space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <p className="text-sm text-emerald-700">
+                    Code sent to <span className="font-semibold">{forgotMaskedEmail}</span>
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Enter Code</label>
+                  <input
+                    type="text"
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="6-digit code"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-center text-2xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-[#0A75BB] focus:border-transparent outline-none"
+                    onKeyDown={(e) => e.key === 'Enter' && handleVerifyForgotOtp()}
+                    autoFocus
+                  />
+                </div>
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <button
+                  onClick={handleVerifyForgotOtp}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-all disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                  {loading ? 'Verifying...' : 'Verify & Sign In'}
+                </button>
+                <button
+                  onClick={() => { handleResendForgotOtp(); setForgotOtp(''); setError(''); }}
+                  disabled={countdown > 0}
+                  className="w-full text-sm text-[#0A75BB] hover:underline disabled:text-gray-400 disabled:no-underline"
+                >
+                  {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend Code'}
+                </button>
+                <button
+                  onClick={() => { setStep('forgot-uhid'); setForgotOtp(''); setError(''); }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700"
+                >
+                  &larr; Back
                 </button>
               </div>
             )}
