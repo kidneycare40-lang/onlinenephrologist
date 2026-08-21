@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Calendar, FileText, ClipboardList, Receipt, User, Clock,
   Video, MapPin, Globe, ChevronRight, AlertTriangle, Pill, MessageSquare,
+  Shield, Lock, Mail, CheckCircle,
 } from 'lucide-react';
 
 interface PortalData {
@@ -13,6 +14,7 @@ interface PortalData {
     first_name: string;
     last_name: string;
     email: string;
+    email_verified: boolean;
     phone: string | null;
     gender: string | null;
     country: string | null;
@@ -69,6 +71,8 @@ export default function PatientDashboardPage() {
     ? Math.ceil((new Date(data.activeFollowUp.valid_until).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
 
+  const isVerified = data.account?.email_verified || false;
+
   return (
     <div className="space-y-6">
       {/* Welcome */}
@@ -81,11 +85,44 @@ export default function PatientDashboardPage() {
             <h1 className="text-xl font-bold text-gray-900">Welcome, {displayName}</h1>
             <p className="text-sm text-gray-500">
               {data.account?.email}
+              {data.account?.phone ? ` · ${data.account.phone}` : ''}
               {data.account?.is_international && data.account?.country ? ` · ${data.account.country}` : ''}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Email Verification Status Banner */}
+      {!isVerified && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <Shield className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-900">Email Verification Required</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Verify your email to access prescriptions, reports, consultation notes, and medical documents.
+                Bookings and appointments are already accessible.
+              </p>
+            </div>
+            <Link
+              href="/patient/login"
+              className="px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition-colors whitespace-nowrap flex items-center gap-1"
+            >
+              <Mail className="h-3.5 w-3.5" /> Verify Email
+            </Link>
+          </div>
+        </div>
+      )}
+      {isVerified && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
+          <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+          <p className="text-sm text-emerald-700 font-medium">
+            Email verified — full access to all medical records enabled.
+          </p>
+        </div>
+      )}
 
       {/* Follow-Up Banner */}
       {data.activeFollowUp && followUpDaysLeft > 0 && (
@@ -120,17 +157,29 @@ export default function PatientDashboardPage() {
           <div className="text-2xl font-bold text-[#0A75BB]">{data.totalBookings}</div>
           <div className="text-xs text-gray-500">Appointments</div>
         </Link>
-        <Link href="/patient/prescriptions" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
-          <div className="text-2xl font-bold text-purple-600">{data.recentPrescriptions.length}</div>
-          <div className="text-xs text-gray-500">Prescriptions</div>
+        <Link href={isVerified ? "/patient/prescriptions" : "#"} onClick={!isVerified ? (e) => { e.preventDefault(); } : undefined}
+          className={`bg-white rounded-xl p-4 border border-gray-100 ${isVerified ? 'hover:shadow-sm transition-all' : 'opacity-60 cursor-not-allowed'}`}>
+          <div className="flex items-center gap-1">
+            <div className="text-2xl font-bold text-purple-600">{isVerified ? data.recentPrescriptions.length : '—'}</div>
+            {!isVerified && <Lock className="h-3.5 w-3.5 text-gray-400" />}
+          </div>
+          <div className="text-xs text-gray-500">Prescriptions {!isVerified && '(locked)'}</div>
         </Link>
-        <Link href="/patient/billing" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
-          <div className="text-2xl font-bold text-emerald-600">{data.recentInvoices.length}</div>
-          <div className="text-xs text-gray-500">Invoices</div>
+        <Link href={isVerified ? "/patient/billing" : "#"} onClick={!isVerified ? (e) => { e.preventDefault(); } : undefined}
+          className={`bg-white rounded-xl p-4 border border-gray-100 ${isVerified ? 'hover:shadow-sm transition-all' : 'opacity-60 cursor-not-allowed'}`}>
+          <div className="flex items-center gap-1">
+            <div className="text-2xl font-bold text-emerald-600">{isVerified ? data.recentInvoices.length : '—'}</div>
+            {!isVerified && <Lock className="h-3.5 w-3.5 text-gray-400" />}
+          </div>
+          <div className="text-xs text-gray-500">Invoices {!isVerified && '(locked)'}</div>
         </Link>
-        <Link href="/patient/reports" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
-          <div className="text-2xl font-bold text-amber-600">{data.recentReports.length}</div>
-          <div className="text-xs text-gray-500">Reports</div>
+        <Link href={isVerified ? "/patient/reports" : "#"} onClick={!isVerified ? (e) => { e.preventDefault(); } : undefined}
+          className={`bg-white rounded-xl p-4 border border-gray-100 ${isVerified ? 'hover:shadow-sm transition-all' : 'opacity-60 cursor-not-allowed'}`}>
+          <div className="flex items-center gap-1">
+            <div className="text-2xl font-bold text-amber-600">{isVerified ? data.recentReports.length : '—'}</div>
+            {!isVerified && <Lock className="h-3.5 w-3.5 text-gray-400" />}
+          </div>
+          <div className="text-xs text-gray-500">Reports {!isVerified && '(locked)'}</div>
         </Link>
       </div>
 
@@ -154,24 +203,48 @@ export default function PatientDashboardPage() {
             <p className="text-[10px] text-gray-500">Message the doctor</p>
           </div>
         </Link>
-        <Link href="/patient/reports" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-            <FileText className="h-5 w-5 text-amber-600" />
+        {isVerified ? (
+          <Link href="/patient/reports" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+              <FileText className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Upload Report</p>
+              <p className="text-[10px] text-gray-500">Share test results</p>
+            </div>
+          </Link>
+        ) : (
+          <div className="bg-white rounded-xl p-4 border border-gray-100 opacity-60 flex items-center gap-3 cursor-not-allowed">
+            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+              <Lock className="h-5 w-5 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Upload Report</p>
+              <p className="text-[10px] text-amber-600">Verify email to unlock</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Upload Report</p>
-            <p className="text-[10px] text-gray-500">Share test results</p>
+        )}
+        {isVerified ? (
+          <Link href="/patient/prescriptions" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+              <Pill className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">My Prescription</p>
+              <p className="text-[10px] text-gray-500">View medications</p>
+            </div>
+          </Link>
+        ) : (
+          <div className="bg-white rounded-xl p-4 border border-gray-100 opacity-60 flex items-center gap-3 cursor-not-allowed">
+            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+              <Lock className="h-5 w-5 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">My Prescription</p>
+              <p className="text-[10px] text-amber-600">Verify email to unlock</p>
+            </div>
           </div>
-        </Link>
-        <Link href="/patient/prescriptions" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-            <Pill className="h-5 w-5 text-purple-600" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">My Prescription</p>
-            <p className="text-[10px] text-gray-500">View medications</p>
-          </div>
-        </Link>
+        )}
       </div>
 
       {/* Upcoming Appointments */}
@@ -227,7 +300,7 @@ export default function PatientDashboardPage() {
       </section>
 
       {/* Recent Prescriptions */}
-      {data.recentPrescriptions.length > 0 && (
+      {data.recentPrescriptions.length > 0 && isVerified && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-900">Recent Prescriptions</h2>
@@ -255,7 +328,7 @@ export default function PatientDashboardPage() {
       )}
 
       {/* Recent Billing */}
-      {data.recentInvoices.length > 0 && (
+      {data.recentInvoices.length > 0 && isVerified && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-900">Recent Bills</h2>
