@@ -7,10 +7,13 @@ import {
   setPatientCookie,
   touchPatientLogin,
 } from '@/lib/patient-auth-server';
+import { getEmrPatientId } from '@/lib/patient-portal-server';
+import { sendLoginDetailsEmail } from '@/lib/email';
+import { getDb } from '@/lib/db/client';
 
 export async function POST(req: Request) {
   try {
-    const { email, otp } = await req.json();
+    const { email, otp, source } = await req.json();
     if (!email || !otp) {
       return NextResponse.json({ error: 'Email and verification code are required.' }, { status: 400 });
     }
@@ -28,8 +31,6 @@ export async function POST(req: Request) {
     let isNew = false;
 
     if (!patient) {
-      // Will be created after the client sends registration details
-      // For now, return that verification succeeded but account needs registration
       const token = await signPatientToken('pending', normalisedEmail, '');
       await setPatientCookie(token);
       return NextResponse.json({
@@ -44,6 +45,33 @@ export async function POST(req: Request) {
     await touchPatientLogin(patient.id);
     const token = await signPatientToken(patient.id, patient.email, `${patient.first_name} ${patient.last_name}`);
     await setPatientCookie(token);
+
+    // If this is a "forgot UHID" login, send login details email server-side (guaranteed delivery)
+    if (source === 'forgot-uhid' && patient.email) {
+      try {
+        const db = getDb();
+        const uhid = await getEmrPatientId(patient.id);
+        let uhidStr = '';
+        if (uhid) {
+          const { data: emrPatient } = await db
+            .from('patients')
+            .select('uhid')
+            .eq('id', uhid)
+            .maybeSingle();
+          uhidStr = emrPatient?.uhid || '';
+        }
+        if (uhidStr) {
+          await sendLoginDetailsEmail(patient.email, {
+            firstName: patient.first_name || 'Patient',
+            uhid: uhidStr,
+            phone: patient.phone || '',
+            email: patient.email,
+          });
+        }
+      } catch (err) {
+        console.error('[verify-otp] Failed to send login details email:', err);
+      }
+    }
 
     return NextResponse.json({
       success: true,

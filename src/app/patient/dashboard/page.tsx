@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Calendar, FileText, ClipboardList, Receipt, User, Clock,
-  Video, MapPin, Globe, ChevronRight, AlertTriangle, Pill, MessageSquare,
-  Shield, Lock, Mail, CheckCircle,
+  Video, MapPin, Globe, ChevronRight, Pill, MessageSquare,
+  Shield, Lock, Mail, CheckCircle, HelpCircle, Bell,
+  CreditCard,
 } from 'lucide-react';
 
 interface PortalData {
@@ -35,12 +36,21 @@ interface PortalData {
   recentReports: any[];
 }
 
-const typeConfig: Record<string, { label: string; icon: typeof Video; color: string }> = {
-  online: { label: 'Online', icon: Video, color: 'text-purple-600 bg-purple-50' },
-  offline: { label: 'Clinic', icon: MapPin, color: 'text-emerald-600 bg-emerald-50' },
-  hospital: { label: 'Hospital', icon: MapPin, color: 'text-blue-600 bg-blue-50' },
-  online_intl: { label: 'International', icon: Globe, color: 'text-amber-600 bg-amber-50' },
+const typeConfig: Record<string, { label: string; icon: typeof Video; color: string; bg: string }> = {
+  online: { label: 'Online Video Consultation', icon: Video, color: 'text-purple-600', bg: 'bg-purple-100' },
+  offline: { label: 'In-Clinic Visit', icon: MapPin, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+  hospital: { label: 'Hospital Visit', icon: MapPin, color: 'text-blue-600', bg: 'bg-blue-100' },
+  online_intl: { label: 'International Video', icon: Globe, color: 'text-amber-600', bg: 'bg-amber-100' },
 };
+
+function fmtDate(d: string) {
+  if (!d) return '';
+  return new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function fmtDay(d: string) {
+  if (!d) return '';
+  return new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-IN', { weekday: 'long' });
+}
 
 export default function PatientDashboardPage() {
   const [data, setData] = useState<PortalData | null>(null);
@@ -66,333 +76,264 @@ export default function PatientDashboardPage() {
   const displayName = data.account
     ? [data.account.first_name, data.account.last_name].filter(Boolean).join(' ') || data.account.email
     : 'Patient';
-
-  const now = new Date().toISOString();
+  const isVerified = data.account?.email_verified || false;
   const followUpDaysLeft = data.activeFollowUp
     ? Math.ceil((new Date(data.activeFollowUp.valid_until).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
+  const totalPaid = data.recentInvoices
+    .filter((i: any) => i.status === 'paid' || i.status === 'PAID')
+    .reduce((sum: number, i: any) => sum + (Number(i.total || i.amount) || 0), 0);
 
-  const isVerified = data.account?.email_verified || false;
+  const recentActivity: { type: string; title: string; subtitle: string; date: string; icon: typeof Calendar; color: string; bg: string }[] = [];
+  for (const b of (data.upcomingBookings || []).slice(0, 5)) {
+    if (b.payment_status === 'paid') {
+      recentActivity.push({ type: 'payment', title: 'Payment Successful', subtitle: `₹${b.consultation_fee || 0} for appointment on ${fmtDate(b.booking_date)}`, date: b.updated_at || b.created_at, icon: CreditCard, color: 'text-emerald-600', bg: 'bg-emerald-100' });
+    }
+    recentActivity.push({ type: 'booking', title: 'Appointment Booked', subtitle: `${b.booking_date}, ${b.booking_time}${b.doctor_name ? ` with ${b.doctor_name}` : ''}`, date: b.created_at, icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-100' });
+  }
+  for (const p of (data.recentPrescriptions || []).slice(0, 3)) {
+    recentActivity.push({ type: 'prescription', title: 'Prescription Added', subtitle: `${p.doctor_name || 'Dr. Rajesh Goel'} — ${p.prescription_date || ''}`, date: p.created_at || p.prescription_date, icon: Pill, color: 'text-purple-600', bg: 'bg-purple-100' });
+  }
+  recentActivity.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+  const nextBooking = data.upcomingBookings[0];
+  const nextTc = nextBooking ? (typeConfig[nextBooking.consultation_type] || typeConfig.online) : null;
+  const NextIcon = nextTc?.icon || Video;
 
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-[#0A75BB] text-white rounded-full flex items-center justify-center text-xl font-bold">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Welcome, {displayName}</h1>
-            <p className="text-sm text-gray-500">
-              {data.account?.email}
-              {data.account?.phone ? ` · ${data.account.phone}` : ''}
-              {data.account?.is_international && data.account?.country ? ` · ${data.account.country}` : ''}
-            </p>
-            {data.uhid && (
-              <p className="text-xs text-gray-400 mt-1 font-mono">
-                UHID: {data.uhid}
-              </p>
+      {/* Welcome Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-gray-500">Welcome back,</p>
+          <div className="flex items-center gap-3 mt-1">
+            <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
+            {isVerified && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
+                <CheckCircle className="h-3.5 w-3.5" /> Verified
+              </span>
             )}
+          </div>
+          {data.uhid && <p className="text-sm text-gray-500 mt-0.5">UHID: <span className="font-mono font-semibold text-gray-700">{data.uhid}</span></p>}
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="p-2.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Help">
+            <HelpCircle className="h-5 w-5" />
+          </button>
+          <button className="relative p-2.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" title="Notifications">
+            <Bell className="h-5 w-5" />
+          </button>
+          <div className="w-10 h-10 bg-[#0A75BB] text-white rounded-full flex items-center justify-center text-sm font-bold">
+            {displayName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
           </div>
         </div>
       </div>
 
-      {/* Email Verification Status Banner */}
-      {!isVerified && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+      {/* Verification Banner */}
+      {isVerified ? (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">Your account is verified</p>
+              <p className="text-xs text-emerald-700">You have full access to all your medical information.</p>
+            </div>
+          </div>
+          <Link href="/patient/profile" className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors">View Profile</Link>
+        </div>
+      ) : (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
               <Shield className="h-5 w-5 text-amber-600" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-amber-900">Email Verification Required</p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Verify your email to access prescriptions, reports, consultation notes, and medical documents.
-                Bookings and appointments are already accessible.
-              </p>
-            </div>
-            <Link
-              href="/patient/login"
-              className="px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition-colors whitespace-nowrap flex items-center gap-1"
-            >
-              <Mail className="h-3.5 w-3.5" /> Verify Email
-            </Link>
-          </div>
-        </div>
-      )}
-      {isVerified && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
-          <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
-          <p className="text-sm text-emerald-700 font-medium">
-            Email verified — full access to all medical records enabled.
-          </p>
-        </div>
-      )}
-
-      {/* Login Details — shows UHID for patients who logged in via Forgot UHID */}
-      {data.uhid && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Lock className="h-4 w-4 text-blue-600" />
-            <p className="text-sm font-semibold text-blue-900">Your Login Details</p>
-          </div>
-          <p className="text-xs text-blue-700 mb-3">Save these details for next time you log in.</p>
-          <div className="flex flex-wrap gap-4 text-sm">
             <div>
-              <span className="text-xs text-blue-600 font-medium">UHID</span>
-              <p className="font-mono font-bold text-blue-900">{data.uhid}</p>
+              <p className="text-sm font-semibold text-amber-900">Email Verification Required</p>
+              <p className="text-xs text-amber-700">Verify your email to access prescriptions, reports, and medical documents.</p>
             </div>
-            {data.account?.phone && (
-              <div>
-                <span className="text-xs text-blue-600 font-medium">Phone</span>
-                <p className="font-medium text-blue-900">{data.account.phone}</p>
-              </div>
-            )}
-            {data.account?.email && (
-              <div>
-                <span className="text-xs text-blue-600 font-medium">Email</span>
-                <p className="font-medium text-blue-900">{data.account.email}</p>
-              </div>
-            )}
           </div>
+          <Link href="/patient/login" className="px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition-colors whitespace-nowrap">Verify Email</Link>
         </div>
       )}
 
-      {/* Follow-Up Banner */}
-      {data.activeFollowUp && followUpDaysLeft > 0 && (
-        <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-5">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-              <Clock className="h-5 w-5 text-emerald-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-emerald-900">FREE FOLLOW-UP AVAILABLE</p>
-              <p className="text-xs text-emerald-700 mt-0.5">
-                Your online consultation payment includes one free follow-up.{' '}
-                <strong>{followUpDaysLeft} day{followUpDaysLeft !== 1 ? 's' : ''} remaining.</strong>
-              </p>
-              <p className="text-[10px] text-emerald-600 mt-1">
-                Valid until: {new Date(data.activeFollowUp.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </p>
-            </div>
-            <Link
-              href={`/book-appointment?type=followup&entitlement=${data.activeFollowUp.id}`}
-              className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
-            >
-              Book Follow-up
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link href="/patient/appointments" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all">
-          <div className="text-2xl font-bold text-[#0A75BB]">{data.totalBookings}</div>
-          <div className="text-xs text-gray-500">Appointments</div>
-        </Link>
-        <Link href={isVerified ? "/patient/prescriptions" : "#"} onClick={!isVerified ? (e) => { e.preventDefault(); } : undefined}
-          className={`bg-white rounded-xl p-4 border border-gray-100 ${isVerified ? 'hover:shadow-sm transition-all' : 'opacity-60 cursor-not-allowed'}`}>
-          <div className="flex items-center gap-1">
-            <div className="text-2xl font-bold text-purple-600">{isVerified ? data.recentPrescriptions.length : '—'}</div>
-            {!isVerified && <Lock className="h-3.5 w-3.5 text-gray-400" />}
-          </div>
-          <div className="text-xs text-gray-500">Prescriptions {!isVerified && '(locked)'}</div>
-        </Link>
-        <Link href={isVerified ? "/patient/billing" : "#"} onClick={!isVerified ? (e) => { e.preventDefault(); } : undefined}
-          className={`bg-white rounded-xl p-4 border border-gray-100 ${isVerified ? 'hover:shadow-sm transition-all' : 'opacity-60 cursor-not-allowed'}`}>
-          <div className="flex items-center gap-1">
-            <div className="text-2xl font-bold text-emerald-600">{isVerified ? data.recentInvoices.length : '—'}</div>
-            {!isVerified && <Lock className="h-3.5 w-3.5 text-gray-400" />}
-          </div>
-          <div className="text-xs text-gray-500">Invoices {!isVerified && '(locked)'}</div>
-        </Link>
-        <Link href={isVerified ? "/patient/reports" : "#"} onClick={!isVerified ? (e) => { e.preventDefault(); } : undefined}
-          className={`bg-white rounded-xl p-4 border border-gray-100 ${isVerified ? 'hover:shadow-sm transition-all' : 'opacity-60 cursor-not-allowed'}`}>
-          <div className="flex items-center gap-1">
-            <div className="text-2xl font-bold text-amber-600">{isVerified ? data.recentReports.length : '—'}</div>
-            {!isVerified && <Lock className="h-3.5 w-3.5 text-gray-400" />}
-          </div>
-          <div className="text-xs text-gray-500">Reports {!isVerified && '(locked)'}</div>
-        </Link>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Link href="/book-appointment" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#0A75BB]/10 flex items-center justify-center shrink-0">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/patient/appointments" className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all group">
+          <div className="w-10 h-10 rounded-lg bg-[#0A75BB]/10 flex items-center justify-center mb-3">
             <Calendar className="h-5 w-5 text-[#0A75BB]" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Book Appointment</p>
-            <p className="text-[10px] text-gray-500">Schedule a consultation</p>
-          </div>
+          <p className="text-xs text-gray-500 font-medium">Upcoming Appointments</p>
+          <p className="text-3xl font-bold text-gray-900 mt-1">{data.upcomingBookings.length}</p>
+          <p className="text-xs text-[#0A75BB] font-medium mt-2 group-hover:underline">View all &rarr;</p>
         </Link>
-        <Link href="/patient/messages" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-            <MessageSquare className="h-5 w-5 text-emerald-600" />
+        <Link href={isVerified ? "/patient/prescriptions" : "#"} className={`bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all group ${!isVerified ? 'opacity-60' : ''}`}>
+          <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mb-3">
+            <FileText className="h-5 w-5 text-purple-600" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900">Ask a Question</p>
-            <p className="text-[10px] text-gray-500">Message the doctor</p>
-          </div>
+          <p className="text-xs text-gray-500 font-medium">Prescriptions</p>
+          <p className="text-3xl font-bold text-gray-900 mt-1">{isVerified ? data.recentPrescriptions.length : '\u2014'}</p>
+          <p className="text-xs text-[#0A75BB] font-medium mt-2 group-hover:underline">View all &rarr;</p>
         </Link>
-        {isVerified ? (
-          <Link href="/patient/reports" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-              <FileText className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Upload Report</p>
-              <p className="text-[10px] text-gray-500">Share test results</p>
-            </div>
-          </Link>
-        ) : (
-          <div className="bg-white rounded-xl p-4 border border-gray-100 opacity-60 flex items-center gap-3 cursor-not-allowed">
-            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Upload Report</p>
-              <p className="text-[10px] text-amber-600">Verify email to unlock</p>
-            </div>
+        <Link href={isVerified ? "/patient/reports" : "#"} className={`bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all group ${!isVerified ? 'opacity-60' : ''}`}>
+          <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3">
+            <ClipboardList className="h-5 w-5 text-amber-600" />
           </div>
-        )}
-        {isVerified ? (
-          <Link href="/patient/prescriptions" className="bg-white rounded-xl p-4 border border-gray-100 hover:shadow-sm transition-all flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-              <Pill className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">My Prescription</p>
-              <p className="text-[10px] text-gray-500">View medications</p>
-            </div>
-          </Link>
-        ) : (
-          <div className="bg-white rounded-xl p-4 border border-gray-100 opacity-60 flex items-center gap-3 cursor-not-allowed">
-            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
-              <Lock className="h-5 w-5 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">My Prescription</p>
-              <p className="text-[10px] text-amber-600">Verify email to unlock</p>
-            </div>
+          <p className="text-xs text-gray-500 font-medium">Reports</p>
+          <p className="text-3xl font-bold text-gray-900 mt-1">{isVerified ? data.recentReports.length : '\u2014'}</p>
+          <p className="text-xs text-[#0A75BB] font-medium mt-2 group-hover:underline">View all &rarr;</p>
+        </Link>
+        <Link href={isVerified ? "/patient/billing" : "#"} className={`bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-all group ${!isVerified ? 'opacity-60' : ''}`}>
+          <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
+            <Receipt className="h-5 w-5 text-emerald-600" />
           </div>
-        )}
+          <p className="text-xs text-gray-500 font-medium">Total Payments</p>
+          <p className="text-3xl font-bold text-gray-900 mt-1">{isVerified && totalPaid > 0 ? `\u20B9${totalPaid.toLocaleString('en-IN')}` : '\u2014'}</p>
+          <p className="text-xs text-[#0A75BB] font-medium mt-2 group-hover:underline">View all &rarr;</p>
+        </Link>
       </div>
 
-      {/* Upcoming Appointments */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-gray-900">Upcoming Appointments</h2>
-          <Link href="/patient/appointments" className="text-xs text-[#0A75BB] font-medium hover:underline">View All</Link>
-        </div>
-        {data.upcomingBookings.length === 0 ? (
-          <div className="bg-white rounded-xl p-6 text-center border border-gray-100">
-            <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 mb-3">No upcoming appointments</p>
-            <Link href="/book-appointment" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0A75BB] text-white text-sm font-semibold rounded-xl hover:bg-[#085a94] transition-all">
-              Book Appointment <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {data.upcomingBookings.slice(0, 3).map((b: any) => {
-              const tc = typeConfig[b.consultation_type] || typeConfig.offline;
-              const Icon = tc.icon;
-              return (
-                <Link key={b.booking_id} href={`/patient/appointments?id=${b.booking_id}`} className="block bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tc.color}`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">{tc.label}</span>
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                          {b.status.charAt(0).toUpperCase() + b.status.slice(1)}
-                        </span>
-                        {b.relationship && b.relationship !== 'self' && (
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                            {b.first_name} ({b.relationship})
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                        <span>{b.booking_date ? new Date(b.booking_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</span>
-                        <span>{b.booking_time}</span>
-                        <span>{b.booking_id}</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-gray-300" />
+      {/* Two-Column: Upcoming Appointment + Follow-up / Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Upcoming Appointment */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-gray-900">Upcoming Appointment</h2>
+              <Link href="/patient/appointments" className="text-xs text-[#0A75BB] font-medium hover:underline">View all</Link>
+            </div>
+            {nextBooking ? (
+              <div className="bg-white rounded-xl border border-gray-100 p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+                    <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
                   </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900">Dr. Rajesh Goel</h3>
+                    <p className="text-xs text-gray-500">Senior Nephrologist &amp; Kidney Transplant Physician</p>
+                    <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600">
+                      <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4 text-gray-400" /> {fmtDate(nextBooking.booking_date)}</span>
+                      <span className="flex items-center gap-1.5"><Clock className="h-4 w-4 text-gray-400" /> {nextBooking.booking_time}</span>
+                      {nextTc && <span className="flex items-center gap-1.5"><NextIcon className="h-4 w-4 text-gray-400" /> {nextTc.label}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                        {nextBooking.status?.charAt(0).toUpperCase() + nextBooking.status?.slice(1) || 'Confirmed'}
+                      </span>
+                      <span className="text-xs text-gray-400">Booking ID: {nextBooking.booking_id}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-100 p-6 text-center">
+                <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 mb-3">No upcoming appointments</p>
+                <Link href="/book-appointment" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0A75BB] text-white text-sm font-semibold rounded-xl hover:bg-[#085a94] transition-all">
+                  Book Appointment <ChevronRight className="h-4 w-4" />
                 </Link>
-              );
-            })}
+              </div>
+            )}
           </div>
-        )}
-      </section>
 
-      {/* Recent Prescriptions */}
-      {data.recentPrescriptions.length > 0 && isVerified && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900">Recent Prescriptions</h2>
-            <Link href="/patient/prescriptions" className="text-xs text-[#0A75BB] font-medium hover:underline">View All</Link>
-          </div>
-          <div className="space-y-2">
-            {data.recentPrescriptions.slice(0, 3).map((p: any) => (
-              <Link key={p.id} href="/patient/prescriptions" className="block bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                    <Pill className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900">{p.prescription_number}</p>
-                    <p className="text-xs text-gray-500">{p.prescription_date} · {p.doctor_name}</p>
-                  </div>
-                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                    {p.status}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+          {/* Recent Activity */}
+          {recentActivity.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 mb-3">Recent Activity</h2>
+              <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+                {recentActivity.slice(0, 5).map((a, i) => {
+                  const AIcon = a.icon;
+                  return (
+                    <div key={i} className="px-5 py-3.5 flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full ${a.bg} flex items-center justify-center shrink-0`}>
+                        <AIcon className={`h-4 w-4 ${a.color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{a.title}</p>
+                        <p className="text-xs text-gray-500 truncate">{a.subtitle}</p>
+                      </div>
+                      <span className="text-xs text-gray-400 shrink-0">{fmtDate(a.date)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
 
-      {/* Recent Billing */}
-      {data.recentInvoices.length > 0 && isVerified && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900">Recent Bills</h2>
-            <Link href="/patient/billing" className="text-xs text-[#0A75BB] font-medium hover:underline">View All</Link>
-          </div>
-          <div className="space-y-2">
-            {data.recentInvoices.slice(0, 3).map((inv: any) => (
-              <Link key={inv.id} href="/patient/billing" className="block bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-all">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
-                    <Receipt className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900">{inv.invoice_number}</p>
-                    <p className="text-xs text-gray-500">{inv.invoice_date} · ₹{inv.grand_total}</p>
-                  </div>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                    inv.status === 'PAID' ? 'bg-green-100 text-green-700' :
-                    inv.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {inv.status}
-                  </span>
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* Follow-up Available */}
+          {data.activeFollowUp && followUpDaysLeft > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-gray-900">Follow-up Available</h3>
+                  <Clock className="h-5 w-5 text-amber-500" />
                 </div>
+                <p className="text-sm text-gray-600 mt-2">Your follow-up is available</p>
+                <p className="text-xs text-gray-500 mt-1">Valid until: {fmtDate(data.activeFollowUp.valid_until)}</p>
+              </div>
+              <div className="px-5 pb-5">
+                <Link href={`/book-appointment?type=followup&entitlement=${data.activeFollowUp.id}`} className="block w-full text-center px-4 py-3 bg-[#0A75BB] text-white text-sm font-semibold rounded-lg hover:bg-[#085a94] transition-colors">
+                  Book Follow-up Appointment
+                </Link>
+                <p className="text-xs text-gray-400 text-center mt-2">Continue your care with Dr. Rajesh Goel</p>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <h3 className="font-bold text-gray-900 mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              <Link href="/book-appointment" className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+                <div className="w-8 h-8 rounded-lg bg-[#0A75BB]/10 flex items-center justify-center"><Calendar className="h-4 w-4 text-[#0A75BB]" /></div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Book New Appointment</span>
               </Link>
-            ))}
+              <Link href={isVerified ? "/patient/reports" : "#"} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group ${!isVerified ? 'opacity-50' : ''}`}>
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center"><FileText className="h-4 w-4 text-amber-600" /></div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Upload Medical Report</span>
+              </Link>
+              <Link href={isVerified ? "/patient/prescriptions" : "#"} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group ${!isVerified ? 'opacity-50' : ''}`}>
+                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center"><Pill className="h-4 w-4 text-purple-600" /></div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">View Prescriptions</span>
+              </Link>
+              <Link href="/patient/messages" className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center"><MessageSquare className="h-4 w-4 text-emerald-600" /></div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Contact Doctor</span>
+              </Link>
+            </div>
+            <Link href="/patient/appointments" className="block text-center text-xs text-[#0A75BB] font-medium mt-3 hover:underline">View All &rarr;</Link>
           </div>
-        </section>
-      )}
+        </div>
+      </div>
+
+      {/* Sensitive Information Protection */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Shield className="h-5 w-5 text-[#0A75BB]" />
+          <h3 className="font-bold text-gray-900 text-sm">Sensitive Information Protection</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">Your medical records, prescriptions, reports and billing details are protected with verified access.</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { icon: Lock, label: 'Prescriptions' },
+            { icon: FileText, label: 'Medical Reports' },
+            { icon: ClipboardList, label: 'Consultation Notes' },
+            { icon: Receipt, label: 'Detailed Billing' },
+          ].map((item) => (
+            <div key={item.label} className="flex flex-col items-center gap-2 p-3 bg-gray-50 rounded-lg">
+              <div className="w-9 h-9 rounded-lg bg-[#0A75BB]/10 flex items-center justify-center">
+                <item.icon className="h-4 w-4 text-[#0A75BB]" />
+              </div>
+              <span className="text-xs font-medium text-gray-600 text-center">{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
