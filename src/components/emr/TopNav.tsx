@@ -299,7 +299,7 @@ export default function TopNav() {
     setPatientUhid('');
   }
 
-  async function handleAddPatient() {
+  async function handleAddPatient(action: 'rx' | 'bill' | 'appt' = 'rx') {
     if (!patientName.trim() || !patientPhone.trim()) return;
     setAddingPatient(true);
 
@@ -352,7 +352,6 @@ export default function TopNav() {
     existing.push(newPatient);
     await setItem('emr-added-patients', existing);
 
-    // Also save to API for cross-browser persistence
     patientsApi.create({
       first_name: firstName,
       last_name: lastName,
@@ -366,11 +365,17 @@ export default function TopNav() {
       insurance_provider: patientInsurance || undefined,
     }).catch(() => {});
 
+    const redirect = action === 'bill'
+      ? `/emr/billing`
+      : action === 'appt'
+        ? `/emr/appointments`
+        : `/emr/consultation/${newPatient.id}`;
+
     setTimeout(() => {
       setAddingPatient(false);
       setShowAddPatient(false);
       resetPatientForm();
-      router.push(`/emr/consultation/${newPatient.id}`);
+      router.push(redirect);
     }, 800);
   }
 
@@ -834,16 +839,16 @@ export default function TopNav() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-100 space-y-3">
-              <button onClick={handleAddPatient} disabled={!patientName.trim() || !patientPhone.trim() || addingPatient}
+              <button onClick={() => handleAddPatient('rx')} disabled={!patientName.trim() || !patientPhone.trim() || addingPatient}
                 className={cn('w-full h-11 rounded-xl text-sm font-semibold text-white transition-all bg-gradient-to-r from-[#0A75BB] to-[#085D94] hover:from-[#085D94] hover:to-[#074D7A] disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-[#0A75BB]/25')}>
                 {addingPatient ? 'Adding...' : 'Add & Create Rx'}
               </button>
               <div className="flex gap-3">
-                <button onClick={handleAddPatient} disabled={!patientName.trim() || !patientPhone.trim()}
+                <button onClick={() => handleAddPatient('bill')} disabled={!patientName.trim() || !patientPhone.trim()}
                   className="flex-1 h-11 rounded-xl text-xs font-semibold text-[#0A75BB] border-2 border-[#0A75BB] hover:bg-[#0A75BB]/5 transition-colors disabled:opacity-50">
                   Add & Create Bill
                 </button>
-                <button onClick={handleAddPatient} disabled={!patientName.trim() || !patientPhone.trim()}
+                <button onClick={() => handleAddPatient('appt')} disabled={!patientName.trim() || !patientPhone.trim()}
                   className="flex-1 h-11 rounded-xl text-xs font-semibold text-[#0A75BB] border-2 border-[#0A75BB] hover:bg-[#0A75BB]/5 transition-colors disabled:opacity-50">
                   Add & Create Appointment
                 </button>
