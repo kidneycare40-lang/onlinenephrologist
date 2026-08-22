@@ -215,7 +215,8 @@ export async function sendDoctorMessage(
   conversationId: string,
   userId: string,
   senderType: 'doctor' | 'admin',
-  message: string
+  message: string,
+  attachments?: { file_name: string; storage_path: string; file_type?: string; file_size?: number }[]
 ): Promise<Message | null> {
   const db = getDb();
 
@@ -231,6 +232,18 @@ export async function sendDoctorMessage(
     .single();
 
   if (error || !msg) return null;
+
+  if (attachments && attachments.length > 0) {
+    await db.from('message_attachments').insert(
+      attachments.map(a => ({
+        message_id: msg.id,
+        file_name: a.file_name,
+        storage_path: a.storage_path,
+        file_type: a.file_type || null,
+        file_size: a.file_size || null,
+      }))
+    );
+  }
 
   // Update conversation
   await db

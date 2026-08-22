@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, Search, ChevronLeft, User } from 'lucide-react';
+import { MessageSquare, Send, Search, ChevronLeft, User, Paperclip, X, FileText, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 
 interface Conversation {
   id: string;
@@ -24,6 +24,25 @@ interface Message {
   attachments: { file_name: string; storage_path: string; file_type: string | null }[];
 }
 
+interface PendingFile {
+  file: File;
+  preview?: string;
+}
+
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+const MAX_SIZE = 10 * 1024 * 1024;
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileIcon(type: string | null) {
+  if (type?.startsWith('image/')) return ImageIcon;
+  return FileText;
+}
+
 export default function EMRMessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
@@ -32,7 +51,10 @@ export default function EMRMessagesPage() {
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [uploadError, setUploadError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/emr/messages')
@@ -73,23 +95,98 @@ export default function EMRMessagesPage() {
     return () => clearInterval(interval);
   }, [selected?.id]);
 
+  const addFiles = (fileList: FileList | null) => {
+    if (!fileList) return;
+    setUploadError('');
+    const newPending: PendingFile[] = [];
+    for (const f of Array.from(fileList)) {
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        setUploadError(`"${f.name}" is not supported. Use PDF, JPG, PNG, or WebP.`);
+        continue;
+      }
+      if (f.size > MAX_SIZE) {
+        setUploadError(`"${f.name}" exceeds 10 MB limit.`);
+        continue;
+      }
+      if (pendingFiles.length + newPending.length >= 5) {
+        setUploadError('Maximum 5 files per message.');
+        break;
+      }
+      const pf: PendingFile = { file: f };
+      if (f.type.startsWith('image/')) {
+        pf.preview = URL.createObjectURL(f);
+      }
+      newPending.push(pf);
+    }
+    setPendingFiles(prev => [...prev, ...newPending]);
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => {
+      const removed = prev[index];
+      if (removed.preview) URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || !selected || sending) return;
+    const hasText = input.trim().length > 0;
+    const hasFiles = pendingFiles.length > 0;
+    if ((!hasText && !hasFiles) || !selected || sending) return;
     setSending(true);
+    setUploadError('');
+
     try {
+      let attachments: { file_name: string; storage_path: string; file_type: string; file_size: number }[] = [];
+
+      if (hasFiles) {
+        const fileData = await Promise.all(
+          pendingFiles.map(pf =>
+            new Promise<{ data: string; name: string; type: string }>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve({ data: reader.result as string, name: pf.file.name, type: pf.file.type });
+              reader.readAsDataURL(pf.file);
+            })
+          )
+        );
+        const uploadRes = await fetch('/api/emr/messages/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: fileData }),
+        });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          setUploadError(uploadData.error || 'Upload failed');
+          setSending(false);
+          return;
+        }
+        attachments = uploadData.files || [];
+      }
+
       const res = await fetch('/api/emr/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: selected.id, message: input.trim() }),
+        body: JSON.stringify({
+          conversationId: selected.id,
+          message: input.trim() || (hasFiles ? `Sent ${pendingFiles.length} file(s)` : ''),
+          attachments,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.message) {
-          setMessages(prev => [...prev, data.message]);
+          setMessages(prev => [...prev, { ...data.message, attachments: attachments || [] }]);
         }
         setInput('');
+        pendingFiles.forEach(pf => { if (pf.preview) URL.revokeObjectURL(pf.preview); });
+        setPendingFiles([]);
+        const listRes = await fetch('/api/emr/messages');
+        const listData = await listRes.json();
+        setConversations(listData.conversations || []);
       }
-    } catch {}
+    } catch {
+      setUploadError('Failed to send. Please try again.');
+    }
     setSending(false);
   };
 
@@ -219,14 +316,22 @@ export default function EMRMessagesPage() {
                       )}
                       <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                       {msg.attachments?.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {msg.attachments.map((att, i) => (
-                            <a key={i} href={`/api/attachment?path=${encodeURIComponent(att.storage_path)}`}
-                              target="_blank" rel="noopener noreferrer"
-                              className={`flex items-center gap-1.5 text-xs ${isPatient ? 'text-gray-500 hover:text-[#0A75BB]' : 'text-blue-100 hover:text-white'}`}>
-                              📎 {att.file_name}
-                            </a>
-                          ))}
+                        <div className="mt-2 space-y-1.5">
+                          {msg.attachments.map((att, i) => {
+                            const Icon = getFileIcon(att.file_type);
+                            return (
+                              <a key={i} href={`/api/attachment?path=${encodeURIComponent(att.storage_path)}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
+                                  isPatient
+                                    ? 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                                    : 'bg-white/20 hover:bg-white/30 text-white'
+                                }`}>
+                                <Icon className="h-4 w-4 shrink-0" />
+                                <span className="truncate flex-1">{att.file_name}</span>
+                              </a>
+                            );
+                          })}
                         </div>
                       )}
                       <p className={`text-[10px] mt-1.5 ${isPatient ? 'text-gray-400' : 'text-blue-200'}`}>
@@ -240,7 +345,42 @@ export default function EMRMessagesPage() {
 
             {/* Input */}
             <div className="bg-white border-t border-gray-200 p-3">
+              {uploadError && (
+                <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  {uploadError}
+                </div>
+              )}
+              {pendingFiles.length > 0 && (
+                <div className="mb-2 flex gap-2 flex-wrap">
+                  {pendingFiles.map((pf, i) => (
+                    <div key={i} className="relative flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
+                      {pf.preview ? (
+                        <img src={pf.preview} alt="" className="w-8 h-8 rounded object-cover" />
+                      ) : (
+                        <FileText className="h-4 w-4 text-gray-400" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-700 truncate max-w-[120px]">{pf.file.name}</p>
+                        <p className="text-[10px] text-gray-400">{formatFileSize(pf.file.size)}</p>
+                      </div>
+                      <button onClick={() => removePendingFile(i)}
+                        className="p-0.5 text-gray-400 hover:text-red-500 transition-colors">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex items-end gap-2">
+                <input ref={fileInputRef} type="file" className="hidden" multiple
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.pdf"
+                  onChange={e => { addFiles(e.target.files); e.target.value = ''; }} />
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="p-2.5 text-gray-400 hover:text-[#0A75BB] hover:bg-gray-100 rounded-xl transition-colors shrink-0"
+                  title="Attach file">
+                  <Paperclip className="h-4 w-4" />
+                </button>
                 <textarea
                   value={input}
                   onChange={e => setInput(e.target.value)}
@@ -257,7 +397,7 @@ export default function EMRMessagesPage() {
                 />
                 <button
                   onClick={handleSend}
-                  disabled={!input.trim() || sending}
+                  disabled={(!input.trim() && pendingFiles.length === 0) || sending}
                   className="p-2.5 bg-[#0A75BB] text-white rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 shrink-0"
                 >
                   <Send className="h-4 w-4" />

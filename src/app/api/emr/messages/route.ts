@@ -28,14 +28,14 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { conversationId, message } = body;
+  const { conversationId, message, attachments } = body;
 
   if (!conversationId || !message?.trim()) {
     return NextResponse.json({ error: 'conversationId and message are required' }, { status: 400 });
   }
 
   const senderType = user.role === 'doctor' ? 'doctor' : 'admin';
-  const msg = await sendDoctorMessage(conversationId, user.userId, senderType, message.trim());
+  const msg = await sendDoctorMessage(conversationId, user.userId, senderType, message.trim(), attachments);
   if (!msg) {
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 });
   }
