@@ -337,12 +337,22 @@ export class PatientService {
 
   private async generateUHID(prefix: string): Promise<string> {
     const year = new Date().getFullYear();
-    const { count } = await this.db
+    const pattern = `${prefix}-${year}-%`;
+    const { data } = await this.db
       .from('patients')
-      .select('id', { count: 'exact', head: true });
+      .select('uhid')
+      .like('uhid', pattern)
+      .order('uhid', { ascending: false })
+      .limit(1);
 
-    const seq = (count || 0) + 1;
-    return `${prefix}-${year}-${String(seq).padStart(5, '0')}`;
+    let seq = 1;
+    if (data && data.length > 0) {
+      const lastUhid = data[0].uhid;
+      const parts = lastUhid.split('-');
+      const lastSeq = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(lastSeq)) seq = lastSeq + 1;
+    }
+    return `${prefix}-${year}-${String(seq).padStart(3, '0')}`;
   }
 
   private get db() {

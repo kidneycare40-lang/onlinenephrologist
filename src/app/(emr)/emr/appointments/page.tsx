@@ -98,9 +98,15 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
   const savePatientAndRedirect = async (action: 'rx' | 'bill' | 'appt') => {
     if (!name.trim() || !phone.trim()) return;
     const now = new Date();
-    const uhid = clinicId === 'psri-delhi'
-      ? `PSRI-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`
-      : `KCC-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`;
+
+    let uhid: string;
+    try {
+      const res = await fetch(`/api/emr/next-uhid?clinicId=${clinicId || 'kcc-faridabad'}`);
+      const data = await res.json();
+      uhid = data?.uhid || `KCC-${now.getFullYear()}-001`;
+    } catch {
+      uhid = `KCC-${now.getFullYear()}-001`;
+    }
     const nameParts = name.trim().split(/\s+/);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';

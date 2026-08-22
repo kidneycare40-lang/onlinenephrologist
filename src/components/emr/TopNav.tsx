@@ -82,15 +82,15 @@ export default function TopNav() {
   // Duplicate detection
   const [duplicatePatient, setDuplicatePatient] = useState<any>(null);
 
-  // Auto UHID preview
-  const autoUhid = useMemo(() => {
-    const now = new Date();
-    if (clinicId === 'online' || clinicId === 'online-intl') {
-      return `ONLINE-${now.getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}`;
-    }
-    const prefix = clinicId === 'psri-delhi' ? 'PSRI' : 'KCC';
-    return `${prefix}-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`;
-  }, [clinicId, showAddPatient]);
+  // Auto UHID preview — fetched from server for sequential numbering
+  const [autoUhid, setAutoUhid] = useState('');
+  useEffect(() => {
+    if (!showAddPatient) return;
+    fetch(`/api/emr/next-uhid?clinicId=${clinicId || 'kcc-faridabad'}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.uhid) setAutoUhid(d.uhid); })
+      .catch(() => {});
+  }, [showAddPatient, clinicId]);
 
   // Detect duplicates as user types phone or name
   useEffect(() => {
@@ -304,11 +304,7 @@ export default function TopNav() {
     setAddingPatient(true);
 
     const now = new Date();
-    const uhid = clinicId === 'psri-delhi'
-      ? (patientUhid.trim() || `PSRI-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`)
-      : (clinicId === 'online' || clinicId === 'online-intl')
-        ? (patientUhid.trim() || `ONLINE-${now.getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}`)
-        : (patientUhid.trim() || `KCC-${now.getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000).slice(0, 3)}`);
+    const uhid = patientUhid.trim() || autoUhid || `KCC-${now.getFullYear()}-001`;
     const dob = patientDob || (patientAge ? `${now.getFullYear() - parseInt(patientAge || '0')}-01-01` : '');
 
     const nameParts = patientName.trim().split(/\s+/);
