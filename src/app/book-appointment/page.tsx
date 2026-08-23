@@ -2091,249 +2091,248 @@ function BookingForm() {
 
           {/* Step 4: Date & Time — DocIndia Style */}
           {step === 4 && (
-            <div className="space-y-6">
-              {/* Doctor Info Card */}
-              {selectedClinic && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shrink-0">
-                      <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-gray-900">Dr. Rajesh Goel</h3>
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-medium">
-                          <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500">{DOCTOR_INFO.qualifications.join(' · ')}</p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium uppercase">Nephrology</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">No ratings yet</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] text-slate-400 uppercase">Consultation</p>
-                      <p className="font-bold text-gray-900 flex items-center justify-end gap-0.5">
-                        {isOutsideIndia ? `$${consultFee}` : `₹${selectedClinic.fee}`}
-                      </p>
-                      <p className="text-[10px] text-slate-400">at this clinic</p>
-                      <div className="flex gap-1 mt-1.5 justify-end">
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">In-clinic</span>
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">Video</span>
-                      </div>
-                      <Link href="/dr-rajesh-goel" className="text-[10px] text-[#0A75BB] font-medium mt-1 inline-block hover:underline">View profile</Link>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Consulting Hours */}
-              {selectedClinic && (
-                <div className="text-sm text-slate-600">
-                  <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-1">Consulting hours at {selectedClinic.shortName}</p>
-                  <p className="font-medium text-gray-900">{selectedClinic.timing}</p>
-                </div>
-              )}
-
-              {/* Date Picker + Time Slots — All in one card */}
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-                {/* Horizontal Date Picker */}
-                <div className="px-5 pb-4 border-t border-slate-100 pt-4">
-                  <div className="flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setDayOffset(Math.max(0, dayOffset - 1))}
-                      disabled={dayOffset === 0}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="h-4 w-4 text-slate-600" />
-                    </button>
-                    <div className="flex gap-2 flex-1 justify-center overflow-hidden">
-                      {Array.from({ length: 7 }, (_, i) => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + dayOffset + i);
-                        const dateStr = d.toISOString().split('T')[0];
-                        const isSelected = formData.date === dateStr;
-                        const dayOfWeek = d.getDay();
-                        const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-                        const dayClinic = clinics.find(c => c.id === formData.clinicId);
-                        const schedule = bookingSettings.schedules.find(s => s.clinicId === formData.clinicId);
-                        const isWorking = formData.clinicId === 'online'
-                          || (schedule?.workingDays || []).includes(dayOfWeek);
-                        const slotCount = isWorking && dayClinic ? dayClinic.slots.length : 0;
-                        const isToday = i === 0 && dayOffset === 0;
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({ ...prev, date: dateStr, time: '' }));
-                              setBookedSlots(new Set());
-                            }}
-                            className={cn(
-                              'flex flex-col items-center px-2 py-2.5 rounded-xl text-xs transition-all min-w-[56px] border',
-                              isSelected
-                                ? 'bg-[#0A75BB] text-white border-[#0A75BB] shadow-md'
-                                : 'border-transparent hover:bg-slate-50 text-slate-600'
-                            )}
-                          >
-                            <span className={cn('text-[9px] font-bold tracking-wide', isSelected ? 'text-blue-100' : 'text-slate-400')}>
-                              {isToday ? 'TODAY' : DAY_NAMES[d.getDay()]}
-                            </span>
-                            <span className="text-lg font-bold leading-tight">{d.getDate()}</span>
-                            <span className={cn(
-                              'text-[9px] font-medium',
-                              isSelected ? 'text-blue-100' : isWorking ? 'text-emerald-500' : 'text-red-400'
-                            )}>
-                              {isWorking ? `${slotCount} slots` : 'No slots'}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setDayOffset(dayOffset + 1)}
-                      disabled={dayOffset >= 26}
-                      className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="h-4 w-4 text-slate-600" />
-                    </button>
-                  </div>
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Left: Date & Time Picker */}
+              <div className="flex-1 min-w-0 space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">Preferred Date & Time</h2>
+                  <p className="text-sm text-slate-500">Select your preferred appointment slot</p>
                 </div>
 
-                {/* Time Slots Grid */}
-                <div className="px-5 pb-5 border-t border-slate-100 pt-4 max-h-[380px] overflow-y-auto">
-                  {isHoliday ? (
-                    <div className="text-center py-8 text-slate-400">
-                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50 text-red-400" />
-                      <p className="text-sm font-medium text-red-600">Doctor is on Leave</p>
-                      <p className="text-xs mt-1">Appointments not available on this date</p>
-                      <div className="mt-3 flex gap-2 justify-center">
-                        <a href="tel:9818235688" className="px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors">
-                          Emergency: 9818235688
-                        </a>
-                      </div>
-                    </div>
-                  ) : slotOptions.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
-                      <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No slots available</p>
-                      <p className="text-xs mt-1">Select a different date</p>
+                {/* International timezone notice */}
+                {isOutsideIndia && (
+                  intlTz ? (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-sm text-purple-700 flex items-center gap-2">
+                      <Globe className="h-4 w-4 shrink-0" />
+                      Times shown in your timezone: <strong>{TIMEZONES[intlTz]}</strong>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {(() => {
-                        const morning = slotOptions.filter(s => s.value.includes('AM'));
-                        const afternoon = slotOptions.filter(s => {
-                          if (!s.value.includes('PM')) return false;
-                          const match = s.value.match(/^(\d{1,2}):/);
-                          return match ? parseInt(match[1]) < 5 : false;
-                        });
-                        const evening = slotOptions.filter(s => {
-                          if (!s.value.includes('PM')) return false;
-                          const match = s.value.match(/^(\d{1,2}):/);
-                          return match ? parseInt(match[1]) >= 5 : false;
-                        });
-                        const sections = [
-                          ...(morning.length > 0 ? [{ label: 'MORNING', slots: morning }] : []),
-                          ...(afternoon.length > 0 ? [{ label: 'AFTERNOON', slots: afternoon }] : []),
-                          ...(evening.length > 0 ? [{ label: 'EVENING', slots: evening }] : []),
-                        ];
-                        return sections.map(section => (
-                          <div key={section.label}>
-                            <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-2">{section.label}</p>
-                            <div className="grid grid-cols-4 gap-2">
-                              {section.slots.map(opt => (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => {
-                                    if (!opt.isBooked) {
-                                      setFormData(prev => ({ ...prev, time: opt.value }));
-                                    }
-                                  }}
-                                  disabled={opt.isBooked}
-                                  className={cn(
-                                    'px-2 py-2.5 rounded-xl text-xs font-medium transition-all border text-center',
-                                    opt.isBooked
-                                      ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed line-through'
-                                      : formData.time === opt.value
-                                        ? 'bg-[#0A75BB] text-white border-[#0A75BB] shadow-md'
-                                        : 'bg-white text-slate-700 border-slate-200 hover:border-[#0A75BB] hover:text-[#0A75BB]'
-                                  )}
-                                >
-                                  {opt.isBooked ? opt.value.replace(/\s*(AM|PM)/i, '') : opt.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ));
-                      })()}
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      Select your timezone in the previous step to see times locally
                     </div>
-                  )}
-                </div>
-              </div>
+                  )
+                )}
 
-              {/* Location & Timings */}
-              {selectedClinic && formData.clinicId !== 'online' && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                  <h3 className="text-base font-bold text-gray-900 mb-3">Location & timings</h3>
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-2 mb-2">
-                        <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm">{selectedClinic.shortName}</p>
-                          <p className="text-xs text-slate-500">{selectedClinic.address}</p>
+                {/* Date Picker + Time Slots */}
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                  {/* Horizontal Date Picker */}
+                  <div className="px-5 pb-4 border-t border-slate-100 pt-4">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setDayOffset(Math.max(0, dayOffset - 1))}
+                        disabled={dayOffset === 0}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft className="h-4 w-4 text-slate-600" />
+                      </button>
+                      <div className="flex gap-2 flex-1 justify-center overflow-hidden">
+                        {Array.from({ length: 7 }, (_, i) => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + dayOffset + i);
+                          const dateStr = d.toISOString().split('T')[0];
+                          const isSelected = formData.date === dateStr;
+                          const dayOfWeek = d.getDay();
+                          const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                          const dayClinic = clinics.find(c => c.id === formData.clinicId);
+                          const schedule = bookingSettings.schedules.find(s => s.clinicId === formData.clinicId);
+                          const isWorking = formData.clinicId === 'online'
+                            || (schedule?.workingDays || []).includes(dayOfWeek);
+                          const slotCount = isWorking && dayClinic ? dayClinic.slots.length : 0;
+                          const isToday = i === 0 && dayOffset === 0;
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, date: dateStr, time: '' }));
+                                setBookedSlots(new Set());
+                              }}
+                              className={cn(
+                                'flex flex-col items-center px-2 py-2.5 rounded-xl text-xs transition-all min-w-[56px] border',
+                                isSelected
+                                  ? 'bg-[#0A75BB] text-white border-[#0A75BB] shadow-md'
+                                  : 'border-transparent hover:bg-slate-50 text-slate-600'
+                              )}
+                            >
+                              <span className={cn('text-[9px] font-bold tracking-wide', isSelected ? 'text-blue-100' : 'text-slate-400')}>
+                                {isToday ? 'TODAY' : DAY_NAMES[d.getDay()]}
+                              </span>
+                              <span className="text-lg font-bold leading-tight">{d.getDate()}</span>
+                              <span className={cn(
+                                'text-[9px] font-medium',
+                                isSelected ? 'text-blue-100' : isWorking ? 'text-emerald-500' : 'text-red-400'
+                              )}>
+                                {isWorking ? `${slotCount} slots` : 'No slots'}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDayOffset(dayOffset + 1)}
+                        disabled={dayOffset >= 26}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight className="h-4 w-4 text-slate-600" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Time Slots Grid */}
+                  <div className="px-5 pb-5 border-t border-slate-100 pt-4 max-h-[380px] overflow-y-auto">
+                    {isHoliday ? (
+                      <div className="text-center py-8 text-slate-400">
+                        <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50 text-red-400" />
+                        <p className="text-sm font-medium text-red-600">Doctor is on Leave</p>
+                        <p className="text-xs mt-1">Appointments not available on this date</p>
+                        <div className="mt-3 flex gap-2 justify-center">
+                          <a href="tel:9818235688" className="px-4 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors">
+                            Emergency: 9818235688
+                          </a>
                         </div>
                       </div>
-                      <a
-                        href={`https://www.google.com/maps/search/${encodeURIComponent(selectedClinic.name + ' ' + selectedClinic.address)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0A75BB] text-white text-xs font-semibold rounded-lg hover:bg-[#085a94] transition-colors"
-                      >
-                        <MapPin className="h-3 w-3" /> Directions
-                      </a>
+                    ) : slotOptions.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400">
+                        <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No slots available</p>
+                        <p className="text-xs mt-1">Select a different date</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {(() => {
+                          const morning = slotOptions.filter(s => s.value.includes('AM'));
+                          const afternoon = slotOptions.filter(s => {
+                            if (!s.value.includes('PM')) return false;
+                            const match = s.value.match(/^(\d{1,2}):/);
+                            return match ? parseInt(match[1]) < 5 : false;
+                          });
+                          const evening = slotOptions.filter(s => {
+                            if (!s.value.includes('PM')) return false;
+                            const match = s.value.match(/^(\d{1,2}):/);
+                            return match ? parseInt(match[1]) >= 5 : false;
+                          });
+                          const sections = [
+                            ...(morning.length > 0 ? [{ label: 'MORNING', slots: morning }] : []),
+                            ...(afternoon.length > 0 ? [{ label: 'AFTERNOON', slots: afternoon }] : []),
+                            ...(evening.length > 0 ? [{ label: 'EVENING', slots: evening }] : []),
+                          ];
+                          return sections.map(section => (
+                            <div key={section.label}>
+                              <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-2">{section.label}</p>
+                              <div className="grid grid-cols-4 gap-2">
+                                {section.slots.map(opt => (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => {
+                                      if (!opt.isBooked) {
+                                        setFormData(prev => ({ ...prev, time: opt.value }));
+                                      }
+                                    }}
+                                    disabled={opt.isBooked}
+                                    className={cn(
+                                      'px-2 py-2.5 rounded-xl text-xs font-medium transition-all border text-center',
+                                      opt.isBooked
+                                        ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                                        : formData.time === opt.value
+                                          ? 'bg-[#0A75BB] text-white border-[#0A75BB] shadow-md'
+                                          : 'bg-white text-slate-700 border-slate-200 hover:border-[#0A75BB] hover:text-[#0A75BB]'
+                                    )}
+                                  >
+                                    {opt.isBooked ? opt.value.replace(/\s*(AM|PM)/i, '') : opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Hidden fields + Back/Next */}
+                <input type="hidden" name="date" value={formData.date} required />
+                <input type="hidden" name="time" value={formData.time} required />
+                <div className="flex justify-between">
+                  <button type="button" onClick={() => setStep(3)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                    Back
+                  </button>
+                  <button type="button" onClick={() => canNext() && setStep(5)} disabled={!canNext()}
+                    className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
+                    Next <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Sidebar — Doctor Info (sticky) */}
+              {selectedClinic && (
+                <div className="w-full lg:w-[340px] shrink-0">
+                  <div className="lg:sticky lg:top-24 space-y-4">
+                    {/* Doctor Card */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shrink-0">
+                          <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-bold text-gray-900 text-sm">Dr. Rajesh Goel</h3>
+                            <span className="inline-flex items-center px-1 py-0.5 bg-green-100 rounded">
+                              <svg className="w-2.5 h-2.5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-tight">{DOCTOR_INFO.qualifications.join(' · ')}</p>
+                          <span className="inline-block mt-1 text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-medium uppercase">Nephrology</span>
+                          <div className="flex items-center gap-1 mt-1.5">
+                            <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                            <span className="text-[11px] font-medium text-gray-900">4.9</span>
+                            <span className="text-[11px] text-slate-400">(1000+ ratings)</span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[10px] text-slate-400 uppercase">Consultation</p>
+                          <p className="font-bold text-gray-900">
+                            {isOutsideIndia ? `$${consultFee}` : `₹${selectedClinic.fee}`}
+                          </p>
+                          <p className="text-[10px] text-slate-400">at this clinic</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="sm:border-l sm:border-slate-100 sm:pl-4">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-1">Clinic timings</p>
+
+                    {/* Consulting Hours */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                      <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-1">Consulting hours at {selectedClinic.shortName}</p>
                       <p className="font-medium text-gray-900 text-sm">{selectedClinic.timing}</p>
                     </div>
+
+                    {/* Location & Timings */}
+                    {formData.clinicId !== 'online' && (
+                      <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                        <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-2">Location & timings</p>
+                        <div className="flex items-start gap-2 mb-3">
+                          <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">{selectedClinic.shortName}</p>
+                            <p className="text-xs text-slate-500">{selectedClinic.address}</p>
+                          </div>
+                        </div>
+                        <a
+                          href={`https://www.google.com/maps/search/${encodeURIComponent(selectedClinic.name + ' ' + selectedClinic.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-4 py-2 bg-[#0A75BB] text-white text-xs font-semibold rounded-lg hover:bg-[#085a94] transition-colors"
+                        >
+                          <MapPin className="h-3 w-3" /> Get directions
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
-
-              {/* International timezone notice */}
-              {isOutsideIndia && (
-                intlTz ? (
-                  <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-sm text-purple-700 flex items-center gap-2">
-                    <Globe className="h-4 w-4 shrink-0" />
-                    Times shown in your timezone: <strong>{TIMEZONES[intlTz]}</strong>
-                  </div>
-                ) : (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    Select your timezone in the previous step to see times locally
-                  </div>
-                )
-              )}
-
-              {/* Hidden date field for form validation */}
-              <input type="hidden" name="date" value={formData.date} required />
-              <input type="hidden" name="time" value={formData.time} required />
-
-              <div className="flex justify-between">
-                <button type="button" onClick={() => setStep(3)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
-                  Back
-                </button>
-                <button type="button" onClick={() => canNext() && setStep(5)} disabled={!canNext()}
-                  className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
-                  Next <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
             </div>
           )}
 
