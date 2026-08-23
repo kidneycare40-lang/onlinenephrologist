@@ -1117,7 +1117,13 @@ function BookingForm() {
               </div>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-2">
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                  <Star className="h-3 w-3 text-yellow-300 fill-yellow-300" /> 4.9 Rating
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
                   <Clock className="h-3 w-3" /> 20+ Years Experience
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                  <Heart className="h-3 w-3" /> 5000+ Patients Treated
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
                   Reg. No. DMC/R/734
