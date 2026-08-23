@@ -1193,7 +1193,7 @@ function BookingForm() {
         </div>
       )}
 
-      <div className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={`flex-1 mx-auto px-4 sm:px-6 lg:px-8 py-8 ${step === 4 ? 'max-w-6xl' : 'max-w-3xl'}`}>
         {isTodayHoliday && (
           <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 space-y-3">
             <div className="flex items-start gap-3">
