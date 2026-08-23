@@ -6,9 +6,9 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'Dr Rajesh Goel - Best Nephrologist Delhi | 18+ Yrs',
+  title: 'Dr Rajesh Goel - Best Nephrologist Delhi | 20+ Yrs',
   description:
-    'Dr Rajesh Goel is a Senior Nephrologist & Kidney Transplant Physician in Delhi with 18+ years experience. MBBS, DNB Medicine, DNB Nephrology, Fellow Kidney Transplant. Book appointment online or at PSRI Hospital, Kidney Care Centre.',
+    'Dr Rajesh Goel is a Senior Nephrologist & Kidney Transplant Physician in Delhi with 20+ years experience. MBBS, DNB Medicine, DNB Nephrology, Fellow Kidney Transplant. Book appointment online or at PSRI Hospital, Kidney Care Centre.',
   keywords: [
     'dr rajesh goel',
     'dr rajesh goel nephrologist',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: 'Dr Rajesh Goel - Best Nephrologist in Delhi',
-    description: 'Senior Nephrologist & Kidney Transplant Physician with 18+ years experience. Book online or in-clinic appointment.',
+    description: 'Senior Nephrologist & Kidney Transplant Physician with 20+ years experience. Book online or in-clinic appointment.',
     url: `${SITE_CONFIG.url}/dr-rajesh-goel`,
     siteName: SITE_CONFIG.name,
     type: 'profile',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Dr Rajesh Goel - Best Nephrologist in Delhi',
-    description: 'Senior Nephrologist & Kidney Transplant Physician with 18+ years experience. Book online or in-clinic appointment.',
+    description: 'Senior Nephrologist & Kidney Transplant Physician with 20+ years experience. Book online or in-clinic appointment.',
     images: [`${SITE_CONFIG.url}/images/dr-rajesh-goel.jpg`],
   },
   alternates: { canonical: `${SITE_CONFIG.url}/dr-rajesh-goel` },
@@ -139,7 +139,7 @@ export default function DoctorProfilePage() {
               <div className="flex flex-wrap gap-3 mb-6">
                 <span className="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-sm flex items-center gap-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
-                  18+ Years Experience
+                  20+ Years Experience
                 </span>
                 <span className="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-sm flex items-center gap-1">
                   Reg. No. {DOCTOR_INFO.regNo}

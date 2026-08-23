@@ -8,7 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Medical Tourism India | Kidney Specialist Online | Dr Goel',
   description:
-    'Best nephrologist in India for international patients. Online kidney consultation from anywhere in the world. Dr Rajesh Goel - Senior Nephrologist & Kidney Transplant Physician with 18+ years experience. Book video consultation now.',
+    'Best nephrologist in India for international patients. Online kidney consultation from anywhere in the world. Dr Rajesh Goel - Senior Nephrologist & Kidney Transplant Physician with 20+ years experience. Book video consultation now.',
   keywords: [
     'medical tourism india',
     'nephrologist india',
@@ -142,7 +142,7 @@ export default function MedicalTourismPage() {
               </h1>
               <p className="text-blue-100 text-lg mb-8 leading-relaxed">
                 Consult Dr Rajesh Goel, Senior Nephrologist & Kidney Transplant Physician, from anywhere in the world. 
-                18+ years experience treating kidney diseases with world-class care at affordable prices.
+                20+ years experience treating kidney diseases with world-class care at affordable prices.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/book-appointment?type=online_intl" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all shadow-xl text-lg">

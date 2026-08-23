@@ -13,7 +13,7 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'Online Nephrologist Consultation India | Dr Rajesh Goel',
   description:
-    'Consult Dr Rajesh Goel online. Best nephrologist in Delhi (18+ yrs). Video consultation for CKD, kidney failure, dialysis, transplant. Book now from ₹500.',
+    'Consult Dr Rajesh Goel online. Best nephrologist in Delhi (20+ yrs). Video consultation for CKD, kidney failure, dialysis, transplant. Book now from ₹500.',
   keywords: [
     'online nephrologist consultation',
     'consult nephrologist online',
@@ -86,7 +86,7 @@ export const metadata: Metadata = {
 };
 
 const faqs = [
-  { question: 'Can I consult a nephrologist online?', answer: 'Yes, you can consult Dr Rajesh Goel, a senior nephrologist with 18+ years of experience, entirely online through video consultation. This is ideal for follow-ups, second opinions, and initial consultations for patients who cannot visit in person. You can book an online appointment through our website or WhatsApp at +91 9818235613.' },
+  { question: 'Can I consult a nephrologist online?', answer: 'Yes, you can consult Dr Rajesh Goel, a senior nephrologist with 20+ years of experience, entirely online through video consultation. This is ideal for follow-ups, second opinions, and initial consultations for patients who cannot visit in person. You can book an online appointment through our website or WhatsApp at +91 9818235613.' },
   { question: 'Is online kidney consultation effective?', answer: 'Yes, online kidney consultation is highly effective for most non-emergency situations. Dr Rajesh Goel can review your blood reports, urine tests, ultrasound reports, and medication history through video call. He provides the same quality diagnosis, treatment planning, and prescription as an in-person visit. For procedures like dialysis or physical examination, an in-clinic visit may be recommended.' },
   { question: 'What reports should I upload before an online consultation?', answer: 'Before your online consultation, please have these ready: Recent kidney function tests (creatinine, eGFR, BUN, electrolytes), complete blood count (CBC), urine routine and microscopy, ultrasound abdomen (if done), any previous biopsy reports, current medication list, and blood pressure records if available. Upload these through our booking portal or share via WhatsApp before your appointment.' },
   { question: 'Can I get kidney treatment without visiting the clinic?', answer: 'Yes, for many kidney conditions, Dr Rajesh Goel can prescribe medications and treatment plans through online consultation. This includes management of CKD stages 1-4, blood pressure control, diabetes-related kidney issues, dietary guidance, and medication adjustments. For dialysis, transplant evaluation, or emergency situations, an in-person visit is necessary.' },
@@ -147,7 +147,7 @@ export default function HomePage() {
                 Online Nephrologist Consultation in <span className="text-blue-200">India</span>
               </h1>
               <p className="text-lg text-blue-100 mb-4 leading-relaxed">
-                Consult <strong className="text-white">Dr Rajesh Goel</strong>, one of the best nephrologists in Delhi, online from anywhere in India or abroad. <strong className="text-white">18+ years of experience</strong> treating CKD, kidney failure, dialysis, transplant, and all kidney conditions.
+                Consult <strong className="text-white">Dr Rajesh Goel</strong>, one of the best nephrologists in Delhi, online from anywhere in India or abroad. <strong className="text-white">20+ years of experience</strong> treating CKD, kidney failure, dialysis, transplant, and all kidney conditions.
               </p>
               <p className="text-sm text-blue-200 mb-8 leading-relaxed">
                 Expert kidney specialist online consultation via video call. Get diagnosis, treatment plan, and prescription without leaving your home. Starting at just ₹500.
@@ -163,7 +163,7 @@ export default function HomePage() {
               <div className="flex flex-wrap items-center gap-2 sm:gap-6 text-sm sm:text-sm text-blue-200">
                 <span className="flex items-center gap-1">
                   <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                  18+ Years Experience
+                  20+ Years Experience
                 </span>
                 <span className="flex items-center gap-1">
                   <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
@@ -189,7 +189,7 @@ export default function HomePage() {
                   <div className="text-gray-500 text-xs">Nephrologist, Delhi</div>
                 </div>
                 <div className="absolute -top-4 -right-4 bg-green-500 text-white rounded-xl px-3 py-2 shadow-lg text-sm font-semibold">
-                  18+ Years
+                  20+ Years
                 </div>
               </div>
             </div>
@@ -202,7 +202,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-3xl font-bold text-[#0A75BB]">18+</div>
+              <div className="text-3xl font-bold text-[#0A75BB]">20+</div>
               <div className="text-sm text-gray-500">Years Experience</div>
             </div>
             <div>
@@ -226,11 +226,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Consult Dr Rajesh Goel Online?</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">One of the best nephrologists in Delhi with 18+ years of experience, now available for online kidney consultation across India and internationally.</p>
+            <p className="text-gray-600 max-w-2xl mx-auto">One of the best nephrologists in Delhi with 20+ years of experience, now available for online kidney consultation across India and internationally.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: '🩺', title: '18+ Years Experience', desc: 'DNB Nephrology from PSRI Hospital. Kidney Transplant Fellowship from Medanta Hospital. Expert in all kidney diseases.' },
+              { icon: '🩺', title: '20+ Years Experience', desc: 'DNB Nephrology from PSRI Hospital. Kidney Transplant Fellowship from Medanta Hospital. Expert in all kidney diseases.' },
               { icon: '🏥', title: '3 Clinic Locations', desc: 'PSRI Hospital Saket, Kidney Care Centre Faridabad, and Kidney Care Centre Saket. Plus online consultation from anywhere.' },
               { icon: '📹', title: 'Video Consultation', desc: 'Consult from home via video call. Same quality care — report review, diagnosis, prescription, and follow-up guidance.' },
               { icon: '🌍', title: 'International Patients', desc: 'Patients from USA, UK, UAE, Singapore consult regularly. $25 USD for international patients. Time zone flexible.' },

@@ -853,7 +853,7 @@ export default function TestsForKidneyDiseasePage() {
                 Kidney disease is often called a &quot;silent disease&quot; because symptoms may not appear until significant damage has occurred. Regular testing is the only way to catch kidney problems early. If you have <strong>diabetes</strong>, <strong>high blood pressure</strong>, a <strong>family history of kidney disease</strong>, or are over 60 years old, regular kidney screening is essential.
               </p>
               <p className="text-slate-700 leading-relaxed mt-3">
-                Dr. Rajesh Goel, Senior Nephrologist with 18+ years of experience, recommends at least annual kidney function screening for all at-risk patients. Early detection allows for lifestyle changes and medications that can slow or stop kidney disease progression.
+                Dr. Rajesh Goel, Senior Nephrologist with 20+ years of experience, recommends at least annual kidney function screening for all at-risk patients. Early detection allows for lifestyle changes and medications that can slow or stop kidney disease progression.
               </p>
             </div>
           </section>

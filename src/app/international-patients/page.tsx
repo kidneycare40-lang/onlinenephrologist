@@ -62,7 +62,7 @@ export default function InternationalPatientsPage() {
             "@type": "Physician",
             "name": "Dr. Rajesh Goel",
             "medicalSpecialty": "Nephrology",
-            "description": "Senior Nephrologist & Kidney Transplant Physician with 18+ years experience, available for international telehealth consultations"
+            "description": "Senior Nephrologist & Kidney Transplant Physician with 20+ years experience, available for international telehealth consultations"
           },
           "availableService": [
             { "@type": "MedicalProcedure", "name": "International Video Consultation", "procedureType": "https://schema.org/LeisureTimeActivity" }
@@ -87,7 +87,7 @@ export default function InternationalPatientsPage() {
               Nephrology Consultation for <span className="text-yellow-300">International Patients</span>
             </h1>
             <p className="text-lg md:text-xl text-white/80 mb-8">
-              Expert kidney care by <strong className="text-white">Dr Rajesh Goel</strong> — Senior Nephrologist & Kidney Transplant Physician with 18+ years of experience. Consult from anywhere in the world via secure video call.
+              Expert kidney care by <strong className="text-white">Dr Rajesh Goel</strong> — Senior Nephrologist & Kidney Transplant Physician with 20+ years of experience. Consult from anywhere in the world via secure video call.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/book-appointment?type=online_intl" className="px-8 py-4 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 text-lg">
@@ -107,7 +107,7 @@ export default function InternationalPatientsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
               { icon: Shield, label: '100% Confidential', sub: 'Secure and confidential handling of your medical information' },
-              { icon: Award, label: '18+ Years Experience', sub: '5000+ patients treated' },
+              { icon: Award, label: '20+ Years Experience', sub: '5000+ patients treated' },
               { icon: Globe, label: 'Patients Worldwide', sub: 'From 20+ countries' },
               { icon: Clock, label: 'Flexible Timings', sub: 'Slots for all timezones' },
             ].map((item, i) => (
@@ -146,7 +146,7 @@ export default function InternationalPatientsPage() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { icon: Stethoscope, title: 'Expert Nephrologist', desc: 'Dr Rajesh Goel is a Senior Nephrologist & Kidney Transplant Physician with 18+ years of experience treating complex kidney conditions worldwide.', color: 'emerald' },
+              { icon: Stethoscope, title: 'Expert Nephrologist', desc: 'Dr Rajesh Goel is a Senior Nephrologist & Kidney Transplant Physician with 20+ years of experience treating complex kidney conditions worldwide.', color: 'emerald' },
               { icon: Video, title: 'Secure Video Consultation', desc: 'High-definition video consultations from the comfort of your home. Secure platform ensuring complete privacy of your medical data.', color: 'blue' },
               { icon: FileText, title: 'Comprehensive Treatment Plans', desc: 'Detailed treatment plans including medication, diet advice, lifestyle modifications, and follow-up schedules delivered via WhatsApp or email.', color: 'purple' },
             ].map((item, i) => (

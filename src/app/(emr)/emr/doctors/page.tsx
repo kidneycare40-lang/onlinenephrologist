@@ -30,7 +30,7 @@ const mockDoctors: Doctor[] = [
   {
     id: 'D-001', firstName: 'Rajesh', lastName: 'Goel', email: 'rajesh@kidneycarecentre.in', phone: '+91 98765 43210',
     gender: 'Male', dateOfBirth: '1980-05-15', qualifications: 'MBBS, MD Medicine, DM Nephrology',
-    specialization: 'Nephrology', registrationNumber: 'MCI-12345', experience: 18,
+    specialization: 'Nephrology', registrationNumber: 'MCI-12345', experience: 20,
     consultationFee: 1500, availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     availableTimes: '9:00 AM - 5:00 PM', bio: 'Senior Nephrologist with expertise in CKD management, dialysis, and kidney transplantation.', isActive: true,
   },

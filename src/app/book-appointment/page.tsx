@@ -1046,7 +1046,7 @@ function BookingForm() {
             "@type": "Physician",
             "name": "Dr. Rajesh Goel",
             "medicalSpecialty": "Nephrology",
-            "description": "Senior Nephrologist & Kidney Transplant Physician with 18+ years experience",
+            "description": "Senior Nephrologist & Kidney Transplant Physician with 20+ years experience",
             "availableService": [
               { "@type": "MedicalProcedure", "name": "Online Video Consultation" },
               { "@type": "MedicalProcedure", "name": "International Video Consultation" },
@@ -1095,7 +1095,7 @@ function BookingForm() {
                   <Star className="h-3 w-3 text-yellow-300 fill-yellow-300" /> 4.9 Rating
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Award className="h-3 w-3" /> 15+ Years Experience
+                  <Award className="h-3 w-3" /> 20+ Years Experience
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
                   <Heart className="h-3 w-3" /> 5000+ Patients Treated
@@ -2619,7 +2619,7 @@ function BookingForm() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
               { icon: Shield, label: '100% Confidential', sub: 'Your data is secure' },
-              { icon: Award, label: '15+ Years Experience', sub: 'Trusted by 5000+ patients' },
+              { icon: Award, label: '20+ Years Experience', sub: 'Trusted by 5000+ patients' },
               { icon: Clock, label: 'Quick Response', sub: 'Same-day appointments' },
               { icon: Phone, label: 'WhatsApp Support', sub: '+91 98182 35613' },
             ].map((item, i) => (

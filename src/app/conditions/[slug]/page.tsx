@@ -283,7 +283,7 @@ export default function ConditionPage({ params }: Props) {
         <section className="py-12 bg-[#0A75BB] text-white text-center">
           <div className="max-w-3xl mx-auto px-4">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">Expert {condition.title} Treatment</h2>
-            <p className="mb-6 text-blue-100">Get personalized treatment from Dr Rajesh Goel — Senior Nephrologist with 18+ years experience</p>
+            <p className="mb-6 text-blue-100">Get personalized treatment from Dr Rajesh Goel — Senior Nephrologist with 20+ years experience</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/book-appointment" className="px-8 py-4 bg-white text-[#0A75BB] font-bold rounded-xl hover:bg-gray-100 transition-all text-lg shadow-xl">
                 Book Appointment

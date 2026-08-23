@@ -160,7 +160,7 @@ export default function SettingsPage() {
   const [regNumber, setRegNumber] = useState('DMC/R/00734');
   const [experience, setExperience] = useState('18');
   const [specialization, setSpecialization] = useState('Nephrology');
-  const [bio, setBio] = useState('Senior Nephrologist with 18+ years of experience in kidney care, dialysis, and transplant medicine.');
+  const [bio, setBio] = useState('Senior Nephrologist with 20+ years of experience in kidney care, dialysis, and transplant medicine.');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
