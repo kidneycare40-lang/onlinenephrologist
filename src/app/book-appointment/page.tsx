@@ -8,7 +8,7 @@ import {
   Video, Building2, CheckCircle2, MapPin, Clock, IndianRupee, AlertTriangle,
   Phone, Calendar, User, Users, FileText, ChevronRight, ChevronLeft, Star, Info,
   Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital, Plus, Trash2,
-  ArrowRight, GraduationCap,
+  ArrowRight, GraduationCap, Stethoscope,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { loadBookingSettings, defaultSettings, type BookingSettings } from '@/lib/booking-settings';
@@ -1120,7 +1120,7 @@ function BookingForm() {
                   <Star className="h-3 w-3 text-yellow-300 fill-yellow-300" /> 4.9 Rating
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Clock className="h-3 w-3" /> 20+ Years Experience
+                  <Stethoscope className="h-3 w-3" /> 20+ Years Experience
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
                   <Heart className="h-3 w-3" /> 5000+ Patients Treated
