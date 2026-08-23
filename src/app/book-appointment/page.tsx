@@ -2136,43 +2136,8 @@ function BookingForm() {
                 </div>
               )}
 
-              {/* Consultation Mode Toggle + Date Picker + Time Slots — All in one card */}
+              {/* Date Picker + Time Slots — All in one card */}
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-                {/* Consultation Mode */}
-                <div className="px-5 pt-5 pb-4">
-                  <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-2">Consultation Mode</p>
-                  <div className="grid grid-cols-2 gap-0 border border-slate-200 rounded-xl overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(prev => ({ ...prev, clinicId: (clinics.find(c => c.id !== 'online')?.id || 'kcc-faridabad'), consultationType: 'offline', time: '' }));
-                      }}
-                      className={cn(
-                        'flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-all border-r border-slate-200',
-                        formData.consultationType !== 'online_intl' && formData.consultationType !== 'online'
-                          ? 'bg-[#0A75BB] text-white'
-                          : 'bg-white text-slate-600'
-                      )}
-                    >
-                      <Building2 className="h-4 w-4" /> In-clinic
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(prev => ({ ...prev, clinicId: 'online', consultationType: 'online', time: '' }));
-                      }}
-                      className={cn(
-                        'flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-all',
-                        formData.clinicId === 'online' || formData.consultationType === 'online'
-                          ? 'bg-[#0A75BB] text-white'
-                          : 'bg-white text-slate-600'
-                      )}
-                    >
-                      <Video className="h-4 w-4" /> Video
-                    </button>
-                  </div>
-                </div>
-
                 {/* Horizontal Date Picker */}
                 <div className="px-5 pb-4 border-t border-slate-100 pt-4">
                   <div className="flex items-center justify-between">
