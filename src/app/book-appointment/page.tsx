@@ -8,7 +8,7 @@ import {
   Video, Building2, CheckCircle2, MapPin, Clock, IndianRupee, AlertTriangle,
   Phone, Calendar, User, Users, FileText, ChevronRight, ChevronLeft, Star, Info,
   Shield, Award, Heart, Upload, X, Loader2, Globe, LogIn, Hospital, Plus, Trash2,
-  ArrowRight,
+  ArrowRight, GraduationCap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { loadBookingSettings, defaultSettings, type BookingSettings } from '@/lib/booking-settings';
@@ -240,7 +240,7 @@ function BookingForm() {
     });
   }, []);
 
-  const [step, setStep] = useState(forceInternational ? 2 : 0);
+  const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
     consultationType: forceInternational ? 'online' : initialType,
@@ -355,14 +355,13 @@ function BookingForm() {
     });
   }, []);
 
-  // If user is already logged in, skip the phone step
+  // If user is already logged in, pre-fill their data
   useEffect(() => {
-    if (currentPatient && step === 0 && !forceInternational) {
-      setStep(1);
+    if (currentPatient && !forceInternational) {
       setPhoneLookupResult('existing');
       setPhoneLookupInput(currentPatient.phone || '');
     }
-  }, [currentPatient, step, forceInternational]);
+  }, [currentPatient, forceInternational]);
 
   // Auto-detect browser timezone — only sets timezone for scheduling, does NOT change location
   useEffect(() => {
@@ -424,7 +423,11 @@ function BookingForm() {
 
     // Validate phone & email before anything else
     const isIntlBooking = isOutsideIndia;
-    const cleanPhone = formData.phone.replace(/[\s-]/g, '').replace(/^\+?91/, '');
+    const effectivePhone = formData.phone || phoneLookupInput;
+    if (effectivePhone && !formData.phone) {
+      setFormData(prev => ({ ...prev, phone: effectivePhone, whatsappNumber: effectivePhone }));
+    }
+    const cleanPhone = effectivePhone.replace(/[\s-]/g, '').replace(/^\+?91/, '');
     if (isIntlBooking && !formData.countryCode) {
       alert('Please select your country code for the WhatsApp number.');
       return;
@@ -846,25 +849,28 @@ function BookingForm() {
   const upiLink = `upi://pay?pa=${upiId}&pn=Kidney%20Care%20Centre&am=${consultFee}&cu=INR`;
 
   const steps = [
-    { num: 0, label: 'Phone' },
-    { num: 1, label: 'Type' },
-    { num: 2, label: 'Clinic' },
-    { num: 3, label: 'Details' },
-    { num: 4, label: 'Schedule' },
-    { num: 5, label: 'Medical' },
+    { num: 0, label: 'Type' },
+    { num: 1, label: 'Clinic' },
+    { num: 2, label: 'Details' },
+    { num: 3, label: 'Schedule' },
+    { num: 4, label: 'Medical' },
+    { num: 5, label: 'Confirm' },
   ];
 
   const canNext = () => {
-    if (step === 0) return phoneLookupResult !== null;
-    if (step === 1) return !!formData.consultationType;
-    if (step === 2) return !!formData.clinicId;
-    if (step === 3) {
+    if (step === 0) return !!formData.consultationType;
+    if (step === 1) return !!formData.clinicId;
+    if (step === 2) {
       if (!formData.firstName || !formData.phone || !formData.age) return false;
-      if (isOutsideIndia && !formData.country) return false;
-      if (bookingFor === 'family' && !relationship) return false;
       return true;
     }
-    if (step === 4) return !!formData.date && !!formData.time && !isHoliday;
+    if (step === 3) return !!formData.date && !!formData.time && !isHoliday;
+    if (step === 4) return true;
+    if (step === 5) {
+      if (!formData.firstName || !formData.phone || !formData.age) return false;
+      if (isOutsideIndia && !formData.country) return false;
+      return true;
+    }
     return true;
   };
 
@@ -884,7 +890,20 @@ function BookingForm() {
             <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Appointment Booked Successfully!</h1>
-          <p className="text-gray-600 mb-8">Dr Rajesh Goel will review your details and see you shortly.</p>
+          <p className="text-gray-600 mb-4">Dr Rajesh Goel will review your details and see you shortly.</p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-green-100 text-green-700">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Confirmation sent on WhatsApp
+            </span>
+            {formData.email && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-100 text-blue-700">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                Email sent to {formData.email}
+              </span>
+            )}
+          </div>
 
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-6 text-left">
             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
@@ -1080,7 +1099,6 @@ function BookingForm() {
       </header>
 
       {/* Hero Section — hidden at step 0 for clean phone-first experience */}
-      {step > 0 && (
       <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
           <div className="flex flex-col md:flex-row items-center gap-6">
@@ -1089,30 +1107,35 @@ function BookingForm() {
             </div>
             <div className="text-center md:text-left">
               <h1 className="text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>
-              <p className="text-white/80 text-sm md:text-base">Consult <strong className="text-white">Dr Rajesh Goel</strong> — Senior Nephrologist & Kidney Transplant Physician</p>
+              <p className="text-white/80 text-sm md:text-base">Consult <strong className="text-white">Dr Rajesh Goel</strong>
+                <span className="inline-flex items-center ml-1.5 align-middle bg-green-400 rounded-sm px-0.5">
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                </span>
+                — Senior Nephrologist & Kidney Transplant Physician</p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
+                <span className="text-xs text-white/90 font-medium">MBBS | DNB Internal Medicine | DNB Nephrology | Fellow Kidney Transplant Medicine</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-2">
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Star className="h-3 w-3 text-yellow-300 fill-yellow-300" /> 4.9 Rating
+                  <Clock className="h-3 w-3" /> 20+ Years Experience
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Award className="h-3 w-3" /> 20+ Years Experience
+                  Reg. No. DMC/R/734
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Heart className="h-3 w-3" /> 5000+ Patients Treated
+                  English, Hindi
                 </span>
               </div>
             </div>
           </div>
         </div>
       </div>
-      )}
 
-      {/* Progress Steps — hidden at step 0 */}
-      {step > 0 && (
+      {/* Progress Steps */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-3xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {steps.filter(s => s.num > 0).map((s, i, arr) => (
+            {steps.map((s, i, arr) => (
               <React.Fragment key={s.num}>
                 <button
                   onClick={() => { if (s.num < step) setStep(s.num); }}
@@ -1135,7 +1158,6 @@ function BookingForm() {
           </div>
         </div>
       </div>
-      )}
 
       {/* Selection Summary Bar */}
       {step > 0 && (
@@ -1193,7 +1215,7 @@ function BookingForm() {
         </div>
       )}
 
-      <div className={`flex-1 mx-auto px-4 sm:px-6 lg:px-8 py-8 ${step === 4 ? 'max-w-6xl' : 'max-w-3xl'}`}>
+      <div className={`flex-1 mx-auto px-4 sm:px-6 lg:px-8 py-8 ${step >= 1 ? 'max-w-7xl' : 'max-w-3xl'}`}>
         {isTodayHoliday && (
           <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 space-y-3">
             <div className="flex items-start gap-3">
@@ -1230,217 +1252,7 @@ function BookingForm() {
             <span>{bookingSettings.noticeBoard.message}</span>
           </div>
         )}
-        {/* Step 0: Phone Lookup — clean, elderly-friendly first screen */}
-        {step === 0 && mounted && !currentPatient && (
-          <div className="max-w-lg mx-auto">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-              <div className="text-center mb-6">
-                <img src="/favicon.png" alt="Online Nephrologist" className="h-12 mx-auto mb-3" />
-                <h1 className="text-xl font-bold text-slate-900">Book an Appointment</h1>
-                <p className="text-sm text-slate-500 mt-1">Enter your mobile number to get started</p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mobile / WhatsApp Number</label>
-                  <div className="flex gap-2">
-                    <select
-                      value={phoneCountryCode}
-                      onChange={(e) => {
-                        const code = e.target.value;
-                        setPhoneCountryCode(code);
-                        const isInternational = code !== '+91';
-                        setFormData(prev => ({
-                          ...prev,
-                          currentLocation: isInternational ? 'outside_india' : 'india',
-                          isInternational,
-                          consultationType: isInternational ? 'online_intl' : (prev.consultationType === 'online_intl' ? 'online' : prev.consultationType),
-                          time: '',
-                        }));
-                      }}
-                      className="border border-slate-300 rounded-xl bg-white text-sm px-2 py-2.5 focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors w-24 shrink-0"
-                    >
-                      <option value="+91">🇮🇳 +91</option>
-                      <option value="+1">🇺🇸 +1</option>
-                      <option value="+44">🇬🇧 +44</option>
-                      <option value="+971">🇦🇪 +971</option>
-                      <option value="+966">🇸🇦 +966</option>
-                      <option value="+61">🇦🇺 +61</option>
-                      <option value="+65">🇸🇬 +65</option>
-                      <option value="+60">🇲🇾 +60</option>
-                      <option value="+234">🇳🇬 +234</option>
-                      <option value="+254">🇰🇪 +254</option>
-                      <option value="+880">🇧🇩 +880</option>
-                      <option value="+92">🇵🇰 +92</option>
-                      <option value="+94">🇱🇰 +94</option>
-                      <option value="+977">🇳🇵 +977</option>
-                      <option value="+63">🇵🇭 +63</option>
-                      <option value="+20">🇪🇬 +20</option>
-                      <option value="+27">🇿🇦 +27</option>
-                      <option value="+81">🇯🇵 +81</option>
-                      <option value="+82">🇰🇷 +82</option>
-                      <option value="+86">🇨🇳 +86</option>
-                      <option value="+49">🇩🇪 +49</option>
-                      <option value="+33">🇫🇷 +33</option>
-                      <option value="+39">🇮🇹 +39</option>
-                      <option value="+34">🇪🇸 +34</option>
-                      <option value="+31">🇳🇱 +31</option>
-                      <option value="+46">🇸🇪 +46</option>
-                      <option value="+47">🇳🇴 +47</option>
-                      <option value="+353">🇮🇪 +353</option>
-                      <option value="+64">🇳🇿 +64</option>
-                    </select>
-                    <input
-                      type="tel"
-                      value={phoneLookupInput}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, phoneCountryCode === '+91' ? 10 : 12);
-                        setPhoneLookupInput(digits);
-                        setPhoneLookupResult(null);
-                      }}
-                      className="flex-1 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
-                      placeholder={phoneCountryCode === '+91' ? '98182 35613' : 'Your number'}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && phoneLookupInput.length >= 6 && !phoneLookupLoading) {
-                          e.preventDefault();
-                          (document.querySelector('[data-phone-check-btn]') as HTMLButtonElement)?.click();
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {phoneLookupError && <p className="text-sm text-red-600">{phoneLookupError}</p>}
-
-                {/* Existing Patient — Welcome Back Panel */}
-                {phoneLookupResult === 'existing' && (
-                  <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl p-5 space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold text-emerald-900">
-                          Welcome back{phoneLookupFirstName ? `, ${phoneLookupFirstName}` : ''}!
-                        </p>
-                        <p className="text-xs text-emerald-600">Existing patient found</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Phone className="h-4 w-4 text-slate-400" />
-                      <span>{phoneCountryCode} {phoneLookupInput}</span>
-                    </div>
-                    {phoneLookupEmailVerified ? (
-                      <div className="flex items-center gap-1.5 text-xs text-emerald-700">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Account verified
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-xs text-amber-600">
-                        <AlertTriangle className="h-3.5 w-3.5" /> Account not verified — verify email after booking
-                      </div>
-                    )}
-                    <p className="text-xs text-slate-500">Your saved details will be used for this booking.</p>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setStep(1)}
-                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors"
-                      >
-                        <Calendar className="h-4 w-4" /> Book New Appointment
-                      </button>
-                      <Link
-                        href="/patient/login"
-                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
-                      >
-                        <User className="h-4 w-4" /> View My Dashboard
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                {/* New Patient — Continue Panel */}
-                {phoneLookupResult === 'new' && (
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-5 space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                        <User className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold text-blue-900">Welcome to Online Nephrologist</p>
-                        <p className="text-xs text-blue-600">New patient</p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-600">
-                      We'll create your patient profile automatically after booking. No separate registration needed.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setStep(1)}
-                      className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors"
-                    >
-                      Continue as New Patient <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Check Button — only shown before result */}
-                {!phoneLookupResult && (
-                  <button
-                    type="button"
-                    data-phone-check-btn
-                    disabled={phoneLookupInput.length < 6 || phoneLookupLoading}
-                    onClick={async () => {
-                      setPhoneLookupLoading(true);
-                      setPhoneLookupError('');
-                      try {
-                        const fullPhone = phoneCountryCode + phoneLookupInput;
-                        const res = await fetch('/api/public/phone-lookup', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ phone: fullPhone }),
-                        });
-                        const data = await res.json();
-                        if (!res.ok) {
-                          setPhoneLookupError(data.error || 'Failed to check number');
-                          return;
-                        }
-                        const result = data.exists ? 'existing' as const : 'new' as const;
-                        setPhoneLookupResult(result);
-                        setPhoneLookupFirstName(data.firstName || '');
-                        setPhoneLookupEmailVerified(data.emailVerified || false);
-                        setFormData(prev => ({
-                          ...prev,
-                          phone: phoneLookupInput,
-                          whatsappNumber: phoneLookupInput,
-                          firstName: data.firstName || prev.firstName,
-                          lastName: data.lastName || prev.lastName,
-                          email: data.email || prev.email,
-                          age: data.age?.toString() || prev.age,
-                          gender: data.gender ? data.gender.charAt(0).toUpperCase() + data.gender.slice(1) : prev.gender,
-                        }));
-                      } catch {
-                        setPhoneLookupError('Network error. Please try again.');
-                      } finally {
-                        setPhoneLookupLoading(false);
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50"
-                  >
-                    {phoneLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                    {phoneLookupLoading ? 'Checking...' : 'Continue'}
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-slate-100 text-center">
-                <p className="text-xs text-slate-400">
-                  Your data is secure and encrypted. We never share your information.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Phone lookup moved to Step 5 Confirm */}
         {currentPatient && (
           <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
@@ -1470,9 +1282,10 @@ function BookingForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate>
-          {/* Step 1: Consultation Type */}
-          {step === 1 && (
+        <form onSubmit={handleSubmit} noValidate className={step === 3 ? 'flex flex-col lg:flex-row gap-6' : ''}>
+          <div className={step === 3 ? 'flex-1 min-w-0' : 'max-w-3xl mx-auto'}>
+          {/* Step 0: Consultation Type */}
+          {step === 0 && (
             <div className="space-y-6">
               {!forceInternational && (
                 <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
@@ -1581,11 +1394,8 @@ function BookingForm() {
               </div>
               </>
               )}
-              <div className="flex justify-between">
-                <button type="button" onClick={() => setStep(0)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
-                  Back
-                </button>
-                <button type="button" onClick={() => { if (canNext()) setStep(2); }} disabled={!canNext()}
+              <div className="flex justify-end">
+                <button type="button" onClick={() => { if (canNext()) setStep(1); }} disabled={!canNext()}
                   className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
                   Next <ChevronRight className="h-4 w-4" />
                 </button>
@@ -1593,8 +1403,8 @@ function BookingForm() {
             </div>
           )}
 
-          {/* Step 2: Clinic Selection */}
-          {step === 2 && (
+          {/* Step 1: Clinic Selection */}
+          {step === 1 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">
@@ -1722,10 +1532,10 @@ function BookingForm() {
                 </div>
               )}
               <div className="flex justify-between">
-                <button type="button" onClick={() => setStep(1)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                <button type="button" onClick={() => setStep(0)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
                   Back
                 </button>
-                <button type="button" onClick={() => canNext() && setStep(3)} disabled={!canNext()}
+                <button type="button" onClick={() => canNext() && setStep(2)} disabled={!canNext()}
                   className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
                   Next <ChevronRight className="h-4 w-4" />
                 </button>
@@ -1733,8 +1543,8 @@ function BookingForm() {
             </div>
           )}
 
-          {/* Step 3: Patient Info */}
-          {step === 3 && (
+          {/* Step 2: Patient Info */}
+          {step === 2 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Patient Information</h2>
@@ -1786,36 +1596,6 @@ function BookingForm() {
                 </div>
               )}
 
-              {/* Where are you located? — determines currency and payment methods */}
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Where are you currently located?</label>
-                <p className="text-xs text-slate-500 mb-3">This determines your consultation fee and available payment methods.</p>
-                {forceInternational ? (
-                  <div className="flex items-center gap-2 px-4 py-2.5 border-2 border-blue-500 bg-blue-50 rounded-xl text-sm font-medium text-blue-700">
-                    <Globe className="h-4 w-4" /> Outside India (locked for this booking)
-                  </div>
-                ) : (
-                  <div className="flex gap-3">
-                    {[
-                      { v: 'india', l: 'India', sub: 'Pay in INR (₹500)', icon: '🇮🇳' },
-                      { v: 'outside_india', l: 'Outside India', sub: 'Pay in USD ($25)', icon: '🌎' },
-                    ].map(o => (
-                      <label key={o.v} className={cn(
-                        'flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl cursor-pointer transition-all text-sm font-medium flex-1',
-                        formData.currentLocation === o.v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                      )}>
-                        <input type="radio" name="currentLocation" value={o.v} checked={formData.currentLocation === o.v} onChange={handleChange} className="sr-only" />
-                        <span className="text-lg">{o.icon}</span>
-                        <div>
-                          <div>{o.l}</div>
-                          <div className="text-[11px] text-slate-400 font-normal">{o.sub}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
@@ -1829,9 +1609,7 @@ function BookingForm() {
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors" placeholder="Enter last name" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                      WhatsApp Number *
-                    </label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mobile / WhatsApp Number *</label>
                     <div className="relative">
                       {isOutsideIndia ? (
                         <select name="countryCode" value={formData.countryCode} onChange={handleChange}
@@ -1841,37 +1619,21 @@ function BookingForm() {
                           <option value="+44">🇬🇧 +44</option>
                           <option value="+971">🇦🇪 +971</option>
                           <option value="+966">🇸🇦 +966</option>
-                          <option value="+974">🇶🇦 +974</option>
-                          <option value="+973">🇧🇭 +973</option>
-                          <option value="+968">🇴🇲 +968</option>
-                          <option value="+965">🇰🇼 +965</option>
-                          <option value="+92">🇵🇰 +92</option>
-                          <option value="+880">🇧🇩 +880</option>
-                          <option value="+94">🇱🇰 +94</option>
-                          <option value="+977">🇳🇵 +977</option>
-                          <option value="+95">🇲🇲 +95</option>
-                          <option value="+60">🇲🇾 +60</option>
-                          <option value="+65">🇸🇬 +65</option>
                           <option value="+61">🇦🇺 +61</option>
-                          <option value="+64">🇳🇿 +64</option>
-                          <option value="+27">🇿🇦 +27</option>
+                          <option value="+65">🇸🇬 +65</option>
+                          <option value="+60">🇲🇾 +60</option>
                           <option value="+234">🇳🇬 +234</option>
                           <option value="+254">🇰🇪 +254</option>
-                          <option value="+20">🇪🇬 +20</option>
-                          <option value="+212">🇲🇦 +212</option>
-                          <option value="+251">🇪🇹 +251</option>
-                          <option value="+256">🇺🇬 +256</option>
-                          <option value="+255">🇹🇿 +255</option>
+                          <option value="+880">🇧🇩 +880</option>
+                          <option value="+92">🇵🇰 +92</option>
+                          <option value="+94">🇱🇰 +94</option>
+                          <option value="+977">🇳🇵 +977</option>
                           <option value="+63">🇵🇭 +63</option>
-                          <option value="+62">🇮🇩 +62</option>
-                          <option value="+66">🇹🇭 +66</option>
-                          <option value="+84">🇻🇳 +84</option>
-                          <option value="+855">🇰🇭 +855</option>
-                          <option value="+856">🇱🇦 +856</option>
-                          <option value="+91">🇮🇳 +91</option>
-                          <option value="+86">🇨🇳 +86</option>
+                          <option value="+20">🇪🇬 +20</option>
+                          <option value="+27">🇿🇦 +27</option>
                           <option value="+81">🇯🇵 +81</option>
                           <option value="+82">🇰🇷 +82</option>
+                          <option value="+86">🇨🇳 +86</option>
                           <option value="+49">🇩🇪 +49</option>
                           <option value="+33">🇫🇷 +33</option>
                           <option value="+39">🇮🇹 +39</option>
@@ -1879,25 +1641,8 @@ function BookingForm() {
                           <option value="+31">🇳🇱 +31</option>
                           <option value="+46">🇸🇪 +46</option>
                           <option value="+47">🇳🇴 +47</option>
-                          <option value="+45">🇩🇰 +45</option>
-                          <option value="+358">🇫🇮 +358</option>
-                          <option value="+41">🇨🇭 +41</option>
-                          <option value="+43">🇦🇹 +43</option>
-                          <option value="+32">🇧🇪 +32</option>
-                          <option value="+48">🇵🇱 +48</option>
-                          <option value="+420">🇨🇿 +420</option>
-                          <option value="+421">🇸🇰 +421</option>
-                          <option value="+36">🇭🇺 +36</option>
-                          <option value="+40">🇷🇴 +40</option>
-                          <option value="+359">🇧🇬 +359</option>
-                          <option value="+385">🇭🇷 +385</option>
-                          <option value="+381">🇷🇸 +381</option>
-                          <option value="+389">🇲🇰 +389</option>
-                          <option value="+355">🇦🇱 +355</option>
-                          <option value="+386">🇸🇮 +386</option>
-                          <option value="+370">🇱🇹 +370</option>
-                          <option value="+371">🇱🇻 +371</option>
-                          <option value="+372">🇪🇪 +372</option>
+                          <option value="+353">🇮🇪 +353</option>
+                          <option value="+64">🇳🇿 +64</option>
                         </select>
                       ) : (
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">+91</span>
@@ -2078,10 +1823,10 @@ function BookingForm() {
                 )}
               </div>
               <div className="flex justify-between">
-                <button type="button" onClick={() => setStep(2)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                <button type="button" onClick={() => setStep(1)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
                   Back
                 </button>
-                <button type="button" onClick={() => canNext() && setStep(4)} disabled={!canNext()}
+                <button type="button" onClick={() => canNext() && setStep(3)} disabled={!canNext()}
                   className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
                   Next <ChevronRight className="h-4 w-4" />
                 </button>
@@ -2089,8 +1834,9 @@ function BookingForm() {
             </div>
           )}
 
-          {/* Step 4: Date & Time — DocIndia Style */}
-          {step === 4 && (
+           {/* Step 3: Date & Time — DocIndia Style */}
+          {step === 3 && (
+            <div>
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Left: Date & Time Picker */}
               <div className="flex-1 min-w-0 space-y-6">
@@ -2115,20 +1861,20 @@ function BookingForm() {
                 )}
 
                 {/* Date Picker + Time Slots */}
-                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden">
                   {/* Horizontal Date Picker */}
-                  <div className="px-5 pb-4 border-t border-slate-100 pt-4">
-                    <div className="flex items-center justify-between">
+                  <div className="px-4 py-4">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setDayOffset(Math.max(0, dayOffset - 1))}
                         disabled={dayOffset === 0}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-2 rounded-full hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                       >
-                        <ChevronLeft className="h-4 w-4 text-slate-600" />
+                        <ChevronLeft className="h-5 w-5 text-slate-500" />
                       </button>
-                      <div className="flex gap-2 flex-1 justify-center overflow-hidden">
-                        {Array.from({ length: 7 }, (_, i) => {
+                      <div className="flex gap-2 flex-1 overflow-x-auto pb-1 scrollbar-hide">
+                        {Array.from({ length: 14 }, (_, i) => {
                           const d = new Date();
                           d.setDate(d.getDate() + dayOffset + i);
                           const dateStr = d.toISOString().split('T')[0];
@@ -2150,19 +1896,19 @@ function BookingForm() {
                                 setBookedSlots(new Set());
                               }}
                               className={cn(
-                                'flex flex-col items-center px-2 py-2.5 rounded-xl text-xs transition-all min-w-[56px] border',
+                                'flex flex-col items-center px-3 py-3 rounded-xl text-xs transition-all min-w-[64px] border shrink-0',
                                 isSelected
-                                  ? 'bg-[#0A75BB] text-white border-[#0A75BB] shadow-md'
-                                  : 'border-transparent hover:bg-slate-50 text-slate-600'
+                                  ? 'bg-white border-[#0A75BB] text-[#0A75BB] shadow-md'
+                                  : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
                               )}
                             >
-                              <span className={cn('text-[9px] font-bold tracking-wide', isSelected ? 'text-blue-100' : 'text-slate-400')}>
-                                {isToday ? 'TODAY' : DAY_NAMES[d.getDay()]}
+                              <span className={cn('text-[10px] font-semibold tracking-wide', isSelected ? 'text-[#0A75BB]' : 'text-slate-400')}>
+                                {isToday ? 'Today' : DAY_NAMES[d.getDay()]}
                               </span>
-                              <span className="text-lg font-bold leading-tight">{d.getDate()}</span>
+                              <span className="text-lg font-bold leading-tight mt-0.5">{d.getDate()}</span>
                               <span className={cn(
-                                'text-[9px] font-medium',
-                                isSelected ? 'text-blue-100' : isWorking ? 'text-emerald-500' : 'text-red-400'
+                                'text-[10px] font-medium mt-0.5',
+                                isSelected ? 'text-[#0A75BB]' : isWorking ? 'text-emerald-500' : 'text-red-400'
                               )}>
                                 {isWorking ? `${slotCount} slots` : 'No slots'}
                               </span>
@@ -2173,16 +1919,16 @@ function BookingForm() {
                       <button
                         type="button"
                         onClick={() => setDayOffset(dayOffset + 1)}
-                        disabled={dayOffset >= 26}
-                        className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled={dayOffset >= 20}
+                        className="p-2 rounded-full hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                       >
-                        <ChevronRight className="h-4 w-4 text-slate-600" />
+                        <ChevronRight className="h-5 w-5 text-slate-500" />
                       </button>
                     </div>
                   </div>
 
                   {/* Time Slots Grid */}
-                  <div className="px-5 pb-5 border-t border-slate-100 pt-4 max-h-[380px] overflow-y-auto">
+                  <div className="px-5 pb-5 border-t border-slate-200 pt-4 max-h-[380px] overflow-y-auto">
                     {isHoliday ? (
                       <div className="text-center py-8 text-slate-400">
                         <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50 text-red-400" />
@@ -2222,7 +1968,7 @@ function BookingForm() {
                           return sections.map(section => (
                             <div key={section.label}>
                               <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-2">{section.label}</p>
-                              <div className="grid grid-cols-4 gap-2">
+                              <div className="grid grid-cols-4 gap-2.5">
                                 {section.slots.map(opt => (
                                   <button
                                     key={opt.value}
@@ -2234,12 +1980,12 @@ function BookingForm() {
                                     }}
                                     disabled={opt.isBooked}
                                     className={cn(
-                                      'px-2 py-2.5 rounded-xl text-xs font-medium transition-all border text-center',
+                                      'px-3 py-3 rounded-xl text-sm font-semibold transition-all border text-center',
                                       opt.isBooked
-                                        ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                                        ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed line-through'
                                         : formData.time === opt.value
                                           ? 'bg-[#0A75BB] text-white border-[#0A75BB] shadow-md'
-                                          : 'bg-white text-slate-700 border-slate-200 hover:border-[#0A75BB] hover:text-[#0A75BB]'
+                                          : 'bg-white text-[#0A75BB] border-[#0A75BB]/30 hover:border-[#0A75BB] hover:bg-[#0A75BB]/5'
                                     )}
                                   >
                                     {opt.isBooked ? opt.value.replace(/\s*(AM|PM)/i, '') : opt.label}
@@ -2257,87 +2003,25 @@ function BookingForm() {
                 {/* Hidden fields + Back/Next */}
                 <input type="hidden" name="date" value={formData.date} required />
                 <input type="hidden" name="time" value={formData.time} required />
-                <div className="flex justify-between">
-                  <button type="button" onClick={() => setStep(3)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
-                    Back
-                  </button>
-                  <button type="button" onClick={() => canNext() && setStep(5)} disabled={!canNext()}
-                    className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
-                    Next <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
               </div>
 
-              {/* Right Sidebar — Doctor Info (sticky) */}
-              {selectedClinic && (
-                <div className="w-full lg:w-[340px] shrink-0">
-                  <div className="lg:sticky lg:top-24 space-y-4">
-                    {/* Doctor Card */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shrink-0">
-                          <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="font-bold text-gray-900 text-sm">Dr. Rajesh Goel</h3>
-                            <span className="inline-flex items-center px-1 py-0.5 bg-green-100 rounded">
-                              <svg className="w-2.5 h-2.5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 leading-tight">{DOCTOR_INFO.qualifications.join(' · ')}</p>
-                          <span className="inline-block mt-1 text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-medium uppercase">Nephrology</span>
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                            <span className="text-[11px] font-medium text-gray-900">4.9</span>
-                            <span className="text-[11px] text-slate-400">(1000+ ratings)</span>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-[10px] text-slate-400 uppercase">Consultation</p>
-                          <p className="font-bold text-gray-900">
-                            {isOutsideIndia ? `$${consultFee}` : `₹${selectedClinic.fee}`}
-                          </p>
-                          <p className="text-[10px] text-slate-400">at this clinic</p>
-                        </div>
-                      </div>
-                    </div>
+            </div>
 
-                    {/* Consulting Hours */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4">
-                      <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-1">Consulting hours at {selectedClinic.shortName}</p>
-                      <p className="font-medium text-gray-900 text-sm">{selectedClinic.timing}</p>
-                    </div>
-
-                    {/* Location & Timings */}
-                    {formData.clinicId !== 'online' && (
-                      <div className="bg-white border border-slate-200 rounded-2xl p-4">
-                        <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-2">Location & timings</p>
-                        <div className="flex items-start gap-2 mb-3">
-                          <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm">{selectedClinic.shortName}</p>
-                            <p className="text-xs text-slate-500">{selectedClinic.address}</p>
-                          </div>
-                        </div>
-                        <a
-                          href={`https://www.google.com/maps/search/${encodeURIComponent(selectedClinic.name + ' ' + selectedClinic.address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 px-4 py-2 bg-[#0A75BB] text-white text-xs font-semibold rounded-lg hover:bg-[#085a94] transition-colors"
-                        >
-                          <MapPin className="h-3 w-3" /> Get directions
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+            {/* Back/Next Buttons */}
+            <div className="flex justify-between mt-6">
+              <button type="button" onClick={() => setStep(2)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                Back
+              </button>
+              <button type="button" onClick={() => canNext() && setStep(4)} disabled={!canNext()}
+                className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
+                Next <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
             </div>
           )}
 
-          {/* Step 5: Medical Info & Submit */}
-          {step === 5 && (
+           {/* Step 4: Medical Info & Submit */}
+          {step === 4 && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Medical Information</h2>
@@ -2561,11 +2245,12 @@ function BookingForm() {
               </div>
 
               <div className="flex justify-between">
-                <button type="button" onClick={() => setStep(4)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                <button type="button" onClick={() => setStep(3)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
                   Back
                 </button>
-                <button type="button" onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)} className="px-10 py-3.5 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 flex items-center gap-2 text-lg">
-                  <CheckCircle2 className="h-5 w-5" /> Confirm Appointment
+                <button type="button" onClick={() => canNext() && setStep(5)} disabled={!canNext()}
+                  className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
+                  Next <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
 
@@ -2573,6 +2258,165 @@ function BookingForm() {
                 By booking, you agree to our terms. Your data is kept confidential and used only for medical purposes.
               </p>
             </div>
+          )}
+
+          {/* Step 5: Confirm & Pay */}
+          {step === 5 && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Confirm Your Booking</h2>
+                <p className="text-sm text-slate-500">Review your booking details and confirm</p>
+              </div>
+
+              {/* Patient Summary */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-3">
+                <h3 className="font-bold text-slate-900">Patient Details</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-500">Name</span><span className="font-medium text-slate-900">{formData.firstName} {formData.lastName}</span></div>
+                  {formData.age && <div className="flex justify-between"><span className="text-slate-500">Age</span><span className="font-medium text-slate-900">{formData.age} years</span></div>}
+                  {formData.gender && <div className="flex justify-between"><span className="text-slate-500">Gender</span><span className="font-medium text-slate-900">{formData.gender}</span></div>}
+                  {formData.phone && <div className="flex justify-between"><span className="text-slate-500">Phone</span><span className="font-medium text-slate-900">{phoneCountryCode} {formData.phone}</span></div>}
+                  {formData.email && <div className="flex justify-between"><span className="text-slate-500">Email</span><span className="font-medium text-slate-900">{formData.email}</span></div>}
+                </div>
+              </div>
+
+              {/* Booking Summary */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-3">
+                <h3 className="font-bold text-slate-900">Booking Summary</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-500">Type</span><span className="font-medium text-slate-900 capitalize">{formData.consultationType?.replace('_', ' ')}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Date</span><span className="font-medium text-slate-900">{formData.date}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Time</span><span className="font-medium text-slate-900">{formData.time}</span></div>
+                  {selectedClinic && <div className="flex justify-between"><span className="text-slate-500">Clinic</span><span className="font-medium text-slate-900">{selectedClinic.shortName || selectedClinic.name}</span></div>}
+                  {formData.reason && <div className="flex justify-between"><span className="text-slate-500">Reason</span><span className="font-medium text-slate-900">{formData.reason}</span></div>}
+                  <div className="flex justify-between border-t border-slate-200 pt-2">
+                    <span className="text-slate-700 font-semibold">Fee</span>
+                    <span className="text-lg font-bold text-[#0A75BB]">{isOutsideIndia ? `$${consultFee}` : `₹${consultFee}`}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <button type="button" onClick={() => setStep(4)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+                  Back
+                </button>
+                <button type="button" onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)} className="px-10 py-3.5 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 flex items-center gap-2 text-lg">
+                  <CheckCircle2 className="h-5 w-5" /> Confirm & Pay
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-400 text-center">
+                By booking, you agree to our terms. Your data is kept confidential and used only for medical purposes.
+              </p>
+            </div>
+          )}
+
+          </div>
+
+          {/* Persistent Sidebar — only on Step 3 Schedule */}
+          {step === 3 && (
+          <div className="w-full lg:w-[300px] shrink-0">
+            <div className="lg:sticky lg:top-24 space-y-4">
+              {/* Patient Details Card */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-gray-900 text-sm">Your Details</h3>
+                  <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Step 3</span>
+                </div>
+                <div className="space-y-2.5">
+                  {formData.firstName && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Name</span>
+                      <span className="text-xs font-semibold text-gray-900">{formData.firstName} {formData.lastName}</span>
+                    </div>
+                  )}
+                  {formData.age && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Age</span>
+                      <span className="text-xs font-semibold text-gray-900">{formData.age} years</span>
+                    </div>
+                  )}
+                  {formData.gender && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Gender</span>
+                      <span className="text-xs font-semibold text-gray-900">{formData.gender}</span>
+                    </div>
+                  )}
+                  {formData.phone && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Phone</span>
+                      <span className="text-xs font-semibold text-gray-900">{phoneCountryCode} {formData.phone}</span>
+                    </div>
+                  )}
+                  {formData.consultationType && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Type</span>
+                      <span className="text-xs font-semibold text-gray-900 capitalize">{formData.consultationType.replace(/_/g, ' ')}</span>
+                    </div>
+                  )}
+                  {formData.date && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Date</span>
+                      <span className="text-xs font-semibold text-gray-900">{formData.date}</span>
+                    </div>
+                  )}
+                  {formData.time && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Time</span>
+                      <span className="text-xs font-semibold text-gray-900">{formData.time}</span>
+                    </div>
+                  )}
+                  {selectedClinic && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Clinic</span>
+                      <span className="text-xs font-semibold text-gray-900">{selectedClinic.shortName || selectedClinic.name}</span>
+                    </div>
+                  )}
+                </div>
+                {selectedClinic && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Fee</span>
+                    <span className="text-lg font-bold text-[#0A75BB]">
+                      {isOutsideIndia ? `$${consultFee}` : `₹${selectedClinic.fee}`}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 text-right">{isOutsideIndia ? 'Pay via Razorpay (USD)' : 'Pay via Razorpay'}</p>
+                </div>
+                )}
+              </div>
+
+              {/* Consulting Hours */}
+              {selectedClinic && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-1">Consulting hours at {selectedClinic.shortName}</p>
+                <p className="font-medium text-gray-900 text-sm">{selectedClinic.timing}</p>
+              </div>
+              )}
+
+              {/* Location & Timings */}
+              {selectedClinic && formData.clinicId !== 'online' && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-4">
+                  <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-2">Location & timings</p>
+                  <div className="flex items-start gap-2 mb-3">
+                    <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{selectedClinic.shortName}</p>
+                      <p className="text-xs text-slate-500">{selectedClinic.address}</p>
+                    </div>
+                  </div>
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(selectedClinic.name + ' ' + selectedClinic.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#0A75BB] text-white text-xs font-semibold rounded-lg hover:bg-[#085a94] transition-colors"
+                  >
+                    <MapPin className="h-3 w-3" /> Get directions
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
           )}
         </form>
       </div>

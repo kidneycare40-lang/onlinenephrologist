@@ -4,6 +4,7 @@ import { authenticateRequest, requirePermission, applyRateLimit, apiError } from
 import { autoBridgeFromBooking, getEmrPatientId, ensureEmrBridge } from '@/lib/patient-portal-server';
 import { normalizePhone } from '@/lib/phone';
 import { notifyBookingCreated } from '@/lib/emr-notifications';
+import { sendBookingConfirmationEmail } from '@/lib/email';
 
 // Find or create an EMR patient record for a relative.
 // Matches by name + DOB to avoid duplicates; falls back to phone match.
@@ -516,6 +517,31 @@ export async function POST(request: NextRequest) {
         isInternational: body.isInternational,
       });
     } catch { /* non-blocking */ }
+
+    // ─── SEND BOOKING CONFIRMATION EMAIL (non-blocking) ──────────
+    if (body.email) {
+      try {
+        const firstName = (body.firstName || '').trim();
+        const lastName = (body.lastName || '').trim();
+        await sendBookingConfirmationEmail({
+          to: body.email,
+          patientName: `${firstName} ${lastName}`.trim(),
+          bookingId: body.bookingId,
+          consultationType: body.consultationType || 'online',
+          date: body.date || '',
+          time: body.time || '',
+          fee: body.consultationFeeCurrency === 'USD'
+            ? `$${body.consultationFee}`
+            : `₹${body.consultationFee}`,
+          doctorName: 'Dr. Rajesh Goel',
+          clinicName: body.clinicId || 'online',
+          relationship: body.relationship || 'self',
+        });
+        console.log(`[bookings] Confirmation email sent to ${body.email} for ${body.bookingId}`);
+      } catch (e) {
+        console.error('[bookings] Failed to send confirmation email (non-blocking):', e);
+      }
+    }
 
     return NextResponse.json({ success: true, bookingId: body.bookingId }, { status: 201 });
   } catch (error) {
