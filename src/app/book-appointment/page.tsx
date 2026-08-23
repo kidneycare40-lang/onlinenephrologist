@@ -1101,8 +1101,8 @@ function BookingForm() {
       {/* Hero Section — hidden at step 0 for clean phone-first experience */}
       <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
-          <div className="flex flex-col md:flex-row items-stretch gap-6">
-            <div className="aspect-[3/4] h-full max-h-48 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="h-28 md:h-32 aspect-[3/4] rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
               <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
             </div>
             <div className="text-center md:text-left">
