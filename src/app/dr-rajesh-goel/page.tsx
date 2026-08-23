@@ -306,34 +306,49 @@ export default function DoctorProfilePage() {
       {/* Clinic Locations */}
       <section className="py-16 bg-gray-50" id="clinics">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Clinic Locations</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {DOCTOR_INFO.clinics.map((clinic, i) => (
-              <div key={i} className={`bg-white rounded-xl p-6 shadow-sm border-2 ${clinic.type === 'online' ? 'border-green-200' : 'border-gray-100'}`}>
-                <div className="flex items-start gap-3 mb-3">
-                  {clinic.type === 'online' ? (
-                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">ONLINE</span>
-                  ) : (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">IN-CLINIC</span>
-                  )}
+          <h2 className="text-3xl font-bold text-gray-900 mb-1">Clinics & timings</h2>
+          <p className="text-sm text-slate-400 mb-6">3 locations</p>
+          <div className="space-y-4">
+            {[
+              { name: 'Kidney Care Centre - Faridabad', address: 'Old Faridabad, 18A Main Market, Faridabad, Haryana 121002', timing: 'Mon to Sat · 09:00 AM - 10:30 AM', fee: 500, maps: 'https://www.google.com/maps/search/Kidney+Care+Centre+Faridabad+18A+Main+Market' },
+              { name: 'Kidney Care Centre - Saket', address: '13 B, K-Block, Gate no. 2, Saket, New Delhi 110017', timing: 'Mon to Sun · 09:00 PM - 11:00 PM', fee: 1200, byAppt: true, maps: 'https://www.google.com/maps/search/Kidney+Care+Centre+Saket+Delhi' },
+              { name: 'PSRI Hospital, New Delhi', address: 'Press Enclave Marg, Shaikh Sarai - II, New Delhi 110017', timing: 'Mon to Sat · 01:00 PM - 07:00 PM', fee: 1000, maps: 'https://www.google.com/maps/search/PSRI+Hospital+New+Delhi' },
+            ].map((clinic, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 hover:border-slate-200 transition-colors">
+                <div className="flex items-start justify-between gap-4 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-gray-900 text-base">{clinic.name}</h3>
+                      {clinic.byAppt && (
+                        <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-medium">By Appt</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-500 mb-1.5">{clinic.address}</p>
+                    <div className="flex items-center gap-2 text-sm text-slate-500 mb-2.5">
+                      <svg className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
+                      {clinic.timing}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">In-clinic</span>
+                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium">Video</span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-gray-900 text-base">₹{clinic.fee}</p>
+                    <p className="text-[11px] text-slate-400">consultation</p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{clinic.name}</h3>
-                <div className="flex items-start gap-2 text-gray-600 text-sm mb-2">
-                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
-                  {clinic.address}
-                </div>
-                <div className="flex items-center gap-2 text-gray-600 text-sm mb-3">
-                  <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/></svg>
-                  {clinic.timing}
-                </div>
-                {clinic.byAppointment && (
-                  <p className="text-xs text-orange-600 font-medium">By Appointment Only</p>
-                )}
-                {clinic.type === 'online' && (
-                  <Link href="/book-appointment?type=online" className="inline-block mt-2 px-4 py-2 bg-green-500 text-white text-sm font-semibold rounded-lg hover:bg-green-600">
-                    Book Online
+                <div className="flex gap-2 mt-4">
+                  <Link href="/book-appointment" className="flex-1 text-center px-4 py-2.5 bg-[#0A75BB] text-white text-sm font-semibold rounded-lg hover:bg-[#085a94] transition-colors">
+                    Book now
                   </Link>
-                )}
+                  <a href={clinic.maps} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-4 py-2.5 border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-50 transition-colors whitespace-nowrap">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Get directions
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  </a>
+                </div>
               </div>
             ))}
           </div>
