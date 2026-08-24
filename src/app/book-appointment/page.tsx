@@ -1317,7 +1317,8 @@ function BookingForm() {
                   </div>
                 </div>
               )}
-              {(forceInternational || formData.currentLocation === 'outside_india') ? (
+               {(forceInternational || formData.currentLocation === 'outside_india') ? (
+                <>
                 <div className="border-2 border-blue-500 bg-blue-50 rounded-2xl p-6 shadow-lg shadow-blue-100">
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0">
@@ -1343,6 +1344,68 @@ function BookingForm() {
                    <input type="hidden" name="consultationType" value="online_intl" />
                   <input type="hidden" name="currentLocation" value="outside_india" />
                 </div>
+
+                {/* Countries We Serve */}
+                <div className="mt-6">
+                  <p className="text-xs text-slate-500 font-medium mb-3 uppercase tracking-wide">Patients from 20+ countries trust us</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { flag: '🇺🇸', name: 'United States' },
+                      { flag: '🇬🇧', name: 'United Kingdom' },
+                      { flag: '🇦🇪', name: 'UAE' },
+                      { flag: '🇸🇦', name: 'Saudi Arabia' },
+                      { flag: '🇨🇦', name: 'Canada' },
+                      { flag: '🇦🇺', name: 'Australia' },
+                      { flag: '🇸🇬', name: 'Singapore' },
+                      { flag: '🇲🇾', name: 'Malaysia' },
+                      { flag: '🇳🇬', name: 'Nigeria' },
+                      { flag: '🇰🇪', name: 'Kenya' },
+                      { flag: '🇧🇩', name: 'Bangladesh' },
+                      { flag: '🇵🇰', name: 'Pakistan' },
+                      { flag: '🇱🇰', name: 'Sri Lanka' },
+                      { flag: '🇳🇵', name: 'Nepal' },
+                      { flag: '🇵🇭', name: 'Philippines' },
+                      { flag: '🇪🇬', name: 'Egypt' },
+                      { flag: '🇿🇦', name: 'South Africa' },
+                      { flag: '🇫🇷', name: 'France' },
+                      { flag: '🇩🇪', name: 'Germany' },
+                      { flag: '🇯🇵', name: 'Japan' },
+                    ].map(c => (
+                      <span key={c.name} className="inline-flex items-center gap-1.5 text-xs bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-full font-medium">
+                        <span className="text-sm">{c.flag}</span> {c.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* International Patient Reviews */}
+                <div className="mt-6">
+                  <p className="text-xs text-slate-500 font-medium mb-3 uppercase tracking-wide">What International Patients Say</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {[
+                      { name: 'Sarah Mitchell', role: 'New York, USA', flag: '🇺🇸', text: 'Dr Goel reviewed my reports over video call and explained everything clearly. Saved me a trip to India. Very professional.' },
+                      { name: 'Ahmed Al Rashid', role: 'Dubai, UAE', flag: '🇦🇪', text: 'Excellent consultation. Dr Goel adjusted my dialysis plan and follow-up on WhatsApp was very convenient.' },
+                      { name: 'Priya Fernando', role: 'Colombo, Sri Lanka', flag: '🇱🇰', text: 'I was worried about my kidney function. Dr Goel guided me through the entire process online. Highly recommended.' },
+                      { name: 'James Okonkwo', role: 'Lagos, Nigeria', flag: '🇳🇬', text: 'Great experience. The timezone-adjusted scheduling made it easy to book from Nigeria. Very thorough consultation.' },
+                    ].map((r, i) => (
+                      <div key={i} className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center gap-1 text-amber-400">
+                          {[1,2,3,4,5].map(s => <Star key={s} className="h-3 w-3 fill-current" />)}
+                        </div>
+                        <p className="text-sm text-slate-600 leading-relaxed">&ldquo;{r.text}&rdquo;</p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <span className="text-base">{r.flag}</span>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-900">{r.name}</p>
+                            <p className="text-[10px] text-slate-400">{r.role}</p>
+                          </div>
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500 ml-auto shrink-0" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                </>
               ) : (
               <>
               <div>
