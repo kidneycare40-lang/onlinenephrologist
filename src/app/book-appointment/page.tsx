@@ -2434,29 +2434,29 @@ function BookingForm() {
           <p className="text-xs text-slate-500 font-medium mb-4 uppercase tracking-wide text-center">Patients from 20+ countries trust us</p>
           <div className="flex flex-wrap justify-center gap-2 mb-10">
             {[
-              { flag: '🇺🇸', name: 'United States' },
-              { flag: '🇬🇧', name: 'United Kingdom' },
-              { flag: '🇦🇪', name: 'UAE' },
-              { flag: '🇸🇦', name: 'Saudi Arabia' },
-              { flag: '🇨🇦', name: 'Canada' },
-              { flag: '🇦🇺', name: 'Australia' },
-              { flag: '🇸🇬', name: 'Singapore' },
-              { flag: '🇲🇾', name: 'Malaysia' },
-              { flag: '🇳🇬', name: 'Nigeria' },
-              { flag: '🇰🇪', name: 'Kenya' },
-              { flag: '🇧🇩', name: 'Bangladesh' },
-              { flag: '🇵🇰', name: 'Pakistan' },
-              { flag: '🇱🇰', name: 'Sri Lanka' },
-              { flag: '🇳🇵', name: 'Nepal' },
-              { flag: '🇵🇭', name: 'Philippines' },
-              { flag: '🇪🇬', name: 'Egypt' },
-              { flag: '🇿🇦', name: 'South Africa' },
-              { flag: '🇫🇷', name: 'France' },
-              { flag: '🇩🇪', name: 'Germany' },
-              { flag: '🇯🇵', name: 'Japan' },
+              { code: 'us', name: 'United States' },
+              { code: 'gb', name: 'United Kingdom' },
+              { code: 'ae', name: 'UAE' },
+              { code: 'sa', name: 'Saudi Arabia' },
+              { code: 'ca', name: 'Canada' },
+              { code: 'au', name: 'Australia' },
+              { code: 'sg', name: 'Singapore' },
+              { code: 'my', name: 'Malaysia' },
+              { code: 'ng', name: 'Nigeria' },
+              { code: 'ke', name: 'Kenya' },
+              { code: 'bd', name: 'Bangladesh' },
+              { code: 'pk', name: 'Pakistan' },
+              { code: 'lk', name: 'Sri Lanka' },
+              { code: 'np', name: 'Nepal' },
+              { code: 'ph', name: 'Philippines' },
+              { code: 'eg', name: 'Egypt' },
+              { code: 'za', name: 'South Africa' },
+              { code: 'fr', name: 'France' },
+              { code: 'de', name: 'Germany' },
+              { code: 'jp', name: 'Japan' },
             ].map(c => (
               <span key={c.name} className="inline-flex items-center gap-1.5 text-sm bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full font-medium shadow-sm">
-                <span>{c.flag}</span> {c.name}
+                <img src={`https://flagcdn.com/w20/${c.code}.png`} alt={c.name} className="w-5 h-auto rounded-sm" /> {c.name}
               </span>
             ))}
           </div>
@@ -2465,10 +2465,10 @@ function BookingForm() {
           <p className="text-sm text-slate-500 text-center mb-6">Verified reviews from patients around the world</p>
           <div className="flex gap-5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
             {[
-              { name: 'Sarah Mitchell', role: 'New York, USA', flag: '🇺🇸', text: 'Dr Goel reviewed my reports over video call and explained everything clearly. Saved me a trip to India. Very professional.' },
-              { name: 'Ahmed Al Rashid', role: 'Dubai, UAE', flag: '🇦🇪', text: 'Excellent consultation. Dr Goel adjusted my dialysis plan and follow-up on WhatsApp was very convenient.' },
-              { name: 'Priya Fernando', role: 'Colombo, Sri Lanka', flag: '🇱🇰', text: 'I was worried about my kidney function. Dr Goel guided me through the entire process online. Highly recommended.' },
-              { name: 'James Okonkwo', role: 'Lagos, Nigeria', flag: '🇳🇬', text: 'Great experience. The timezone-adjusted scheduling made it easy to book from Nigeria. Very thorough consultation.' },
+              { name: 'Sarah Mitchell', role: 'New York, USA', code: 'us', text: 'Dr Goel reviewed my reports over video call and explained everything clearly. Saved me a trip to India. Very professional.' },
+              { name: 'Ahmed Al Rashid', role: 'Dubai, UAE', code: 'ae', text: 'Excellent consultation. Dr Goel adjusted my dialysis plan and follow-up on WhatsApp was very convenient.' },
+              { name: 'Priya Fernando', role: 'Colombo, Sri Lanka', code: 'lk', text: 'I was worried about my kidney function. Dr Goel guided me through the entire process online. Highly recommended.' },
+              { name: 'James Okonkwo', role: 'Lagos, Nigeria', code: 'ng', text: 'Great experience. The timezone-adjusted scheduling made it easy to book from Nigeria. Very thorough consultation.' },
             ].map((r, i) => (
               <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm min-w-[320px] max-w-[360px] shrink-0 snap-center">
                 <div className="flex items-center gap-1 text-amber-400">
@@ -2476,7 +2476,7 @@ function BookingForm() {
                 </div>
                 <p className="text-sm text-slate-600 leading-relaxed">&ldquo;{r.text}&rdquo;</p>
                 <div className="flex items-center gap-2 pt-1">
-                  <span className="text-lg">{r.flag}</span>
+                  <img src={`https://flagcdn.com/w20/${r.code}.png`} alt="" className="w-5 h-auto rounded-sm" />
                   <div>
                     <p className="text-xs font-semibold text-slate-900">{r.name}</p>
                     <p className="text-[11px] text-slate-400">{r.role}</p>
