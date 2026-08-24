@@ -876,7 +876,7 @@ function BookingForm() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white overflow-x-hidden">
         <header className="bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
             <Link href="/" className="flex items-center gap-2.5">
@@ -1098,37 +1098,37 @@ function BookingForm() {
         </div>
       </header>
 
-      {/* Hero Section — hidden at step 0 for clean phone-first experience */}
-      <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="h-28 md:h-32 aspect-[4/5] rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
+            <div className="w-20 h-24 md:w-24 md:h-32 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
               <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
             </div>
-            <div className="text-center md:text-left">
-              <h1 className="text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>
-              <p className="text-white/80 text-sm md:text-base">Consult <strong className="text-white">Dr Rajesh Goel</strong>
+            <div className="text-center md:text-left min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>
+              <p className="text-white/80 text-xs sm:text-sm md:text-base truncate md:whitespace-normal">Consult <strong className="text-white">Dr Rajesh Goel</strong>
                 <span className="inline-flex items-center ml-1.5 align-middle bg-green-400 rounded-sm px-0.5">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                 </span>
-                — Senior Nephrologist & Kidney Transplant Physician</p>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-3">
-                <span className="text-xs text-white/90 font-medium">MBBS | DNB Internal Medicine | DNB Nephrology | Fellow Kidney Transplant Medicine</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-2">
-                <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Star className="h-3 w-3 text-yellow-300 fill-yellow-300" /> 4.9 Rating
+                <span className="hidden sm:inline"> — Senior Nephrologist & Kidney Transplant Physician</span>
+                <span className="sm:hidden"> — Nephrologist</span>
+              </p>
+              <p className="text-[10px] sm:text-xs text-white/70 mt-0.5">MBBS | DNB Internal Medicine | DNB Nephrology | Fellow Kidney Transplant Medicine</p>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 sm:gap-2 mt-2">
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs bg-white/15 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                  <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-yellow-300 fill-yellow-300" /> 4.9 Rating
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Stethoscope className="h-3 w-3" /> 20+ Years Experience
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs bg-white/15 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                  <Stethoscope className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> 20+ Years Experience
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                  <Heart className="h-3 w-3" /> 5000+ Patients Treated
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] sm:text-xs bg-white/15 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                  <Heart className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> 5000+ Patients Treated
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] sm:text-xs bg-white/15 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
                   Reg. No. DMC/R/734
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs bg-white/15 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] sm:text-xs bg-white/15 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
                   English, Hindi
                 </span>
               </div>
@@ -1708,7 +1708,7 @@ function BookingForm() {
                       <Globe className="h-5 w-5 text-purple-500" />
                       <h3 className="font-bold text-slate-900">International Patient Details</h3>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">Country *</label>
                         <select name="country" required value={formData.country} onChange={handleChange}
@@ -1974,7 +1974,7 @@ function BookingForm() {
                           return sections.map(section => (
                             <div key={section.label}>
                               <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-2">{section.label}</p>
-                              <div className="grid grid-cols-4 gap-2.5">
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5">
                                 {section.slots.map(opt => (
                                   <button
                                     key={opt.value}
@@ -2319,9 +2319,9 @@ function BookingForm() {
 
           </div>
 
-          {/* Persistent Sidebar — shows on steps 1-5 */}
+          {/* Persistent Sidebar — shows on steps 1-5, hidden on mobile */}
           {step >= 1 && step <= 5 && (
-          <div className="w-full lg:w-[300px] shrink-0">
+          <div className="hidden lg:block w-[300px] shrink-0">
             <div className="lg:sticky lg:top-24 space-y-4">
               {/* Patient Details Card */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5">
