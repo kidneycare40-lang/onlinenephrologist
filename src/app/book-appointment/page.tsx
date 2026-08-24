@@ -2463,28 +2463,36 @@ function BookingForm() {
 
           <h3 className="text-xl font-bold text-slate-900 text-center mb-1">What International Patients Say</h3>
           <p className="text-sm text-slate-500 text-center mb-6">Verified reviews from patients around the world</p>
-          <div className="flex gap-5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-            {[
-              { name: 'Sarah Mitchell', role: 'New York, USA', code: 'us', text: 'Dr Goel reviewed my reports over video call and explained everything clearly. Saved me a trip to India. Very professional.' },
-              { name: 'Ahmed Al Rashid', role: 'Dubai, UAE', code: 'ae', text: 'Excellent consultation. Dr Goel adjusted my dialysis plan and follow-up on WhatsApp was very convenient.' },
-              { name: 'Priya Fernando', role: 'Colombo, Sri Lanka', code: 'lk', text: 'I was worried about my kidney function. Dr Goel guided me through the entire process online. Highly recommended.' },
-              { name: 'James Okonkwo', role: 'Lagos, Nigeria', code: 'ng', text: 'Great experience. The timezone-adjusted scheduling made it easy to book from Nigeria. Very thorough consultation.' },
-            ].map((r, i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm min-w-[320px] max-w-[360px] shrink-0 snap-center">
-                <div className="flex items-center gap-1 text-amber-400">
-                  {[1,2,3,4,5].map(s => <Star key={s} className="h-3.5 w-3.5 fill-current" />)}
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed">&ldquo;{r.text}&rdquo;</p>
-                <div className="flex items-center gap-2 pt-1">
-                  <img src={`https://flagcdn.com/w20/${r.code}.png`} alt="" className="w-5 h-auto rounded-sm" />
-                  <div>
-                    <p className="text-xs font-semibold text-slate-900">{r.name}</p>
-                    <p className="text-[11px] text-slate-400">{r.role}</p>
+          <div className="relative">
+            <div id="intl-reviews-scroll" className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory scroll-smooth">
+              {[
+                { name: 'Sarah Mitchell', role: 'New York, USA', code: 'us', text: 'Dr Goel reviewed my reports over video call and explained everything clearly. Saved me a trip to India. Very professional.' },
+                { name: 'Ahmed Al Rashid', role: 'Dubai, UAE', code: 'ae', text: 'Excellent consultation. Dr Goel adjusted my dialysis plan and follow-up on WhatsApp was very convenient.' },
+                { name: 'Priya Fernando', role: 'Colombo, Sri Lanka', code: 'lk', text: 'I was worried about my kidney function. Dr Goel guided me through the entire process online. Highly recommended.' },
+                { name: 'James Okonkwo', role: 'Lagos, Nigeria', code: 'ng', text: 'Great experience. The timezone-adjusted scheduling made it easy to book from Nigeria. Very thorough consultation.' },
+              ].map((r, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm w-[280px] sm:w-[340px] shrink-0 snap-center">
+                  <div className="flex items-center gap-1 text-amber-400">
+                    {[1,2,3,4,5].map(s => <Star key={s} className="h-3.5 w-3.5 fill-current" />)}
                   </div>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 ml-auto shrink-0" />
+                  <p className="text-sm text-slate-600 leading-relaxed">&ldquo;{r.text}&rdquo;</p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <img src={`https://flagcdn.com/w20/${r.code}.png`} alt="" className="w-5 h-auto rounded-sm" />
+                    <div>
+                      <p className="text-xs font-semibold text-slate-900">{r.name}</p>
+                      <p className="text-[11px] text-slate-400">{r.role}</p>
+                    </div>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 ml-auto shrink-0" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <button type="button" onClick={() => document.getElementById('intl-reviews-scroll')?.scrollBy({ left: -370, behavior: 'smooth' })} className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center hover:bg-slate-50 transition-colors z-10 cursor-pointer">
+              <ChevronLeft className="h-5 w-5 text-slate-600" />
+            </button>
+            <button type="button" onClick={() => document.getElementById('intl-reviews-scroll')?.scrollBy({ left: 370, behavior: 'smooth' })} className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md items-center justify-center hover:bg-slate-50 transition-colors z-10 cursor-pointer">
+              <ChevronRight className="h-5 w-5 text-slate-600" />
+            </button>
           </div>
         </div>
       </div>
