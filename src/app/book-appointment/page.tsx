@@ -1288,8 +1288,8 @@ function BookingForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate className={step === 3 ? 'flex flex-col lg:flex-row gap-6' : ''}>
-          <div className={step === 3 ? 'flex-1 min-w-0' : 'max-w-3xl mx-auto'}>
+        <form onSubmit={handleSubmit} noValidate className={step >= 1 ? 'flex flex-col lg:flex-row gap-6' : ''}>
+          <div className={step >= 1 ? 'flex-1 min-w-0' : 'max-w-3xl mx-auto'}>
           {/* Step 0: Consultation Type */}
           {step === 0 && (
             <div className="space-y-6">
@@ -2319,15 +2319,15 @@ function BookingForm() {
 
           </div>
 
-          {/* Persistent Sidebar — only on Step 3 Schedule */}
-          {step === 3 && (
+          {/* Persistent Sidebar — shows on steps 1-5 */}
+          {step >= 1 && step <= 5 && (
           <div className="w-full lg:w-[300px] shrink-0">
             <div className="lg:sticky lg:top-24 space-y-4">
               {/* Patient Details Card */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-bold text-gray-900 text-sm">Your Details</h3>
-                  <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Step 3</span>
+                  <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{step === 1 ? 'Step 1' : step === 2 ? 'Step 2' : step === 3 ? 'Step 3' : step === 4 ? 'Step 4' : 'Confirm'}</span>
                 </div>
                 <div className="space-y-2.5">
                   {formData.firstName && (
