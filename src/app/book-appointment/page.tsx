@@ -2427,28 +2427,6 @@ function BookingForm() {
         </form>
       </div>
 
-      {/* Trust Footer */}
-      <div className="bg-white border-t border-slate-200 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            {[
-              { icon: Shield, label: '100% Confidential', sub: 'Your data is secure' },
-              { icon: Award, label: '20+ Years Experience', sub: 'Trusted by 5000+ patients' },
-              { icon: Clock, label: 'Quick Response', sub: 'Same-day appointments' },
-              { icon: Phone, label: 'WhatsApp Support', sub: '+91 98182 35613' },
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-[#0A75BB]/10 flex items-center justify-center">
-                  <item.icon className="h-5 w-5 text-[#0A75BB]" />
-                </div>
-                <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-                <p className="text-xs text-slate-500">{item.sub}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* International Section — full width below form */}
       {(forceInternational || (mounted && formData.currentLocation === 'outside_india')) && (
       <div className="bg-slate-50 border-t border-slate-200">
@@ -2511,6 +2489,28 @@ function BookingForm() {
         </div>
       </div>
       )}
+
+      {/* Trust Footer */}
+      <div className="bg-white border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { icon: Shield, label: '100% Confidential', sub: 'Your data is secure' },
+              { icon: Award, label: '20+ Years Experience', sub: 'Trusted by 5000+ patients' },
+              { icon: Clock, label: 'Quick Response', sub: 'Same-day appointments' },
+              { icon: Phone, label: 'WhatsApp Support', sub: '+91 98182 35613' },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-[#0A75BB]/10 flex items-center justify-center">
+                  <item.icon className="h-5 w-5 text-[#0A75BB]" />
+                </div>
+                <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+                <p className="text-xs text-slate-500">{item.sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       <footer className="bg-slate-900 text-slate-400 py-6 text-center text-sm">
         &copy; {new Date().getFullYear()} Online Nephrologist. All rights reserved.
