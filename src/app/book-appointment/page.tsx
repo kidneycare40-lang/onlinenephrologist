@@ -2463,14 +2463,14 @@ function BookingForm() {
 
           <h3 className="text-xl font-bold text-slate-900 text-center mb-1">What International Patients Say</h3>
           <p className="text-sm text-slate-500 text-center mb-6">Verified reviews from patients around the world</p>
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="flex gap-5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
             {[
               { name: 'Sarah Mitchell', role: 'New York, USA', flag: '🇺🇸', text: 'Dr Goel reviewed my reports over video call and explained everything clearly. Saved me a trip to India. Very professional.' },
               { name: 'Ahmed Al Rashid', role: 'Dubai, UAE', flag: '🇦🇪', text: 'Excellent consultation. Dr Goel adjusted my dialysis plan and follow-up on WhatsApp was very convenient.' },
               { name: 'Priya Fernando', role: 'Colombo, Sri Lanka', flag: '🇱🇰', text: 'I was worried about my kidney function. Dr Goel guided me through the entire process online. Highly recommended.' },
               { name: 'James Okonkwo', role: 'Lagos, Nigeria', flag: '🇳🇬', text: 'Great experience. The timezone-adjusted scheduling made it easy to book from Nigeria. Very thorough consultation.' },
             ].map((r, i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm">
+              <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-sm min-w-[320px] max-w-[360px] shrink-0 snap-center">
                 <div className="flex items-center gap-1 text-amber-400">
                   {[1,2,3,4,5].map(s => <Star key={s} className="h-3.5 w-3.5 fill-current" />)}
                 </div>
