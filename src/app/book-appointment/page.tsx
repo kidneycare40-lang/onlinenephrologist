@@ -1869,7 +1869,7 @@ function BookingForm() {
                 {/* Date Picker + Time Slots */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden">
                   {/* Horizontal Date Picker */}
-                  <div className="px-4 py-4">
+                  <div className="px-2 sm:px-4 py-3 sm:py-4">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -1902,7 +1902,7 @@ function BookingForm() {
                                 setBookedSlots(new Set());
                               }}
                               className={cn(
-                                'flex flex-col items-center px-3 py-3 rounded-xl text-xs transition-all min-w-[64px] border shrink-0',
+                                'flex flex-col items-center px-2 py-2 rounded-xl text-xs transition-all min-w-[56px] sm:min-w-[64px] border shrink-0',
                                 isSelected
                                   ? 'bg-white border-[#0A75BB] text-[#0A75BB] shadow-md'
                                   : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
@@ -1934,7 +1934,7 @@ function BookingForm() {
                   </div>
 
                   {/* Time Slots Grid */}
-                  <div className="px-5 pb-5 border-t border-slate-200 pt-4 max-h-[380px] overflow-y-auto">
+                  <div className="px-3 sm:px-5 pb-4 sm:pb-5 border-t border-slate-200 pt-3 sm:pt-4 max-h-[380px] overflow-y-auto">
                     {isHoliday ? (
                       <div className="text-center py-8 text-slate-400">
                         <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50 text-red-400" />
@@ -1974,7 +1974,7 @@ function BookingForm() {
                           return sections.map(section => (
                             <div key={section.label}>
                               <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-2">{section.label}</p>
-                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-2.5">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-2.5">
                                 {section.slots.map(opt => (
                                   <button
                                     key={opt.value}
@@ -1986,7 +1986,7 @@ function BookingForm() {
                                     }}
                                     disabled={opt.isBooked}
                                     className={cn(
-                                      'px-3 py-3 rounded-xl text-sm font-semibold transition-all border text-center',
+                                      'px-2 py-2 sm:px-3 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all border text-center',
                                       opt.isBooked
                                         ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed line-through'
                                         : formData.time === opt.value
