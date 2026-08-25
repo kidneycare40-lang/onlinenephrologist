@@ -2448,9 +2448,9 @@ function BookingForm() {
       {(forceInternational || (mounted && formData.currentLocation === 'outside_india')) && (
       <div className="bg-slate-50 border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <p className="text-xs text-slate-500 font-medium mb-4 uppercase tracking-wide text-center">Patients from 20+ countries trust us</p>
-          <div className="flex flex-wrap justify-center gap-2 mb-10">
-            {[
+          <p className="text-xs text-slate-500 font-medium mb-5 uppercase tracking-wide text-center">Patients from 20+ countries trust us</p>
+          {(() => {
+            const countries = [
               { code: 'us', name: 'United States' },
               { code: 'gb', name: 'United Kingdom' },
               { code: 'ae', name: 'UAE' },
@@ -2471,12 +2471,23 @@ function BookingForm() {
               { code: 'fr', name: 'France' },
               { code: 'de', name: 'Germany' },
               { code: 'jp', name: 'Japan' },
-            ].map(c => (
-              <span key={c.name} className="inline-flex items-center gap-1.5 text-sm bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full font-medium shadow-sm">
-                <img src={`https://flagcdn.com/w20/${c.code}.png`} alt={c.name} className="w-5 h-auto rounded-sm" /> {c.name}
+            ];
+            const flagBadge = (c: { code: string; name: string }, i: number) => (
+              <span key={`${c.code}-${i}`} className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap shrink-0">
+                <img src={`https://flagcdn.com/w20/${c.code}.png`} alt={c.name} className="w-4 h-auto rounded-sm" loading="lazy" /> {c.name}
               </span>
-            ))}
-          </div>
+            );
+            return (
+              <div className="overflow-hidden mb-10 relative">
+                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-slate-50 to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-50 to-transparent z-10 pointer-events-none" />
+                <div className="flex gap-2.5 animate-marquee w-max">
+                  {countries.map((c, i) => flagBadge(c, i))}
+                  {countries.map((c, i) => flagBadge(c, i + countries.length))}
+                </div>
+              </div>
+            );
+          })()}
 
           <h3 className="text-xl font-bold text-slate-900 text-center mb-1">What International Patients Say</h3>
           <p className="text-sm text-slate-500 text-center mb-6">Verified reviews from patients around the world</p>
