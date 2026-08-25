@@ -1684,12 +1684,14 @@ function BookingForm() {
                   </div>
                 </div>
 
+                {!isOutsideIndia && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Address / Location</label>
                   <input type="text" name="address" value={formData.address} onChange={handleChange}
                     className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
                     placeholder="City, State" />
                 </div>
+                )}
 
                 {/* Relationship field — only for family bookings */}
                 {bookingFor === 'family' && (
