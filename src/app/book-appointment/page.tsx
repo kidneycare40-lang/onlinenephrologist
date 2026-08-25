@@ -2447,8 +2447,8 @@ function BookingForm() {
       {/* International Section — full width below form */}
       {(forceInternational || (mounted && formData.currentLocation === 'outside_india')) && (
       <div className="bg-slate-50 border-t border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <p className="text-xs text-slate-500 font-medium mb-5 uppercase tracking-wide text-center">Patients from 20+ countries trust us</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-5 uppercase tracking-wide text-center">Patients from 20+ Countries Trust Us</h3>
           {(() => {
             const countries = [
               { code: 'us', name: 'United States' },
