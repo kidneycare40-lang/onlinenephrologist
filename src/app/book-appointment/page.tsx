@@ -1945,7 +1945,47 @@ function BookingForm() {
                 )}
 
                 {/* Date Picker + Time Slots */}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden">
+                {/* MOBILE: Simple dropdowns */}
+                <div className="sm:hidden bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Select Date *</label>
+                    <input
+                      type="date"
+                      required
+                      min={today}
+                      max={maxDate}
+                      value={formData.date}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, date: e.target.value, time: '' }));
+                        setBookedSlots(new Set());
+                      }}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Book up to 30 days in advance</p>
+                  </div>
+                  {formData.date && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Select Time Slot *</label>
+                      <select
+                        required
+                        value={formData.time}
+                        onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
+                      >
+                        <option value="">Select time</option>
+                        {slotOptions.filter(s => !s.isBooked).map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                      {slotOptions.filter(s => !s.isBooked).length === 0 && (
+                        <p className="text-xs text-amber-600 mt-1">No slots available — select a different date</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP: Grid date picker + time slots */}
+                <div className="hidden sm:block bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden">
                   {/* Horizontal Date Picker */}
                   <div className="px-2 sm:px-4 py-3 sm:py-4">
                     <div className="flex items-center gap-2">
@@ -2092,7 +2132,7 @@ function BookingForm() {
             </div>
 
             {/* Back/Next Buttons */}
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-between mt-6 gap-3">
               <button type="button" onClick={() => setStep(2)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
                 Back
               </button>
