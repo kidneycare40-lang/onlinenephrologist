@@ -2527,7 +2527,7 @@ function BookingForm() {
               )}
 
               {/* Location & Timings */}
-              {selectedClinic && formData.clinicId !== 'online' && (
+              {selectedClinic && !formData.clinicId.startsWith('online') && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-4">
                   <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-2">Location & timings</p>
                   <div className="flex items-start gap-2 mb-3">
