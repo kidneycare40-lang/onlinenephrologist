@@ -1052,7 +1052,7 @@ function BookingForm() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white overflow-x-hidden">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -1101,22 +1101,22 @@ function BookingForm() {
       </header>
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
-            <div className="w-20 h-24 md:w-24 md:h-32 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
+      <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-10">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-6">
+            <div className="w-16 h-20 md:w-24 md:h-32 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
               <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
             </div>
-            <div className="text-center md:text-left min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>
-              <p className="text-white/80 text-xs sm:text-sm md:text-base truncate md:whitespace-normal">Consult <strong className="text-white">Dr Rajesh Goel</strong>
+            <div className="text-center md:text-left min-w-0 flex-1">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>
+              <p className="text-white/80 text-xs sm:text-sm md:text-base">Consult <strong className="text-white">Dr Rajesh Goel</strong>
                 <span className="inline-flex items-center ml-1.5 align-middle bg-green-400 rounded-sm px-0.5">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                 </span>
                 <span className="hidden sm:inline"> — Senior Nephrologist & Kidney Transplant Physician</span>
                 <span className="sm:hidden"> — Nephrologist</span>
               </p>
-              <p className="text-[10px] sm:text-xs text-white/70 mt-0.5">MBBS | DNB Internal Medicine | DNB Nephrology | Fellow Kidney Transplant Medicine</p>
+              <p className="text-[10px] sm:text-xs text-white/70 mt-0.5 hidden sm:block">MBBS | DNB Internal Medicine | DNB Nephrology | Fellow Kidney Transplant Medicine</p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 sm:gap-2 mt-2">
                 <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs bg-white/15 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
                   <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-yellow-300 fill-yellow-300" /> 4.9 Rating
@@ -1141,26 +1141,26 @@ function BookingForm() {
 
       {/* Progress Steps */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center justify-between overflow-x-auto scrollbar-hide">
             {steps.map((s, i, arr) => (
               <React.Fragment key={s.num}>
                 <button
                   onClick={() => { if (s.num < step) setStep(s.num); }}
                   className={cn(
-                    'flex items-center gap-1.5 text-xs font-medium transition-colors',
+                    'flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-medium transition-colors shrink-0',
                     step === s.num ? 'text-[#0A75BB]' : step > s.num ? 'text-emerald-600' : 'text-slate-400'
                   )}
                 >
                   <span className={cn(
-                    'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
+                    'w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold',
                     step === s.num ? 'bg-[#0A75BB] text-white' : step > s.num ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
                   )}>
                     {step > s.num ? '✓' : s.num}
                   </span>
                   <span className="hidden sm:inline">{s.label}</span>
                 </button>
-                {i < arr.length - 1 && <div className={cn('flex-1 h-0.5 mx-2', step > s.num ? 'bg-emerald-300' : 'bg-slate-200')} />}
+                {i < arr.length - 1 && <div className={cn('w-4 sm:flex-1 h-0.5 mx-1 sm:mx-2 shrink-0', step > s.num ? 'bg-emerald-300' : 'bg-slate-200')} />}
               </React.Fragment>
             ))}
           </div>
@@ -1170,9 +1170,9 @@ function BookingForm() {
       {/* Selection Summary Bar */}
       {step > 0 && (
         <div className="bg-slate-100 border-b border-slate-200">
-          <div className="max-w-3xl mx-auto px-4 py-2.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your Selection:</span>
+          <div className="max-w-3xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
+              <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0">Your Selection:</span>
               {formData.phone && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700 border border-slate-300">
                   <Phone className="h-3 w-3" />
@@ -1223,7 +1223,7 @@ function BookingForm() {
         </div>
       )}
 
-      <div className={`flex-1 mx-auto px-4 sm:px-6 lg:px-8 py-8 ${step >= 1 ? 'max-w-7xl' : 'max-w-3xl'}`}>
+      <div className={`flex-1 mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 ${step >= 1 ? 'max-w-7xl' : 'max-w-3xl'}`}>
         {isTodayHoliday && (
           <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 space-y-3">
             <div className="flex items-start gap-3">
