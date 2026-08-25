@@ -242,7 +242,7 @@ function BookingForm() {
 
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', phone: '', email: '', age: '', gender: 'Male',
+    firstName: '', lastName: '', phone: '', email: '', address: '', age: '', gender: 'Male',
     consultationType: forceInternational ? 'online' : initialType,
     clinicId: (initialType === 'online' || initialType === 'online_intl') ? 'online' : '',
     date: '', time: '', reason: '', previousKidneyIssue: 'no',
@@ -602,6 +602,7 @@ function BookingForm() {
         lastName: formData.lastName,
         phone: fullPhone,
         email: formData.email,
+        address: formData.address || undefined,
         dateOfBirth: formData.age ? `${new Date().getFullYear() - parseInt(formData.age)}-01-01` : '',
         gender: formData.gender,
         clinicId: mappedClinic,
@@ -664,6 +665,7 @@ function BookingForm() {
         patientName: `${formData.firstName} ${formData.lastName}`,
         patientPhone: fullPhone,
         patientEmail: formData.email || undefined,
+        address: formData.address || undefined,
         ageGender: `${formData.age} / ${formData.gender}`,
         age: formData.age || undefined,
         gender: formData.gender || undefined,
@@ -691,7 +693,7 @@ function BookingForm() {
 
     // Also open WhatsApp from patient's browser as backup
     const doctorMsg = encodeURIComponent(
-      `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\nWhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(isOutsideIndia ? 'online_intl' : formData.consultationType))}\n${isOutsideIndia ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
+      `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\n${formData.address ? `Location: ${formData.address}\n` : ''}WhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(isOutsideIndia ? 'online_intl' : formData.consultationType))}\n${isOutsideIndia ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
     );
     // Open WhatsApp to doctor (number 1) with full booking details — patient clicks Send
     window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
@@ -1682,6 +1684,13 @@ function BookingForm() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Address / Location</label>
+                  <input type="text" name="address" value={formData.address} onChange={handleChange}
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
+                    placeholder="City, State" />
+                </div>
+
                 {/* Relationship field — only for family bookings */}
                 {bookingFor === 'family' && (
                   <div className="border-t border-slate-200 pt-4 mt-4">
@@ -2346,6 +2355,12 @@ function BookingForm() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-500">Gender</span>
                       <span className="text-xs font-semibold text-gray-900">{formData.gender}</span>
+                    </div>
+                  )}
+                  {formData.address && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500">Location</span>
+                      <span className="text-xs font-semibold text-gray-900 text-right max-w-[150px] truncate">{formData.address}</span>
                     </div>
                   )}
                   {formData.phone && (
