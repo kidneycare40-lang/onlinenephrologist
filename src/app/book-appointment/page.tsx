@@ -1104,12 +1104,12 @@ function BookingForm() {
       <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-10">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-6">
-            <div className="w-16 h-20 md:w-24 md:h-32 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden">
+            <Link href="/dr-rajesh-goel" className="w-16 h-20 md:w-24 md:h-32 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden hover:border-white/60 transition-colors">
               <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
-            </div>
+            </Link>
             <div className="text-center md:text-left min-w-0 flex-1">
               <h1 className="text-lg sm:text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>
-              <p className="text-white/80 text-xs sm:text-sm md:text-base">Consult <strong className="text-white">Dr Rajesh Goel</strong>
+              <p className="text-white/80 text-xs sm:text-sm md:text-base">Consult <Link href="/dr-rajesh-goel" className="text-white font-semibold underline decoration-white/40 hover:decoration-white transition-colors">Dr Rajesh Goel</Link>
                 <span className="inline-flex items-center ml-1.5 align-middle bg-green-400 rounded-sm px-0.5">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                 </span>
