@@ -1621,7 +1621,7 @@ function BookingForm() {
                     <div className="relative">
                       {isOutsideIndia ? (
                         <select name="countryCode" value={formData.countryCode} onChange={handleChange}
-                          className="absolute left-0 top-0 bottom-0 w-20 border-0 border-r border-slate-300 rounded-l-xl bg-slate-50 text-sm px-2 focus:ring-0 focus:border-[#0A75BB] appearance-auto">
+                          className="absolute left-0 top-0 bottom-0 w-24 border-0 border-r border-slate-300 rounded-l-xl bg-slate-50 text-sm px-2 focus:ring-0 focus:border-[#0A75BB] appearance-auto">
                           <option value="">Code</option>
                           <option value="+1">🇺🇸 +1</option>
                           <option value="+44">🇬🇧 +44</option>
@@ -1651,6 +1651,73 @@ function BookingForm() {
                           <option value="+47">🇳🇴 +47</option>
                           <option value="+353">🇮🇪 +353</option>
                           <option value="+64">🇳🇿 +64</option>
+                          <option value="+968">🇴🇲 +968</option>
+                          <option value="+974">🇶🇦 +974</option>
+                          <option value="+973">🇧🇭 +973</option>
+                          <option value="+965">🇰🇼 +965</option>
+                          <option value="+962">🇯🇴 +962</option>
+                          <option value="+961">🇱🇧 +961</option>
+                          <option value="+212">🇲🇦 +212</option>
+                          <option value="+216">🇹🇳 +216</option>
+                          <option value="+218">🇱🇾 +218</option>
+                          <option value="+249">🇸🇩 +249</option>
+                          <option value="+251">🇪🇹 +251</option>
+                          <option value="+256">🇺🇬 +256</option>
+                          <option value="+255">🇹🇿 +255</option>
+                          <option value="+263">🇿🇼 +263</option>
+                          <option value="+260">🇿🇲 +260</option>
+                          <option value="+267">🇧🇼 +267</option>
+                          <option value="+264">🇳🇦 +264</option>
+                          <option value="+354">🇮🇸 +354</option>
+                          <option value="+358">🇫🇮 +358</option>
+                          <option value="+45">🇩🇰 +45</option>
+                          <option value="+48">🇵🇱 +48</option>
+                          <option value="+420">🇨🇿 +420</option>
+                          <option value="+43">🇦🇹 +43</option>
+                          <option value="+41">🇨🇭 +41</option>
+                          <option value="+351">🇵🇹 +351</option>
+                          <option value="+30">🇬🇷 +30</option>
+                          <option value="+90">🇹🇷 +90</option>
+                          <option value="+66">🇹🇭 +66</option>
+                          <option value="+84">🇻🇳 +84</option>
+                          <option value="+62">🇮🇩 +62</option>
+                          <option value="+95">🇲🇲 +95</option>
+                          <option value="+855">🇰🇭 +855</option>
+                          <option value="+856">🇱🇦 +856</option>
+                          <option value="+976">🇲🇳 +976</option>
+                          <option value="+98">🇮🇷 +98</option>
+                          <option value="+964">🇮🇶 +964</option>
+                          <option value="+972">🇮🇱 +972</option>
+                          <option value="+213">🇩🇿 +213</option>
+                          <option value="+229">🇧🇯 +229</option>
+                          <option value="+225">🇨🇮 +225</option>
+                          <option value="+233">🇬🇭 +233</option>
+                          <option value="+228">🇹🇬 +228</option>
+                          <option value="+227">🇳🇪 +227</option>
+                          <option value="+226">🇧🇫 +226</option>
+                          <option value="+245">🇬🇼 +245</option>
+                          <option value="+240">🇬🇶 +240</option>
+                          <option value="+241">🇬🇦 +241</option>
+                          <option value="+242">🇨🇬 +242</option>
+                          <option value="+243">🇨🇩 +243</option>
+                          <option value="+262">🇷🇪 +262</option>
+                          <option value="+509">🇭🇹 +509</option>
+                          <option value="+503">🇸🇻 +503</option>
+                          <option value="+502">🇬🇹 +502</option>
+                          <option value="+504">🇭🇳 +504</option>
+                          <option value="+505">🇳🇮 +505</option>
+                          <option value="+506">🇨🇷 +506</option>
+                          <option value="+507">🇵🇦 +507</option>
+                          <option value="+51">🇵🇪 +51</option>
+                          <option value="+56">🇨🇱 +56</option>
+                          <option value="+57">🇨🇴 +57</option>
+                          <option value="+58">🇻🇪 +58</option>
+                          <option value="+55">🇧🇷 +55</option>
+                          <option value="+54">🇦🇷 +54</option>
+                          <option value="+598">🇺🇾 +598</option>
+                          <option value="+595">🇵🇾 +595</option>
+                          <option value="+593">🇪🇨 +593</option>
+                          <option value="+591">🇧🇴 +591</option>
                         </select>
                       ) : (
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">+91</span>
@@ -1658,7 +1725,7 @@ function BookingForm() {
                       <input type="tel" name="phone" required value={formData.phone} onChange={handleChange}
                         className={cn(
                           "w-full border border-slate-300 rounded-xl py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors",
-                          isOutsideIndia ? 'pl-24 pr-4' : 'pl-12 pr-4'
+                          isOutsideIndia ? 'pl-28 pr-4' : 'pl-12 pr-4'
                         )} placeholder={isOutsideIndia ? 'WhatsApp number with country code' : '98182 35613'} />
                     </div>
                     <p className="text-[11px] text-slate-400 mt-1">Booking confirmation will be sent on this WhatsApp</p>
