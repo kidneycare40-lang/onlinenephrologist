@@ -2473,8 +2473,8 @@ function BookingForm() {
               { code: 'jp', name: 'Japan' },
             ];
             const flagBadge = (c: { code: string; name: string }, i: number) => (
-              <span key={`${c.code}-${i}`} className="inline-flex items-center gap-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap shrink-0">
-                <img src={`https://flagcdn.com/w20/${c.code}.png`} alt={c.name} className="w-4 h-auto rounded-sm" loading="lazy" /> {c.name}
+              <span key={`${c.code}-${i}`} className="inline-flex items-center gap-2 text-sm font-semibold bg-white border border-slate-200 text-slate-800 px-4 py-2 rounded-full shadow-sm whitespace-nowrap shrink-0">
+                <img src={`https://flagcdn.com/w40/${c.code}.png`} alt={c.name} className="w-6 h-auto rounded-sm" loading="lazy" /> {c.name}
               </span>
             );
             return (
