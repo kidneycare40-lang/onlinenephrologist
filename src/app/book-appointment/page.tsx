@@ -1170,18 +1170,18 @@ function BookingForm() {
       {/* Selection Summary Bar */}
       {step > 0 && (
         <div className="bg-slate-100 border-b border-slate-200">
-          <div className="max-w-3xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5">
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
-              <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0">Your Selection:</span>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide whitespace-nowrap">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider shrink-0">Your Selection:</span>
               {formData.phone && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700 border border-slate-300">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700 border border-slate-300 shrink-0">
                   <Phone className="h-3 w-3" />
                   {phoneCountryCode} {formData.phone}
                   {phoneLookupResult === 'existing' && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
                 </span>
               )}
               <span className={cn(
-                'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full',
+                'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full shrink-0',
                 isOnline
                   ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                   : 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -1192,8 +1192,8 @@ function BookingForm() {
               </span>
               {step > 2 && selectedClinic && (
                 <>
-                  <ChevronRight className="h-3 w-3 text-slate-400" />
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-[#0A75BB]/10 text-[#0A75BB] border border-[#0A75BB]/20">
+                  <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-[#0A75BB]/10 text-[#0A75BB] border border-[#0A75BB]/20 shrink-0">
                     <MapPin className="h-3 w-3" />
                     {formData.consultationType === 'hospital' ? 'PSRI Hospital' : (selectedClinic.shortName || selectedClinic.name)}
                     <span className="text-[#0A75BB]/60">• {isOutsideIndia ? `$${consultFee} USD` : `₹${consultFee}`}</span>
@@ -1202,8 +1202,8 @@ function BookingForm() {
               )}
               {step > 3 && formData.date && (
                 <>
-                  <ChevronRight className="h-3 w-3 text-slate-400" />
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                  <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 shrink-0">
                     <Calendar className="h-3 w-3" />
                     {formData.date} • {formData.time}
                   </span>
@@ -1211,8 +1211,8 @@ function BookingForm() {
               )}
               {step > 4 && formData.firstName && (
                 <>
-                  <ChevronRight className="h-3 w-3 text-slate-400" />
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                  <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200 shrink-0">
                     <User className="h-3 w-3" />
                     {formData.firstName} {formData.lastName}
                   </span>
