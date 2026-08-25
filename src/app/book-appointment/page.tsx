@@ -244,7 +244,7 @@ function BookingForm() {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', address: '', age: '', gender: 'Male',
     consultationType: forceInternational ? 'online' : initialType,
-    clinicId: (initialType === 'online' || initialType === 'online_intl') ? 'online' : '',
+    clinicId: (initialType === 'online' || initialType === 'online_intl') ? (initialType === 'online_intl' ? 'online-intl' : 'online') : '',
     date: '', time: '', reason: '', previousKidneyIssue: 'no',
     currentMedications: '', notes: '', complaints: '', medicines: '',
     currentLocation: forceInternational ? 'outside_india' as 'india' | 'outside_india' : 'india' as 'india' | 'outside_india',
@@ -727,6 +727,7 @@ function BookingForm() {
         currentLocation: value as 'india' | 'outside_india',
         isInternational: isOutside,
         consultationType: isOutside ? 'online_intl' : (prev.consultationType === 'online_intl' ? 'online' : prev.consultationType),
+        clinicId: isOutside ? 'online-intl' : (prev.clinicId === 'online-intl' ? 'online' : prev.clinicId),
         time: '',
         country: isOutside ? prev.country : '',
         countryCode: isOutside ? prev.countryCode : '',
@@ -739,6 +740,7 @@ function BookingForm() {
         currentLocation: isOutside ? 'outside_india' : 'india',
         isInternational: isOutside,
         consultationType: isOutside ? 'online_intl' : (prev.consultationType === 'online_intl' ? 'online' : prev.consultationType),
+        clinicId: isOutside ? 'online-intl' : (prev.clinicId === 'online-intl' ? 'online' : prev.clinicId),
         time: '',
       }));
     } else if (name === 'interpreterRequired') {
