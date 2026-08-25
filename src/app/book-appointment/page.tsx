@@ -1925,8 +1925,8 @@ function BookingForm() {
               {/* Left: Date & Time Picker */}
               <div className="flex-1 min-w-0 space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">Preferred Date & Time</h2>
-                  <p className="text-sm text-slate-500">Select your preferred appointment slot</p>
+                  <h2 className="text-xl sm:text-xl font-bold text-gray-900 mb-1">Preferred Date & Time</h2>
+                  <p className="text-sm sm:text-sm text-slate-500">Select your preferred appointment slot</p>
                 </div>
 
                 {/* International timezone notice */}
@@ -1946,9 +1946,9 @@ function BookingForm() {
 
                 {/* Date Picker + Time Slots */}
                 {/* MOBILE: Simple dropdowns */}
-                <div className="sm:hidden bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+                <div className="sm:hidden bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-5">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Select Date *</label>
+                    <label className="block text-base font-semibold text-slate-700 mb-2">Select Date *</label>
                     <input
                       type="date"
                       required
@@ -1959,18 +1959,18 @@ function BookingForm() {
                         setFormData(prev => ({ ...prev, date: e.target.value, time: '' }));
                         setBookedSlots(new Set());
                       }}
-                      className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
+                      className="w-full border border-slate-300 rounded-xl px-4 py-3.5 text-base bg-white focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
                     />
-                    <p className="text-[11px] text-slate-400 mt-1">Book up to 30 days in advance</p>
+                    <p className="text-xs text-slate-400 mt-1.5">Book up to 30 days in advance</p>
                   </div>
                   {formData.date && (
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Select Time Slot *</label>
+                      <label className="block text-base font-semibold text-slate-700 mb-2">Select Time Slot *</label>
                       <select
                         required
                         value={formData.time}
                         onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                        className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
+                        className="w-full border border-slate-300 rounded-xl px-4 py-3.5 text-base bg-white focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors"
                       >
                         <option value="">Select time</option>
                         {slotOptions.filter(s => !s.isBooked).map(opt => (
@@ -1978,7 +1978,7 @@ function BookingForm() {
                         ))}
                       </select>
                       {slotOptions.filter(s => !s.isBooked).length === 0 && (
-                        <p className="text-xs text-amber-600 mt-1">No slots available — select a different date</p>
+                        <p className="text-xs text-amber-600 mt-1.5">No slots available — select a different date</p>
                       )}
                     </div>
                   )}
@@ -2133,11 +2133,11 @@ function BookingForm() {
 
             {/* Back/Next Buttons */}
             <div className="flex justify-between mt-6 gap-3">
-              <button type="button" onClick={() => setStep(2)} className="px-6 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors">
+              <button type="button" onClick={() => setStep(2)} className="flex-1 sm:flex-none px-6 py-3.5 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors text-center">
                 Back
               </button>
               <button type="button" onClick={() => canNext() && setStep(4)} disabled={!canNext()}
-                className="px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center gap-2">
+                className="flex-1 sm:flex-none px-8 py-3.5 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                 Next <ChevronRight className="h-4 w-4" />
               </button>
             </div>
