@@ -1109,7 +1109,7 @@ function BookingForm() {
             </Link>
             <div className="text-center md:text-left min-w-0 flex-1">
               <h1 className="text-lg sm:text-2xl md:text-3xl font-bold mb-1">Book Appointment</h1>
-              <p className="text-white/80 text-xs sm:text-sm md:text-base">Consult <Link href="/dr-rajesh-goel" className="text-white font-semibold underline decoration-white/40 hover:decoration-white transition-colors">Dr Rajesh Goel</Link>
+              <p className="text-white/80 text-xs sm:text-sm md:text-base">Consult <Link href="/dr-rajesh-goel" className="text-white font-semibold underline underline-offset-2 decoration-2 decoration-white/60 hover:decoration-white transition-colors">Dr Rajesh Goel</Link>
                 <span className="inline-flex items-center ml-1.5 align-middle bg-green-400 rounded-sm px-0.5">
                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                 </span>
