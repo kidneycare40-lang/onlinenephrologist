@@ -1252,7 +1252,7 @@ function BookingForm() {
         </div>
       )}
 
-      <div className={`flex-1 mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 ${isEmbed ? 'w-full' : step >= 1 ? 'max-w-7xl' : 'max-w-3xl'}`}>
+      <div className={`mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 ${step >= 1 ? 'max-w-7xl' : 'max-w-3xl'}`}>
         {isTodayHoliday && (
           <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 space-y-3">
             <div className="flex items-start gap-3">
@@ -1320,7 +1320,7 @@ function BookingForm() {
         )}
 
         <form onSubmit={handleSubmit} noValidate className={step >= 1 ? 'flex flex-col lg:flex-row gap-6' : ''}>
-          <div className={step >= 1 ? (isEmbed ? 'min-w-0' : 'flex-1 min-w-0') : 'max-w-3xl mx-auto'}>
+          <div className={step >= 1 ? (isEmbed ? 'max-w-3xl mx-auto' : 'flex-1 min-w-0') : 'max-w-3xl mx-auto'}>
           {/* Step 0: Consultation Type */}
           {step === 0 && (
             <div className="space-y-6">
