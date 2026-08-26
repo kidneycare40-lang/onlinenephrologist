@@ -245,16 +245,21 @@ function BookingForm() {
   useEffect(() => {
     if (!isEmbed) return;
     const sendHeight = () => {
-      const h = document.documentElement.scrollHeight;
-      window.parent.postMessage({ type: 'iframe-resize', height: h }, '*');
+      requestAnimationFrame(() => {
+        const h = Math.max(
+          document.body.scrollHeight,
+          document.body.offsetHeight,
+          document.documentElement.scrollHeight
+        );
+        window.parent.postMessage({ type: 'iframe-resize', height: h }, '*');
+      });
     };
     sendHeight();
     const observer = new ResizeObserver(sendHeight);
     observer.observe(document.body);
     window.addEventListener('load', sendHeight);
-    // Also send after step changes
-    const mutationObs = new MutationObserver(sendHeight);
-    mutationObs.observe(document.body, { childList: true, subtree: true });
+    const mutationObs = new MutationObserver(() => setTimeout(sendHeight, 50));
+    mutationObs.observe(document.body, { childList: true, subtree: true, attributes: true });
     return () => { observer.disconnect(); mutationObs.disconnect(); window.removeEventListener('load', sendHeight); };
   }, [isEmbed]);
 
@@ -1315,7 +1320,7 @@ function BookingForm() {
         )}
 
         <form onSubmit={handleSubmit} noValidate className={step >= 1 ? 'flex flex-col lg:flex-row gap-6' : ''}>
-          <div className={step >= 1 ? 'flex-1 min-w-0' : 'max-w-3xl mx-auto'}>
+          <div className={step >= 1 ? (isEmbed ? 'min-w-0' : 'flex-1 min-w-0') : 'max-w-3xl mx-auto'}>
           {/* Step 0: Consultation Type */}
           {step === 0 && (
             <div className="space-y-6">
