@@ -252,7 +252,10 @@ function BookingForm() {
     const observer = new ResizeObserver(sendHeight);
     observer.observe(document.body);
     window.addEventListener('load', sendHeight);
-    return () => { observer.disconnect(); window.removeEventListener('load', sendHeight); };
+    // Also send after step changes
+    const mutationObs = new MutationObserver(sendHeight);
+    mutationObs.observe(document.body, { childList: true, subtree: true });
+    return () => { observer.disconnect(); mutationObs.disconnect(); window.removeEventListener('load', sendHeight); };
   }, [isEmbed]);
 
   const [step, setStep] = useState(0);
@@ -1071,7 +1074,7 @@ function BookingForm() {
   }
 
   return (
-    <div className={`${isEmbed ? '' : 'min-h-screen'} flex flex-col bg-gradient-to-b from-slate-50 to-white overflow-x-hidden`}>
+    <div className={`${isEmbed ? '' : 'min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white'} overflow-x-hidden`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -2458,8 +2461,8 @@ function BookingForm() {
 
           </div>
 
-          {/* Persistent Sidebar — shows on steps 1-5, hidden on mobile */}
-          {step >= 1 && step <= 5 && (
+          {/* Persistent Sidebar — shows on steps 1-5, hidden on mobile and embed */}
+          {step >= 1 && step <= 5 && !isEmbed && (
           <div className="hidden lg:block w-[300px] shrink-0">
             <div className="lg:sticky lg:top-24 space-y-4">
               {/* Patient Details Card */}
