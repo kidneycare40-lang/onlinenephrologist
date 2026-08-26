@@ -266,7 +266,13 @@ function BookingForm() {
   const [step, setStep] = useState(0);
   const [formError, setFormError] = useState('');
 
-  useEffect(() => { setFormError(''); }, [step]);
+  useEffect(() => {
+    setFormError('');
+    window.scrollTo(0, 0);
+    if (isEmbed) {
+      window.parent.postMessage({ type: 'iframe-scroll-top' }, '*');
+    }
+  }, [step]);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', address: '', age: '', gender: 'Male',
     consultationType: forceInternational ? 'online' : initialType,
