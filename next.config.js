@@ -14,6 +14,19 @@ const nextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: '/book-appointment',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' https://www.kidneycarecentre.in https://kidneycarecentre.in;",
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {

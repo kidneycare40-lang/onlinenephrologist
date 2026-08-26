@@ -220,6 +220,7 @@ function BookingForm() {
   const searchParams = useSearchParams();
   const initialType = searchParams.get('type') || 'online';
   const forceInternational = initialType === 'online_intl';
+  const isEmbed = searchParams.get('embed') === '1';
 
   const [bookingSettings, setBookingSettings] = useState<BookingSettings>({
     ...defaultSettings,
@@ -881,6 +882,7 @@ function BookingForm() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white overflow-x-hidden">
+        {!isEmbed && (
         <header className="bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
             <Link href="/" className="flex items-center gap-2.5">
@@ -889,6 +891,7 @@ function BookingForm() {
             </Link>
           </div>
         </header>
+        )}
         <div className="max-w-2xl mx-auto px-4 py-12 text-center">
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 overflow-hidden">
             <img src="/images/dr-rajesh-goel.jpg" alt="Dr Rajesh Goel" className="w-full h-full object-cover" />
@@ -1054,7 +1057,7 @@ function BookingForm() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white overflow-x-hidden">
+    <div className={`${isEmbed ? '' : 'min-h-screen'} flex flex-col bg-gradient-to-b from-slate-50 to-white overflow-x-hidden`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -1090,6 +1093,7 @@ function BookingForm() {
         }) }}
       />
 
+      {!isEmbed && (
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
@@ -1101,6 +1105,7 @@ function BookingForm() {
           </Link>
         </div>
       </header>
+      )}
 
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
@@ -2636,6 +2641,7 @@ function BookingForm() {
       )}
 
       {/* Trust Footer */}
+      {!isEmbed && (
       <div className="bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
@@ -2656,10 +2662,13 @@ function BookingForm() {
           </div>
         </div>
       </div>
+      )}
 
+      {!isEmbed && (
       <footer className="bg-slate-900 text-slate-400 py-6 text-center text-sm">
         &copy; {new Date().getFullYear()} Online Nephrologist. All rights reserved.
       </footer>
+      )}
 
       {/* Duplicate Appointment Modal */}
       {duplicateAppt && duplicateType && (
