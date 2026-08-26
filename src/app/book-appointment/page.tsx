@@ -264,6 +264,9 @@ function BookingForm() {
   }, [isEmbed]);
 
   const [step, setStep] = useState(0);
+  const [formError, setFormError] = useState('');
+
+  useEffect(() => { setFormError(''); }, [step]);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', address: '', age: '', gender: 'Male',
     consultationType: forceInternational ? 'online' : initialType,
@@ -452,20 +455,20 @@ function BookingForm() {
     }
     const cleanPhone = effectivePhone.replace(/[\s-]/g, '').replace(/^\+?91/, '');
     if (isIntlBooking && !formData.countryCode) {
-      alert('Please select your country code for the WhatsApp number.');
+      setFormError('Please select your country code for the WhatsApp number.');
       return;
     }
     const phoneOk = isIntlBooking
       ? /^\d{7,12}$/.test(cleanPhone)
       : /^[6-9]\d{9}$/.test(cleanPhone);
     if (!phoneOk) {
-      alert(isIntlBooking
+      setFormError(isIntlBooking
         ? 'Please enter a valid WhatsApp number with country code (7-15 digits, no spaces).'
         : 'Please enter a valid 10-digit Indian mobile number (e.g. 98182 35613).');
       return;
     }
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      alert('Please enter a valid email address or leave the email field empty.');
+      setFormError('Please enter a valid email address or leave the email field empty.');
       return;
     }
 
@@ -480,7 +483,7 @@ function BookingForm() {
           compareMinutes = ((nowMinutes + deviceOffset + 330) % 1440 + 1440) % 1440;
         }
         if (slotMins <= compareMinutes) {
-          alert('This time slot has already passed. Please choose a current or upcoming slot.');
+          setFormError('This time slot has already passed. Please choose a current or upcoming slot.');
           return;
         }
       }
@@ -733,6 +736,7 @@ function BookingForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormError('');
     const { name, value } = e.target;
     if (name === 'clinicId' || name === 'consultationType') {
       if (name === 'consultationType') {
@@ -1320,6 +1324,17 @@ function BookingForm() {
         )}
 
         <form onSubmit={handleSubmit} noValidate className={step >= 1 ? 'flex flex-col lg:flex-row gap-6' : ''}>
+          {formError && (
+            <div className="max-w-3xl mx-auto w-full mb-4 bg-red-50 border border-red-300 rounded-xl px-4 py-3 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-red-700 font-medium">{formError}</p>
+              </div>
+              <button type="button" onClick={() => setFormError('')} className="text-red-400 hover:text-red-600 shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <div className={step >= 1 ? (isEmbed ? 'max-w-3xl mx-auto' : 'flex-1 min-w-0') : 'max-w-3xl mx-auto'}>
           {/* Step 0: Consultation Type */}
           {step === 0 && (
