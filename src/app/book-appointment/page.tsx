@@ -241,6 +241,20 @@ function BookingForm() {
     });
   }, []);
 
+  // Auto-resize iframe height for embed mode
+  useEffect(() => {
+    if (!isEmbed) return;
+    const sendHeight = () => {
+      const h = document.documentElement.scrollHeight;
+      window.parent.postMessage({ type: 'iframe-resize', height: h }, '*');
+    };
+    sendHeight();
+    const observer = new ResizeObserver(sendHeight);
+    observer.observe(document.body);
+    window.addEventListener('load', sendHeight);
+    return () => { observer.disconnect(); window.removeEventListener('load', sendHeight); };
+  }, [isEmbed]);
+
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', address: '', age: '', gender: 'Male',
@@ -1230,7 +1244,7 @@ function BookingForm() {
         </div>
       )}
 
-      <div className={`flex-1 mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 ${step >= 1 ? 'max-w-7xl' : 'max-w-3xl'}`}>
+      <div className={`flex-1 mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 ${isEmbed ? 'w-full' : step >= 1 ? 'max-w-7xl' : 'max-w-3xl'}`}>
         {isTodayHoliday && (
           <div className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 space-y-3">
             <div className="flex items-start gap-3">
