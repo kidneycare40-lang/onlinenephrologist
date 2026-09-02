@@ -2614,14 +2614,6 @@ function BookingForm() {
                 )}
               </div>
 
-              {/* Consulting Hours */}
-              {selectedClinic && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-4">
-                <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-1">Consulting hours at {selectedClinic.shortName}</p>
-                <p className="font-medium text-gray-900 text-sm">{selectedClinic.timing}</p>
-              </div>
-              )}
-
               {/* Location & Timings */}
               {selectedClinic && !formData.clinicId.startsWith('online') && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-4">
@@ -2637,6 +2629,20 @@ function BookingForm() {
                     <div className="flex items-start gap-2 mb-3 ml-6">
                       <Clock className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
                       <p className="text-xs text-slate-600">{selectedClinic.timing}</p>
+                    </div>
+                  )}
+                  {formData.clinicId === 'kcc-faridabad' && (
+                    <div className="mb-3 rounded-lg overflow-hidden border border-slate-200">
+                      <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d28074.90758912895!2d77.30719564999998!3d28.408288150000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cdc8055555555%3A0xdceb0bfdc166f54e!2sKidney%20Care%20Centre%20-%20Dr.%20Rajesh%20Goel!5e0!3m2!1sen!2sin!4v1788386981733!5m2!1sen!2sin"
+                        width="100%"
+                        height="180"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Kidney Care Centre Faridabad Location"
+                      />
                     </div>
                   )}
                   <a
