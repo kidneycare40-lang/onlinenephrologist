@@ -58,7 +58,10 @@ function to24Hour(time12h: string): string {
 }
 
 function formatDateISO(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function generateTimeSlots(clinicId: string): string[] {
@@ -285,8 +288,10 @@ export default function AppointmentsPage() {
       const start = dateStr + 'T00:00:00';
       const end = dateStr + 'T23:59:59';
       const data = await appointmentsApi.getByDateRange(start, end, undefined);
+      console.log('[appointments]', dateStr, '→', data?.length, 'results');
       setApiAppointments(data || []);
-    } catch {
+    } catch (err) {
+      console.error('[appointments] fetch error:', err);
       setApiAppointments([]);
     } finally {
       setLoading(false);
