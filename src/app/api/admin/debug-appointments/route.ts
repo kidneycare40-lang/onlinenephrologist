@@ -10,31 +10,47 @@ export async function POST(request: NextRequest) {
 
     const db = getDb();
 
-    // Simple query - no joins
-    const { data: allAppts, error: e1 } = await db
-      .from('appointments')
-      .select('id, patient_id, doctor_id, clinic_id, appointment_date, appointment_time, status, notes, payment_status, is_deleted')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Simple query - doctors
-    const { data: doctors, error: e2 } = await db
-      .from('users')
-      .select('id, first_name, last_name, role, is_active')
-      .eq('role', 'doctor');
-
-    // Simple query - clinics
-    const { data: clinics, error: e3 } = await db
+    // Check if clinic_id exists
+    const { data: clinic, error: ce } = await db
       .from('clinics')
-      .select('id, name, slug, is_active');
+      .select('id, name')
+      .eq('id', '00000000-0000-0000-0000-000000000010')
+      .maybeSingle();
+
+    // List all clinics
+    const { data: allClinics } = await db.from('clinics').select('id, name');
+
+    // Try the exact same query the appointments page uses
+    const { data: joinQuery, error: joinErr } = await db
+      .from('appointments')
+      .select(`
+        *,
+        patient:patients(id, first_name, last_name, phone, uhid),
+        doctor:users(id, first_name, last_name),
+        clinic:clinics(id, name)
+      `)
+      .eq('is_deleted', false)
+      .gte('appointment_date', '2026-09-03')
+      .lte('appointment_date', '2026-09-03')
+      .order('appointment_time', { ascending: true });
+
+    // Try without joins
+    const { data: noJoin, error: njErr } = await db
+      .from('appointments')
+      .select('*')
+      .eq('is_deleted', false)
+      .gte('appointment_date', '2026-09-03')
+      .lte('appointment_date', '2026-09-03')
+      .order('appointment_time', { ascending: true });
 
     return NextResponse.json({
-      appointments: allAppts,
-      appointmentsErr: e1?.message,
-      doctors,
-      doctorsErr: e2?.message,
-      clinics,
-      clinicsErr: e3?.message,
+      shashiClinicExists: clinic,
+      shashiClinicError: ce?.message,
+      allClinics,
+      joinQuery,
+      joinError: joinErr?.message,
+      noJoin,
+      noJoinError: njErr?.message,
     });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
