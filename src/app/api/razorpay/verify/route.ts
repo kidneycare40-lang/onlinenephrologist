@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
               appointment_date: bk.booking_date,
               appointment_time: bk.booking_time,
               type: bk.consultation_type === 'online' ? 'ONLINE' : 'WALK_IN',
-              status: 'SCHEDULED',
+              status: 'WAITING',
               reason: bk.reason || `Online booking: ${bookingId}`,
               notes: `Booking ID: ${bookingId}`,
               payment_status: 'PAID',
