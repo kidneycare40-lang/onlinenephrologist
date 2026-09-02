@@ -2645,15 +2645,21 @@ function BookingForm() {
               {selectedClinic && !formData.clinicId.startsWith('online') && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-4">
                   <p className="text-[11px] text-slate-400 uppercase tracking-wide font-medium mb-2">Location & timings</p>
-                  <div className="flex items-start gap-2 mb-3">
+                  <div className="flex items-start gap-2 mb-2">
                     <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                     <div>
                       <p className="font-medium text-gray-900 text-sm">{selectedClinic.shortName}</p>
                       <p className="text-xs text-slate-500">{selectedClinic.address}</p>
                     </div>
                   </div>
+                  {selectedClinic.timing && (
+                    <div className="flex items-start gap-2 mb-3 ml-6">
+                      <Clock className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
+                      <p className="text-xs text-slate-600">{selectedClinic.timing}</p>
+                    </div>
+                  )}
                   <a
-                    href={`https://www.google.com/maps/search/${encodeURIComponent(selectedClinic.name + ' ' + selectedClinic.address)}`}
+                    href="https://maps.app.goo.gl/c1AsWrWUmtPbBxGB8"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-4 py-2 bg-[#0A75BB] text-white text-xs font-semibold rounded-lg hover:bg-[#085a94] transition-colors"
