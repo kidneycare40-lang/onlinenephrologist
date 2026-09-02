@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-import { authenticateRequest } from '@/lib/auth/middleware';
 
 export async function GET(request: NextRequest) {
-  const { user, error: authError } = await authenticateRequest(request);
-  if (authError) return NextResponse.json({ authError: true });
-
   const { searchParams } = new URL(request.url);
+  const secret = searchParams.get('secret');
+  if (secret !== process.env.SETUP_KEY) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
   const startDate = searchParams.get('startDate') || '2026-09-03T00:00:00';
   const endDate = searchParams.get('endDate') || '2026-09-03T23:59:59';
 
   const db = getDb();
 
-  // Test 1: Direct Supabase query (no joins)
+  // Test 1: Direct query (no joins)
   const { data: raw, error: rawErr } = await db
     .from('appointments')
     .select('*')
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest) {
     .gte('appointment_date', startDate)
     .lte('appointment_date', endDate);
 
-  // Test 2: Same query with joins (mimics findByDateRange)
+  // Test 2: Query with joins (mimics findByDateRange)
   const { data: joined, error: joinErr } = await db
     .from('appointments')
     .select(`
@@ -35,14 +34,13 @@ export async function GET(request: NextRequest) {
     .order('appointment_time', { ascending: true });
 
   return NextResponse.json({
-    user: user?.userId,
     startDate,
     endDate,
     rawCount: raw?.length || 0,
-    rawError: rawErr?.message,
-    rawSample: raw?.[0],
+    rawError: rawErr?.message || null,
+    rawSample: raw?.[0] ? { id: raw[0].id, appointment_date: raw[0].appointment_date, clinic_id: raw[0].clinic_id, doctor_id: raw[0].doctor_id } : null,
     joinedCount: joined?.length || 0,
-    joinError: joinErr?.message,
-    joinedSample: joined?.[0],
+    joinError: joinErr?.message || null,
+    joinedSample: joined?.[0] ? { id: joined[0].id, doctor: joined[0].doctor, patient: joined[0].patient, clinic: joined[0].clinic } : null,
   });
 }
