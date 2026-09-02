@@ -2648,6 +2648,20 @@ function BookingForm() {
                       />
                     </div>
                   )}
+                  {formData.clinicId === 'kcc-saket' && (
+                    <div className="mb-3 rounded-lg overflow-hidden border border-slate-200">
+                      <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d28044.632684504166!2d77.17268167431641!3d28.522309!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce144340d2bad%3A0xb4d0bde24926b52f!2sKidney%20Care%20Centre!5e0!3m2!1sen!2sin!4v1788388092799!5m2!1sen!2sin"
+                        width="100%"
+                        height="180"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Kidney Care Centre Saket Location"
+                      />
+                    </div>
+                  )}
                   <a
                     href="https://maps.app.goo.gl/c1AsWrWUmtPbBxGB8"
                     target="_blank"
