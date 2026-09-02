@@ -17,11 +17,13 @@ export async function POST(request: NextRequest) {
 
     const db = getDb();
 
-    // Find all PAID bookings
+    // Find bookings that need fixing:
+    // 1. PAID bookings without appointments
+    // 2. Bookings with Razorpay payment IDs but still marked unpaid (pre-fix race condition)
     const { data: paidBookings, error: fetchErr } = await db
       .from('bookings')
-      .select('booking_id, actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency, status')
-      .eq('payment_status', 'paid')
+      .select('booking_id, actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency, status, payment_status, payment_id')
+      .or('payment_status.eq.paid,and(payment_status.eq.unpaid,not.payment_id.is.null)')
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 
@@ -29,13 +31,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch bookings', detail: fetchErr.message }, { status: 500 });
     }
 
-    const results = {
+    const results: {
+      totalPaidBookings: number;
+      alreadyHaveAppointments: number;
+      missingAppointments: number;
+      createdAppointments: number;
+      skippedDueToMissingData: number;
+      fixedPaymentStatus: number;
+      errors: string[];
+    } = {
       totalPaidBookings: paidBookings?.length || 0,
       alreadyHaveAppointments: 0,
       missingAppointments: 0,
       createdAppointments: 0,
       skippedDueToMissingData: 0,
-      errors: [] as string[],
+      fixedPaymentStatus: 0,
+      errors: [],
     };
 
     for (const bk of paidBookings || []) {
@@ -53,8 +64,19 @@ export async function POST(request: NextRequest) {
         .limit(1);
 
       if (existingAppt && existingAppt.length > 0) {
+        // Even if appointment exists, fix payment_status if it's unpaid but has a payment_id
+        if (bk.payment_status === 'unpaid' && bk.payment_id) {
+          await db.from('bookings').update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() }).eq('booking_id', bk.booking_id);
+          results.fixedPaymentStatus = (results.fixedPaymentStatus || 0) + 1;
+        }
         results.alreadyHaveAppointments++;
         continue;
+      }
+
+      // Fix payment_status if it's unpaid but has a payment_id
+      if (bk.payment_status === 'unpaid' && bk.payment_id) {
+        await db.from('bookings').update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() }).eq('booking_id', bk.booking_id);
+        results.fixedPaymentStatus = (results.fixedPaymentStatus || 0) + 1;
       }
 
       results.missingAppointments++;
