@@ -20,16 +20,28 @@ export async function POST(request: NextRequest) {
     // Find bookings that need fixing:
     // 1. PAID bookings without appointments
     // 2. Bookings with Razorpay payment IDs but still marked unpaid (pre-fix race condition)
-    const { data: paidBookings, error: fetchErr } = await db
-      .from('bookings')
-      .select('booking_id, actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency, status, payment_status, payment_id')
-      .or('payment_status.eq.paid,and(payment_status.eq.unpaid,not.payment_id.is.null)')
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: false });
+    const fields = 'booking_id, actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency, status, payment_status, payment_id';
 
-    if (fetchErr) {
-      return NextResponse.json({ error: 'Failed to fetch bookings', detail: fetchErr.message }, { status: 500 });
+    const [paidResult, unpaidWithPaymentResult] = await Promise.all([
+      db.from('bookings').select(fields).eq('payment_status', 'paid').eq('is_deleted', false).order('created_at', { ascending: false }),
+      db.from('bookings').select(fields).eq('payment_status', 'unpaid').not('payment_id', 'is', null).eq('is_deleted', false).order('created_at', { ascending: false }),
+    ]);
+
+    if (paidResult.error) {
+      return NextResponse.json({ error: 'Failed to fetch bookings', detail: paidResult.error.message }, { status: 500 });
     }
+    if (unpaidWithPaymentResult.error) {
+      return NextResponse.json({ error: 'Failed to fetch unpaid bookings', detail: unpaidWithPaymentResult.error.message }, { status: 500 });
+    }
+
+    // Merge and deduplicate by booking_id
+    const allBookings = [...(paidResult.data || [])];
+    for (const bk of unpaidWithPaymentResult.data || []) {
+      if (!allBookings.find((b: any) => b.booking_id === bk.booking_id)) {
+        allBookings.push(bk);
+      }
+    }
+    const paidBookings = allBookings;
 
     const results: {
       totalPaidBookings: number;
