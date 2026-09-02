@@ -112,7 +112,114 @@ export async function POST(request: NextRequest) {
       .update(bookingUpdate)
       .eq('booking_id', bookingId);
 
-    // Send WhatsApp notification to doctor when payment is captured
+    // ─── AUTO-CREATE APPOINTMENT FROM BOOKING ───────────────────────
+    // Bridge bookings → appointments so they show in EMR dashboard/calendar
+    if (newStatus === 'CAPTURED') {
+      try {
+        const { data: bk } = await db
+          .from('bookings')
+          .select('actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency')
+          .eq('booking_id', bookingId)
+          .maybeSingle();
+
+        if (bk && bk.booking_date && bk.booking_time && bk.clinic_id) {
+          // Find or create EMR patient
+          let emrPatientId = bk.actual_patient_id;
+          if (!emrPatientId && bk.patient_account_id) {
+            const { data: bridge } = await db
+              .from('patient_account_emr_patients')
+              .select('emr_patient_id')
+              .eq('patient_account_id', bk.patient_account_id)
+              .limit(1);
+            if (bridge && bridge.length > 0) emrPatientId = bridge[0].emr_patient_id;
+          }
+          if (!emrPatientId && bk.phone) {
+            const cleanPhone = bk.phone.replace(/\D/g, '');
+            const { data: byPhone } = await db
+              .from('patients')
+              .select('id')
+              .or(`phone.eq.${cleanPhone},phone.eq.${bk.phone}`)
+              .eq('is_deleted', false)
+              .limit(1);
+            if (byPhone && byPhone.length > 0) emrPatientId = byPhone[0].id;
+          }
+
+          // Find doctor UUID — default to first active doctor
+          let doctorId: string | null = null;
+          const { data: doctors } = await db
+            .from('users')
+            .select('id')
+            .eq('role', 'doctor')
+            .eq('is_active', true)
+            .limit(1);
+          if (doctors && doctors.length > 0) doctorId = doctors[0].id;
+
+          // Map booking clinic_id slug → EMR clinic UUID
+          const clinicSlugMap: Record<string, string> = {
+            'kcc-faridabad': 'kcc-faridabad',
+            'kcc-saket': 'kcc-saket',
+            'online': 'online',
+            'online-intl': 'online-intl',
+          };
+          const emrClinicId = clinicSlugMap[bk.clinic_id] || bk.clinic_id;
+
+          let clinicId: string | null = null;
+          const { data: clinics } = await db
+            .from('clinics')
+            .select('id')
+            .eq('is_active', true)
+            .limit(5);
+          if (clinics && clinics.length > 0) {
+            const match = clinics.find((c: any) =>
+              c.id === emrClinicId || c.slug === emrClinicId || c.name?.toLowerCase().includes(bk.clinic_id?.replace('kcc-', '') || '')
+            );
+            clinicId = match ? match.id : clinics[0].id;
+          }
+
+          if (emrPatientId && doctorId && clinicId) {
+            // Idempotent: check if appointment already exists
+            const { data: existingAppt } = await db
+              .from('appointments')
+              .select('id')
+              .eq('doctor_id', doctorId)
+              .eq('appointment_date', bk.booking_date)
+              .eq('appointment_time', bk.booking_time)
+              .eq('is_deleted', false)
+              .limit(1);
+
+            if (!existingAppt || existingAppt.length === 0) {
+              const { error: apptErr } = await db.from('appointments').insert({
+                patient_id: emrPatientId,
+                doctor_id: doctorId,
+                clinic_id: clinicId,
+                appointment_date: bk.booking_date,
+                appointment_time: bk.booking_time,
+                type: bk.consultation_type === 'online' ? 'ONLINE' : 'WALK_IN',
+                status: 'WAITING',
+                reason: bk.reason || `Online booking: ${bookingId}`,
+                notes: `Booking ID: ${bookingId}`,
+                payment_status: 'PAID',
+                amount: Number(bk.consultation_fee || 500),
+                currency: bk.consultation_fee_currency || 'INR',
+              });
+              if (apptErr) {
+                console.error('[webhook] Failed to create appointment from booking:', apptErr);
+              } else {
+                console.log(`[webhook] Appointment created for booking ${bookingId} on ${bk.booking_date} ${bk.booking_time}`);
+              }
+            } else {
+              console.log(`[webhook] Appointment already exists for booking ${bookingId} — skipping`);
+            }
+          } else {
+            console.log(`[webhook] Skipping appointment creation — patientId=${emrPatientId}, doctorId=${doctorId}, clinicId=${clinicId}`);
+          }
+        }
+      } catch (apptBridgeErr) {
+        console.error('[webhook] Auto-create appointment error:', apptBridgeErr);
+      }
+    }
+
+    // Send WhatsApp + email notifications (non-blocking, best-effort)
     if (newStatus === 'CAPTURED') {
       // Fetch booking data for invoice + WhatsApp
       let booking: any = null;

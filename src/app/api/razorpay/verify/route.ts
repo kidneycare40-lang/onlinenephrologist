@@ -123,30 +123,22 @@ export async function POST(request: NextRequest) {
       return apiError('Payment record could not be created', 500);
     }
 
-    // Also confirm the booking in the bookings table (with retry for race condition)
-    let bookingUpdated = false;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: updatedBooking } = await db
-        .from('bookings')
-        .update({
-          status: 'confirmed',
-          payment_status: 'paid',
-          payment_id: razorpayPaymentId,
-          razorpay_order_id: razorpayOrderId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('booking_id', bookingId)
-        .select('id')
-        .single();
-      if (updatedBooking) {
-        bookingUpdated = true;
-        break;
-      }
-      // Wait 1s for booking creation to complete
-      await new Promise(r => setTimeout(r, 1000));
-    }
-    if (!bookingUpdated) {
-      console.error('[verify] Booking', bookingId, 'not found after 3 attempts — payment may be orphaned');
+    // ─── CRITICAL: Booking row is pre-created by frontend BEFORE payment ───
+    // No retry loop needed — the booking row exists when verify runs.
+    const { data: updatedBooking } = await db
+      .from('bookings')
+      .update({
+        status: 'confirmed',
+        payment_status: 'paid',
+        payment_id: razorpayPaymentId,
+        razorpay_order_id: razorpayOrderId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('booking_id', bookingId)
+      .select('id')
+      .single();
+    if (!updatedBooking) {
+      console.error('[verify] Booking', bookingId, 'not found — payment may be orphaned. Use reconciliation endpoint.');
     }
 
     // ─── AUTO-CREATE APPOINTMENT FROM BOOKING ───────────────────────

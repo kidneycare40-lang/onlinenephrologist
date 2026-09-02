@@ -495,12 +495,63 @@ function BookingForm() {
       }
     }
 
-    // Show payment gateway IMMEDIATELY — do not wait for async validation.
-    // Duplicate/slot checks can run in background; they only block if a conflict
-    // is found, in which case we close the gateway and show the conflict dialog.
+    // ─── CRITICAL FIX: Create booking row BEFORE payment gateway ─────
+    // This eliminates the race condition where verify runs before the booking exists.
+    // The booking row is created with status='pending', payment_status='unpaid'.
+    // After payment verify, it gets updated to confirmed/paid.
     const id = `KN-${Date.now().toString(36).toUpperCase()}`;
     setBookingId(id);
     sessionStorage.setItem('pending_booking_id', id);
+
+    // Pre-create booking in database (non-blocking but awaited before payment)
+    const isIntl = isOutsideIndia;
+    const fullPhone = isIntl && formData.countryCode
+      ? `${formData.countryCode}${formData.phone.replace(/[\s-]/g, '')}`
+      : formData.phone;
+
+    try {
+      await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: id,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: fullPhone,
+          email: formData.email || null,
+          age: formData.age,
+          gender: formData.gender,
+          currentLocation: formData.currentLocation,
+          country: formData.country,
+          timezone: formData.timezone,
+          isInternational: isIntl,
+          countryCode: formData.countryCode || '+91',
+          preferredLanguage: formData.preferredLanguage,
+          interpreterRequired: formData.interpreterRequired,
+          consultationType: formData.consultationType,
+          clinicId: formData.clinicId,
+          date: formData.date,
+          time: formData.time,
+          reason: formData.reason,
+          complaints: formData.complaints,
+          currentMedications: formData.currentMedications || formData.medicines,
+          notes: formData.notes,
+          previousKidneyIssue: formData.previousKidneyIssue,
+          consultationFee: consultFee,
+          consultationFeeCurrency: consultCurrency,
+          doctorName: 'Dr Rajesh Goel',
+          status: 'pending',
+          patientAccountId: patientAccountId || undefined,
+          bookedByPatientAccountId: patientAccountId || undefined,
+          relationship: patientAccountId ? (bookingFor === 'family' ? relationship : 'self') : 'self',
+        }),
+      });
+    } catch (bookingErr) {
+      console.error('[booking] Pre-create failed:', bookingErr);
+      // Continue anyway — webhook/verify will create it if needed
+    }
+
+    // Show payment gateway — booking row now exists in DB
     setShowPaymentGateway(true);
 
     // Run duplicate check in background (non-blocking). If a conflict is found,
