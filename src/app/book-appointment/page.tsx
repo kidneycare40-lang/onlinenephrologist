@@ -2662,8 +2662,8 @@ function BookingForm() {
                       />
                     </div>
                   )}
-                  <a
-                    href="https://maps.app.goo.gl/c1AsWrWUmtPbBxGB8"
+                   <a
+                    href={formData.clinicId === 'kcc-saket' ? 'https://maps.app.goo.gl/VM1uNXrFBuzfWBPT6' : 'https://maps.app.goo.gl/c1AsWrWUmtPbBxGB8'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-4 py-2 bg-[#0A75BB] text-white text-xs font-semibold rounded-lg hover:bg-[#085a94] transition-colors"
