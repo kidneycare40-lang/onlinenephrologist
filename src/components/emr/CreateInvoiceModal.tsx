@@ -8,6 +8,7 @@ import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi } from '@/lib/api-client';
 import { getItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 import type { EMRInvoice, InvoiceItem, InvoiceStatus, PaymentMethod, VisitType } from '@/types/emr';
 
 interface CreateInvoiceModalProps {
@@ -137,7 +138,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
     } catch {}
     try {
       const added = ((await getItem('emr-added-patients')) as any[] || []);
-      const bookings = ((await getItem('emr-bookings')) as any[] || []);
+      const bookings = await fetchBookings();
       const consultationList = ((await getItem('emr-consultations')) as any[] || []);
       const appointments = ((await getItem('emr-appointments')) as any[] || []);
       const BOOKING_CLINIC_MAP: Record<string, string> = {

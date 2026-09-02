@@ -12,6 +12,7 @@ import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi, ApiError } from '@/lib/api-client';
 import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { getItem, setItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 
 function calculateAge(dob: string): number {
   if (!dob) return 0;
@@ -104,7 +105,7 @@ export default function PatientListPage() {
             }
           }
         }
-        const bookings = (await getItem('emr-bookings')) as any[] || [];
+        const bookings = await fetchBookings();
         if (Array.isArray(bookings)) {
           const allPats = [...apiPatients];
           const BOOKING_CLINIC_MAP: Record<string, string> = {
@@ -174,7 +175,7 @@ export default function PatientListPage() {
           }
         }
         // Also load booking patients
-        const bookings = (await getItem('emr-bookings')) as any[] || [];
+        const bookings = await fetchBookings();
         if (Array.isArray(bookings)) {
           const BOOKING_CLINIC_MAP: Record<string, string> = {
             'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',

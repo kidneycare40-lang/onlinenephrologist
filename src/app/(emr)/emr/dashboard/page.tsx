@@ -22,9 +22,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
-import { dashboardApi, patientsApi, ApiError } from '@/lib/api-client';
+import { api, dashboardApi, patientsApi, ApiError } from '@/lib/api-client';
 import { deleteOnlineBooking } from '@/lib/emr-delete';
-import { getItem, setItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 import type { AppointmentStatus, AppointmentType } from '@/types/emr';
 
 const BOOKING_CLINIC_MAP: Record<string, string> = {
@@ -62,9 +62,8 @@ interface OnlineBooking {
 }
 
 async function getOnlineBookings(): Promise<OnlineBooking[]> {
-  if (typeof window === 'undefined') return [];
   try {
-    return (await getItem('emr-bookings')) as OnlineBooking[] || [];
+    return (await fetchBookings()) as unknown as OnlineBooking[];
   } catch {
     return [];
   }
@@ -144,13 +143,8 @@ export default function EMRDashboardPage() {
           let sorted = (patientsResult.data || []);
           // Also merge in booking patients from localStorage
           try {
-            const bookings = (await getItem('emr-bookings')) as OnlineBooking[] || [];
+            const bookings = await fetchBookings();
             if (Array.isArray(bookings)) {
-              const BOOKING_CLINIC_MAP: Record<string, string> = {
-                'online': 'online', 'online-intl': 'online-intl', 'faridabad': 'kcc-faridabad',
-                'kcc-faridabad': 'kcc-faridabad', 'psri': 'psri-delhi', 'psri-delhi': 'psri-delhi',
-                'saket': 'kcc-saket', 'kcc-saket': 'kcc-saket',
-              };
               for (const b of bookings) {
                 const mappedClinic = BOOKING_CLINIC_MAP[b.clinicId] || b.clinicId || '';
                 if (clinicId && mappedClinic !== clinicId) continue;
@@ -189,12 +183,8 @@ export default function EMRDashboardPage() {
 
   const handleMarkPaid = async (bookingId: string) => {
     try {
-      const bookings = (await getItem('emr-bookings')) as OnlineBooking[] || [];
-      const idx = bookings.findIndex((b: OnlineBooking) => b.bookingId === bookingId);
-      if (idx === -1) return;
-      bookings[idx] = { ...bookings[idx], paymentStatus: 'paid' };
-      await setItem('emr-bookings', bookings);
-      setOnlineBookings([...bookings]);
+      await api.put('/api/bookings', { bookingId, paymentStatus: 'paid' });
+      setOnlineBookings((prev) => prev.map((b) => b.bookingId === bookingId ? { ...b, paymentStatus: 'paid' } : b));
     } catch {}
   };
 

@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/emr-auth-context';
 import { useEMRUnreadCount } from '@/hooks/useEMRUnreadCount';
 import { patientsApi } from '@/lib/api-client';
 import { getItem, setItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 
 const clinicOptions = [
   { id: 'kcc-faridabad', name: 'Kidney Care Centre - Faridabad', parent: 'Kidney Care Centre', address: 'Sector 15, Faridabad' },
@@ -104,7 +105,7 @@ export default function TopNav() {
       const allStored: any[] = [];
       try { allStored.push(...((await getItem('emr-added-patients')) as any[] || [])); } catch {}
       try {
-        const bookings = (await getItem('emr-bookings')) as any[] || [];
+        const bookings = await fetchBookings();
         if (Array.isArray(bookings)) {
           for (const b of bookings) {
             if (b.firstName) {
@@ -249,14 +250,14 @@ export default function TopNav() {
           }
         } catch {}
         try {
-          const bookings = (await getItem('emr-bookings')) as any[] || [];
+          const bookings = await fetchBookings();
           if (Array.isArray(bookings)) {
             for (const b of bookings) {
               if (clinicId && b.clinicId !== clinicId) continue;
-              if (b.patientData?.firstName) {
-                const id = b.patientId || 'obp-' + b.bookingId;
+              if (b.firstName) {
+                const id = 'obp-' + b.bookingId;
                 if (!allPatients.some((p) => p.id === id)) {
-                  allPatients.push({ id, name: `${b.patientData.firstName || ''} ${b.patientData.lastName || ''}`.trim(), phone: b.patientData.phone || '', uhid: 'OB-' + id.slice(4) });
+                  allPatients.push({ id, name: `${b.firstName || ''} ${b.lastName || ''}`.trim(), phone: b.phone || '', uhid: 'OB-' + id.slice(4) });
                 }
               }
             }

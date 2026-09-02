@@ -12,7 +12,8 @@ const EMR_CLINIC_MAP: Record<string, string> = {
   'online-intl': 'online',
 };
 
-const NON_ACTIVE = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
+const NON_ACTIVE_APPOINTMENTS = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
+const NON_ACTIVE_BOOKINGS = ['cancelled', 'completed', 'no_show'];
 
 function to12Hour(time24: string): string {
   if (!time24) return '';
@@ -35,29 +36,49 @@ export async function GET(request: NextRequest) {
   }
 
   const db = getDb();
-  const emrClinicId = clinicId ? EMR_CLINIC_MAP[clinicId] : null;
+  const emrClinicId = clinicId ? EMR_CLINIC_MAP[clinicId] || null : null;
+  const booked = new Set<string>();
 
-  let query = db
-    .from('appointments')
-    .select('appointment_time, clinic_id, status')
-    .eq('appointment_date', date)
-    .eq('is_deleted', false);
+  // 1. Query EMR appointments table
+  try {
+    let aptQuery = db
+      .from('appointments')
+      .select('appointment_time, status')
+      .eq('appointment_date', date)
+      .eq('is_deleted', false);
 
-  if (emrClinicId && emrClinicId !== 'online') {
-    query = query.eq('clinic_id', emrClinicId);
-  }
+    if (emrClinicId && emrClinicId !== 'online') {
+      aptQuery = aptQuery.eq('clinic_id', emrClinicId);
+    }
 
-  const { data, error } = await query;
+    const { data: aptData, error: aptError } = await aptQuery;
+    if (!aptError) {
+      for (const apt of aptData || []) {
+        if (NON_ACTIVE_APPOINTMENTS.includes(apt.status)) continue;
+        booked.add(to12Hour(apt.appointment_time));
+      }
+    }
+  } catch {}
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  // 2. Query Supabase bookings table
+  try {
+    let bkQuery = db
+      .from('bookings')
+      .select('booking_time, status')
+      .eq('booking_date', date);
 
-  const booked: string[] = [];
-  for (const apt of data || []) {
-    if (NON_ACTIVE.includes(apt.status)) continue;
-    booked.push(to12Hour(apt.appointment_time));
-  }
+    if (clinicId) {
+      bkQuery = bkQuery.eq('clinic_id', clinicId);
+    }
 
-  return NextResponse.json({ booked });
+    const { data: bkData, error: bkError } = await bkQuery;
+    if (!bkError) {
+      for (const b of bkData || []) {
+        if (NON_ACTIVE_BOOKINGS.includes(b.status)) continue;
+        booked.add(to12Hour(b.booking_time));
+      }
+    }
+  } catch {}
+
+  return NextResponse.json({ booked: Array.from(booked) });
 }

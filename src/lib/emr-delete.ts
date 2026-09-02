@@ -5,7 +5,6 @@ import { EMRPatient } from '@/types/emr';
 
 const DELETED_PATIENTS_KEY = 'emr-deleted-patients';
 const ADDED_PATIENTS_KEY = 'emr-added-patients';
-const BOOKINGS_KEY = 'emr-bookings';
 
 export async function getDeletedPatientIds(): Promise<string[]> {
   if (typeof window === 'undefined') return [];
@@ -35,11 +34,8 @@ export async function deleteAddedPatient(patientId: string): Promise<void> {
 }
 
 export async function deleteOnlineBooking(bookingId: string): Promise<void> {
-  try {
-    const bookings = ((await getItem(BOOKINGS_KEY)) as { bookingId: string }[]) || [];
-    const filtered = bookings.filter((b) => b.bookingId !== bookingId);
-    await setItem(BOOKINGS_KEY, filtered);
-  } catch { /* ignore */ }
+  console.log(`Booking ${bookingId} deletion should be handled via Supabase API. localStorage deletion is a no-op.`);
+  // localStorage deletion is no longer needed — data lives in Supabase.
 }
 
 export async function filterDeletedPatients<T extends { id: string }>(patientList: T[]): Promise<T[]> {

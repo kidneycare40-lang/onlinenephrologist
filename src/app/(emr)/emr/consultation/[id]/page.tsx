@@ -36,6 +36,7 @@ import { autoCorrect } from '@/lib/spellcheck';
 import { loadConsultationFromApi, loadPatientFromApi, saveConsultationToApi, apiPatientToEMR, loadBookingFromApi } from '@/lib/consultation-api';
 import { patientsApi } from '@/lib/api-client';
 import { getItem, setItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 import TemplateSelector from '@/components/emr/TemplateSelector';
 
 class ErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
@@ -156,8 +157,8 @@ export default function ConsultationPage() {
 
   const [onlineBookings, setOnlineBookings] = useState<{ bookingId: string; firstName: string; lastName: string; phone: string; email: string; age: string; gender: string; consultationType: string; clinicId: string; date: string; time: string; reason: string; complaints?: string; currentMedications?: string; medicines?: string; notes?: string; previousKidneyIssue?: string; reportFiles?: string[]; ultrasoundFile?: string; bookingMedicines?: { id: string; name: string; strength: string; dosage: string; when: string; frequency: string; duration: string }[]; doctorName?: string; consultationFee?: number; consultationFeeCurrency?: string; createdAt: string; status: string; paymentStatus?: string }[]>([]);
   useEffect(() => {
-    getItem('emr-bookings').then((data) => {
-      if (Array.isArray(data)) setOnlineBookings(data as any);
+    fetchBookings().then((data) => {
+      setOnlineBookings(data);
     }).catch(() => {});
   }, []);
 

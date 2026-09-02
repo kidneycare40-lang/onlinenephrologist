@@ -613,26 +613,7 @@ function BookingForm() {
       bookingMedicines: bookingMedicines.filter(m => m.name.trim()),
     };
 
-    try {
-      const existing = ((await getItem('emr-bookings')) as any[] || []).filter((b: any) => b.bookingId !== id);
-      existing.push(bookingData);
-      await setItem('emr-bookings', existing);
-    } catch {
-      try {
-        const slimBooking = {
-          ...bookingData,
-          reportFiles: reportFilesData.map(({ name, type }) => ({ name, type, data: '' })),
-          ultrasoundFile: ultrasoundData ? { ...ultrasoundData, data: '' } : null,
-        };
-        const existing = ((await getItem('emr-bookings')) as any[] || []).filter((b: any) => b.bookingId !== id);
-        existing.push(slimBooking);
-        await setItem('emr-bookings', existing);
-      } catch {}
-    }
-
-    // Sync the booking (patient profile + uploaded reports) to the EMR database
-    // so it appears in the doctor's EMR on any device. Best-effort — the
-    // localStorage record above keeps the flow working if the sync fails.
+    // Save the booking to Supabase (primary storage)
     try {
       await fetch('/api/bookings', {
         method: 'POST',
@@ -2862,12 +2843,11 @@ function BookingForm() {
               <button
                 onClick={async () => {
                   try {
-                    const bookings = ((await getItem('emr-bookings')) as any[] || []);
-                    const idx = bookings.findIndex((b: any) => b.bookingId === duplicateAppt.bookingId);
-                    if (idx >= 0) {
-                      bookings[idx].status = 'cancelled';
-                      await setItem('emr-bookings', bookings);
-                    }
+                    await fetch('/api/bookings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ bookingId: duplicateAppt.bookingId, status: 'cancelled' }),
+                    });
                   } catch {}
                   setDuplicateAppt(null);
                   setDuplicateType(null);

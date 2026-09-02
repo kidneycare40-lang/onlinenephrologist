@@ -57,7 +57,13 @@ export function isActiveStatus(status: string): boolean {
 
 export async function getStoredBookings(): Promise<Booking[]> {
   try {
-    return ((await getItem('emr-bookings')) as Booking[]) || [];
+    const res = await fetch('/api/bookings/list-public', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : data.bookings || []) as Booking[];
   } catch {
     return [];
   }

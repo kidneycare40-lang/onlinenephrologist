@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi } from '@/lib/api-client';
 import { getItem, setItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 
 interface FamilyMemberForm {
   id: string;
@@ -135,7 +136,7 @@ export default function AddPatientPage() {
       // Try localStorage first (consistent with patient detail page)
       try {
         const localPatients = (await getItem('emr-added-patients')) as any[] || [];
-        const localBookings = (await getItem('emr-bookings')) as any[] || [];
+        const localBookings = await fetchBookings();
         // Also search consultation/appointment localStorage
         const consultPatients = (await getItem('emr-consultations')) as any[] || [];
         const apptPatients = (await getItem('emr-appointments')) as any[] || [];

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { getItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 import type { EMRPatient } from '@/types/emr';
 
 interface WaitingPatient {
@@ -44,17 +45,17 @@ export default function TelemedicinePage() {
 
       // Online bookings
       try {
-        const bookings = (await getItem('emr-bookings')) as any[] || [];
+        const bookings = await fetchBookings();
         const today = new Date().toISOString().split('T')[0];
         for (const b of bookings) {
           if (b.date === today && b.status !== 'cancelled') {
             patients.push({
-              id: b.bookingId || b.id,
+              id: b.bookingId,
               name: `${b.firstName} ${b.lastName}`,
               phone: b.phone || '',
               type: 'Online Consultation',
               clinicId: b.clinicId || 'online',
-              uhid: b.uhid || '',
+              uhid: '',
             });
           }
         }

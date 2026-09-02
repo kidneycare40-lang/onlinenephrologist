@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { getItem, setItem } from '@/lib/client-storage';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { appointmentsApi, patientsApi, ApiError } from '@/lib/api-client';
+import { fetchBookings } from '@/lib/booking-data';
 import { CreditCard } from 'lucide-react';
 import type { AppointmentType } from '@/lib/db/types';
 
@@ -266,11 +267,12 @@ export default function AppointmentsPage() {
 
   const dateStr = formatDateISO(selectedDate);
 
-  // Load online bookings from KV store
+  // Load online bookings from Supabase API
   useEffect(() => {
     (async () => {
       try {
-        setOnlineBookings((await getItem('emr-bookings')) as any[] || []);
+        const data = await fetchBookings();
+        setOnlineBookings(data as any[]);
       } catch { /* ignore */ }
     })();
   }, []);

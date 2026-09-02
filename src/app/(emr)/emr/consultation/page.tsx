@@ -11,6 +11,7 @@ import { EMRPatient, EMRConsultation } from '@/types/emr';
 import { deleteOnlineBooking } from '@/lib/emr-delete';
 import { bookingsApi } from '@/lib/api-client';
 import { getItem, setItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 
 type StatusFilter = 'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
 
@@ -55,8 +56,8 @@ const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
   useEffect(() => {
     const loadData = async () => {
       try {
-        const bookingsData = await getItem('emr-bookings');
-        if (Array.isArray(bookingsData)) setOnlineBookings(bookingsData as any);
+        const bookingsData = await fetchBookings();
+        setOnlineBookings(bookingsData);
       } catch { /* ignore */ }
 
       // Load bookings synced from the public booking form into the database
@@ -64,8 +65,8 @@ const [addedPatients, setAddedPatients] = useState<EMRPatient[]>([]);
         .then((bookings) => setApiBookings(Array.isArray(bookings) ? bookings : []))
         .catch(() => { /* ignore */ });
       try {
-        const bookingsData2 = await getItem('emr-bookings');
-        if (Array.isArray(bookingsData2)) setOnlineBookings(bookingsData2 as any);
+        const bookingsData2 = await fetchBookings();
+        setOnlineBookings(bookingsData2);
       } catch { /* ignore */ }
       try {
         const stored = ((await getItem('emr-consultations')) as EMRConsultation[]) || [];

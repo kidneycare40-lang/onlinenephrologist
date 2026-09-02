@@ -16,6 +16,7 @@ import { useClinic } from '@/lib/emr-clinic-context';
 import { EMRPatient, EMRConsultation } from '@/types/emr';
 import { deleteAddedPatient, markPatientDeleted } from '@/lib/emr-delete';
 import { getItem, setItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 
 type Tab = 'overview' | 'visits' | 'prescriptions' | 'lab' | 'reports' | 'timeline';
 
@@ -99,7 +100,7 @@ export default function PatientDetailPage() {
         setAddedPatients((await getItem('emr-added-patients')) as EMRPatient[] || []);
       } catch { /* ignore */ }
       try {
-        setLocalBookings((await getItem('emr-bookings')) as any[] || []);
+        setLocalBookings(await fetchBookings());
       } catch { /* ignore */ }
       try {
         setLocalConsultations((await getItem('emr-consultations')) as EMRConsultation[] || []);

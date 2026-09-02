@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn, formatDate, formatCurrency } from '@/lib/utils';
 import { getItem, setItem, removeItem } from '@/lib/client-storage';
+import { fetchBookings } from '@/lib/booking-data';
 import BillingInvoice from '@/components/emr/BillingInvoice';
 import CreateInvoiceModal from '@/components/emr/CreateInvoiceModal';
 import { billingApi } from '@/lib/api-client';
@@ -125,7 +126,7 @@ async function enrichInvoicesWithAge(invoices: EMRInvoice[]): Promise<EMRInvoice
   // Build a lookup from KV store patient data
   const localPatients: any[] = [];
   try { localPatients.push(...((await getItem('emr-added-patients')) as any[] || [])); } catch {}
-  try { localPatients.push(...((await getItem('emr-bookings')) as any[] || [])); } catch {}
+  try { localPatients.push(...(await fetchBookings())); } catch {}
   try { localPatients.push(...((await getItem('emr-consultations')) as any[] || [])); } catch {}
   try { localPatients.push(...((await getItem('emr-appointments')) as any[] || [])); } catch {}
 
