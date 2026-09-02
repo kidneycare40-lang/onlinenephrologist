@@ -308,11 +308,11 @@ export default function AppointmentsPage() {
       doctorId: apt.doctor_id,
       doctorName: apt.doctor ? `Dr. ${apt.doctor.first_name} ${apt.doctor.last_name}` : '—',
       date: apt.appointment_date,
-      time: apt.appointment_time,
+      time: apt.appointment_time?.slice(0, 5) || '00:00',
       type: apt.type || 'WALK_IN',
       status: apt.status || 'SCHEDULED',
       reason: apt.reason || '',
-      payment: apt.payment_status === 'paid' ? 'PAID' : 'UNPAID',
+      payment: apt.payment_status?.toUpperCase() === 'PAID' ? 'PAID' : 'UNPAID',
       amount: apt.amount || 0,
       clinicId: apt.clinic_id,
     }));
