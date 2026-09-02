@@ -899,16 +899,32 @@ function BookingForm() {
       setBookedSlots(new Set());
       return;
     }
-    getStoredBookings().then(bookings => {
-      const taken = new Set<string>();
-      for (const b of bookings) {
-        if (b.date !== formData.date) continue;
-        if (b.clinicId !== formData.clinicId) continue;
-        if (!isActiveStatus(b.status)) continue;
-        taken.add(b.time.replace(/\s+/g, '').toUpperCase());
-      }
-      setBookedSlots(taken);
-    });
+    const taken = new Set<string>();
+    const promises: Promise<void>[] = [];
+
+    promises.push(
+      getStoredBookings().then(bookings => {
+        for (const b of bookings) {
+          if (b.date !== formData.date) continue;
+          if (b.clinicId !== formData.clinicId) continue;
+          if (!isActiveStatus(b.status)) continue;
+          taken.add(b.time.replace(/\s+/g, '').toUpperCase());
+        }
+      }).catch(() => {})
+    );
+
+    promises.push(
+      fetch(`/api/slots/booked?date=${formData.date}&clinicId=${formData.clinicId}`)
+        .then(r => r.json())
+        .then((data: { booked?: string[] }) => {
+          for (const t of data.booked || []) {
+            taken.add(t.replace(/\s+/g, '').toUpperCase());
+          }
+        })
+        .catch(() => {})
+    );
+
+    Promise.all(promises).then(() => setBookedSlots(new Set(taken)));
   }, [mounted, formData.date, formData.clinicId]);
 
   const slotOptions = useMemo(() => {

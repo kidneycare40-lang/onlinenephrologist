@@ -109,32 +109,52 @@ async function checkSlotConflict(
   time: string,
   excludeBookingId?: string
 ): Promise<ExistingAppointment | null> {
+  const tTime = time.replace(/\s+/g, '').toUpperCase();
+
+  // Check localStorage bookings
   const bookings = await getStoredBookings();
-  const match = bookings.find((b) => {
+  const localMatch = bookings.find((b) => {
     if (excludeBookingId && b.bookingId === excludeBookingId) return false;
     if (b.date !== date) return false;
     if (!isActiveStatus(b.status)) return false;
-    // Normalize clinic IDs for comparison
-    const bClinic = b.clinicId;
-    const targetClinic = clinicId;
-    if (bClinic !== targetClinic) return false;
-    // Compare times (normalize)
-    const bTime = b.time.replace(/\s+/g, '').toUpperCase();
-    const tTime = time.replace(/\s+/g, '').toUpperCase();
-    return bTime === tTime;
+    if (b.clinicId !== clinicId) return false;
+    return b.time.replace(/\s+/g, '').toUpperCase() === tTime;
   });
-  if (!match) return null;
-  return {
-    bookingId: match.bookingId,
-    patientName: `${match.firstName} ${match.lastName}`,
-    clinicName: getClinicName(match.clinicId),
-    doctorName: match.doctorName || 'Dr. Rajesh Goel',
-    date: match.date,
-    time: match.time,
-    status: match.status,
-    clinicId: match.clinicId,
-    phone: match.phone,
-  };
+  if (localMatch) {
+    return {
+      bookingId: localMatch.bookingId,
+      patientName: `${localMatch.firstName} ${localMatch.lastName}`,
+      clinicName: getClinicName(localMatch.clinicId),
+      doctorName: localMatch.doctorName || 'Dr. Rajesh Goel',
+      date: localMatch.date,
+      time: localMatch.time,
+      status: localMatch.status,
+      clinicId: localMatch.clinicId,
+      phone: localMatch.phone,
+    };
+  }
+
+  // Also check EMR appointments table via API
+  try {
+    const res = await fetch(`/api/slots/booked?date=${date}&clinicId=${clinicId}`);
+    const data: { booked?: string[] } = await res.json();
+    const booked = (data.booked || []).map(t => t.replace(/\s+/g, '').toUpperCase());
+    if (booked.includes(tTime)) {
+      return {
+        bookingId: 'emr-' + Date.now(),
+        patientName: 'Existing patient',
+        clinicName: getClinicName(clinicId),
+        doctorName: 'Dr. Rajesh Goel',
+        date,
+        time,
+        status: 'WAITING',
+        clinicId,
+        phone: '',
+      };
+    }
+  } catch { /* ignore */ }
+
+  return null;
 }
 
 /**
