@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     // Merge: paid bookings + bookings with captured payments but unpaid status
     const allBookings = [...(paidResult.data || [])];
     for (const bk of (allBookingsResult.data as any[]) || []) {
-      if (capturedBookingIds.has((bk as any).booking_id) && !allBookings.find((b: any) => b.booking_id === (bk as any).booking_id)) {
+      if (capturedBookingIds.has(bk.booking_id) && !allBookings.find((b: any) => b.booking_id === bk.booking_id)) {
         allBookings.push(bk);
       }
     }
@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
         .limit(1);
 
       if (existingAppt && existingAppt.length > 0) {
-        // Even if appointment exists, fix payment_status if it's unpaid but has a payment_id
-        if (bk.payment_status === 'unpaid' && bk.payment_id) {
+        // Fix payment_status if unpaid — either via payment_id or via booking_payments CAPTURED
+        if (bk.payment_status === 'unpaid' && (bk.payment_id || capturedBookingIds.has(bk.booking_id))) {
           await db.from('bookings').update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() }).eq('booking_id', bk.booking_id);
           results.fixedPaymentStatus = (results.fixedPaymentStatus || 0) + 1;
         }
@@ -103,8 +103,8 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Fix payment_status if it's unpaid but has a payment_id
-      if (bk.payment_status === 'unpaid' && bk.payment_id) {
+      // Fix payment_status if unpaid — either via payment_id or via booking_payments CAPTURED
+      if (bk.payment_status === 'unpaid' && (bk.payment_id || capturedBookingIds.has(bk.booking_id))) {
         await db.from('bookings').update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() }).eq('booking_id', bk.booking_id);
         results.fixedPaymentStatus = (results.fixedPaymentStatus || 0) + 1;
       }
