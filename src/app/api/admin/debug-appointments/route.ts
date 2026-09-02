@@ -10,40 +10,32 @@ export async function POST(request: NextRequest) {
 
     const db = getDb();
 
-    // Direct query: find all appointments for Sep 3
-    const { data: appts, error: apptErr } = await db
+    // Simple query - no joins
+    const { data: allAppts, error: e1 } = await db
       .from('appointments')
-      .select('id, patient_id, doctor_id, clinic_id, appointment_date, appointment_time, type, status, notes, payment_status, is_deleted')
-      .gte('appointment_date', '2026-09-03')
-      .lte('appointment_date', '2026-09-03')
-      .order('appointment_time');
-
-    // Also try without date filter
-    const { data: allAppts } = await db
-      .from('appointments')
-      .select('id, patient_id, doctor_id, clinic_id, appointment_date, appointment_time, notes, is_deleted')
-      .ilike('notes', '%KN-%')
+      .select('id, patient_id, doctor_id, clinic_id, appointment_date, appointment_time, status, notes, payment_status, is_deleted')
       .order('created_at', { ascending: false })
       .limit(10);
 
-    // Check the users table for doctors
-    const { data: doctors } = await db
+    // Simple query - doctors
+    const { data: doctors, error: e2 } = await db
       .from('users')
       .select('id, first_name, last_name, role, is_active')
       .eq('role', 'doctor');
 
-    // Check clinics
-    const { data: clinics } = await db
+    // Simple query - clinics
+    const { data: clinics, error: e3 } = await db
       .from('clinics')
       .select('id, name, slug, is_active');
 
     return NextResponse.json({
-      appointmentsForSep3: appts,
-      appointmentsForSep3Error: apptErr?.message,
-      appointmentsWithBookingId: allAppts,
-      doctors: doctors,
-      clinics: clinics,
-    }, { space: 2 });
+      appointments: allAppts,
+      appointmentsErr: e1?.message,
+      doctors,
+      doctorsErr: e2?.message,
+      clinics,
+      clinicsErr: e3?.message,
+    });
   } catch (error) {
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
