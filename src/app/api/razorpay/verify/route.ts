@@ -123,17 +123,138 @@ export async function POST(request: NextRequest) {
       return apiError('Payment record could not be created', 500);
     }
 
-    // Also confirm the booking in the bookings table
-    await db
-      .from('bookings')
-      .update({
-        status: 'confirmed',
-        payment_status: 'paid',
-        payment_id: razorpayPaymentId,
-        razorpay_order_id: razorpayOrderId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('booking_id', bookingId);
+    // Also confirm the booking in the bookings table (with retry for race condition)
+    let bookingUpdated = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: updatedBooking } = await db
+        .from('bookings')
+        .update({
+          status: 'confirmed',
+          payment_status: 'paid',
+          payment_id: razorpayPaymentId,
+          razorpay_order_id: razorpayOrderId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('booking_id', bookingId)
+        .select('id')
+        .single();
+      if (updatedBooking) {
+        bookingUpdated = true;
+        break;
+      }
+      // Wait 1s for booking creation to complete
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    if (!bookingUpdated) {
+      console.error('[verify] Booking', bookingId, 'not found after 3 attempts — payment may be orphaned');
+    }
+
+    // ─── AUTO-CREATE APPOINTMENT FROM BOOKING ───────────────────────
+    // Bridge bookings → appointments so they show in EMR dashboard/calendar
+    try {
+      const { data: bk } = await db
+        .from('bookings')
+        .select('actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      if (bk && bk.booking_date && bk.booking_time && bk.clinic_id) {
+        // Find or create EMR patient
+        let emrPatientId = bk.actual_patient_id;
+        if (!emrPatientId && bk.patient_account_id) {
+          // Try bridge lookup
+          const { data: bridge } = await db
+            .from('patient_account_emr_patients')
+            .select('emr_patient_id')
+            .eq('patient_account_id', bk.patient_account_id)
+            .limit(1);
+          if (bridge && bridge.length > 0) emrPatientId = bridge[0].emr_patient_id;
+        }
+        if (!emrPatientId && bk.phone) {
+          // Try find patient by phone
+          const cleanPhone = bk.phone.replace(/\D/g, '');
+          const { data: byPhone } = await db
+            .from('patients')
+            .select('id')
+            .or(`phone.eq.${cleanPhone},phone.eq.${bk.phone}`)
+            .eq('is_deleted', false)
+            .limit(1);
+          if (byPhone && byPhone.length > 0) emrPatientId = byPhone[0].id;
+        }
+
+        // Find doctor UUID — default to first active doctor
+        let doctorId: string | null = null;
+        const { data: doctors } = await db
+          .from('users')
+          .select('id')
+          .eq('role', 'doctor')
+          .eq('is_active', true)
+          .limit(1);
+        if (doctors && doctors.length > 0) doctorId = doctors[0].id;
+
+        // Map booking clinic_id slug → EMR clinic UUID
+        const clinicSlugMap: Record<string, string> = {
+          'kcc-faridabad': 'kcc-faridabad',
+          'kcc-saket': 'kcc-saket',
+          'online': 'online',
+          'online-intl': 'online-intl',
+        };
+        const emrClinicId = clinicSlugMap[bk.clinic_id] || bk.clinic_id;
+
+        // Find clinic UUID
+        let clinicId: string | null = null;
+        const { data: clinics } = await db
+          .from('clinics')
+          .select('id')
+          .eq('is_active', true)
+          .limit(5);
+        if (clinics && clinics.length > 0) {
+          // Match by slug or name
+          const match = clinics.find((c: any) =>
+            c.id === emrClinicId || c.slug === emrClinicId || c.name?.toLowerCase().includes(bk.clinic_id?.replace('kcc-', '') || '')
+          );
+          clinicId = match ? match.id : clinics[0].id;
+        }
+
+        if (emrPatientId && doctorId && clinicId) {
+          // Check if appointment already exists for this slot
+          const { data: existingAppt } = await db
+            .from('appointments')
+            .select('id')
+            .eq('doctor_id', doctorId)
+            .eq('appointment_date', bk.booking_date)
+            .eq('appointment_time', bk.booking_time)
+            .eq('is_deleted', false)
+            .limit(1);
+
+          if (!existingAppt || existingAppt.length === 0) {
+            const { error: apptErr } = await db.from('appointments').insert({
+              patient_id: emrPatientId,
+              doctor_id: doctorId,
+              clinic_id: clinicId,
+              appointment_date: bk.booking_date,
+              appointment_time: bk.booking_time,
+              type: bk.consultation_type === 'online' ? 'ONLINE' : 'WALK_IN',
+              status: 'SCHEDULED',
+              reason: bk.reason || `Online booking: ${bookingId}`,
+              notes: `Booking ID: ${bookingId}`,
+              payment_status: 'PAID',
+              amount: paymentData?.amount || 500,
+              currency: paymentData?.currency || 'INR',
+            });
+            if (apptErr) {
+              console.error('[verify] Failed to create appointment from booking:', apptErr);
+            } else {
+              console.log(`[verify] Appointment created for booking ${bookingId} on ${bk.booking_date} ${bk.booking_time}`);
+            }
+          }
+        } else {
+          console.log(`[verify] Skipping appointment creation — patientId=${emrPatientId}, doctorId=${doctorId}, clinicId=${clinicId}`);
+        }
+      }
+    } catch (apptBridgeErr) {
+      console.error('[verify] Auto-create appointment error:', apptBridgeErr);
+    }
 
     // Auto-create EMR bridge and follow-up entitlement for online consultations
     try {
