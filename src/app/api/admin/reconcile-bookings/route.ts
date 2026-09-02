@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     const fields = 'booking_id, actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency, status, payment_status, payment_id';
 
     const [paidResult, unpaidWithPaymentResult] = await Promise.all([
-      db.from('bookings').select(fields).eq('payment_status', 'paid').eq('is_deleted', false).order('created_at', { ascending: false }),
-      db.from('bookings').select(fields).eq('payment_status', 'unpaid').not('payment_id', 'is', null).eq('is_deleted', false).order('created_at', { ascending: false }),
+      db.from('bookings').select(fields).eq('payment_status', 'paid').order('created_at', { ascending: false }),
+      db.from('bookings').select(fields).eq('payment_status', 'unpaid').not('payment_id', 'is', null).order('created_at', { ascending: false }),
     ]);
 
     if (paidResult.error) {
