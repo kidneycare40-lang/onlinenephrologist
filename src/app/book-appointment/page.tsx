@@ -2099,7 +2099,10 @@ function BookingForm() {
                         {Array.from({ length: 14 }, (_, i) => {
                           const d = new Date();
                           d.setDate(d.getDate() + dayOffset + i);
-                          const dateStr = d.toISOString().split('T')[0];
+                          const y = d.getFullYear();
+                          const mo = String(d.getMonth() + 1).padStart(2, '0');
+                          const da = String(d.getDate()).padStart(2, '0');
+                          const dateStr = `${y}-${mo}-${da}`;
                           const isSelected = formData.date === dateStr;
                           const dayOfWeek = d.getDay();
                           const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];

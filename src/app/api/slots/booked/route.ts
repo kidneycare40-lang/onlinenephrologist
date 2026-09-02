@@ -18,9 +18,10 @@ const NON_ACTIVE_BOOKINGS = ['cancelled', 'completed', 'no_show'];
 function to12Hour(time24: string): string {
   if (!time24) return '';
   const cleaned = time24.replace(/\s+/g, '');
+  if (cleaned.match(/AM|PM/i)) return cleaned.replace(/AM|PM/i, (m) => ` ${m.toUpperCase()}`);
   const parts = cleaned.split(':');
   let h = parseInt(parts[0], 10);
-  const m = parts[1] || '00';
+  const m = (parts[1] || '00').replace(/[^0-9]/g, '');
   const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
   return `${h}:${m} ${ampm}`;
