@@ -19,25 +19,43 @@ export async function POST(request: NextRequest) {
 
     // Find bookings that need fixing:
     // 1. PAID bookings without appointments
-    // 2. Bookings with Razorpay payment IDs but still marked unpaid (pre-fix race condition)
+    // 2. Bookings where booking_payments says CAPTURED but bookings table still says unpaid
     const fields = 'booking_id, actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency, status, payment_status, payment_id';
 
-    const [paidResult, unpaidWithPaymentResult] = await Promise.all([
+    const [paidResult, allBookingsResult] = await Promise.all([
       db.from('bookings').select(fields).eq('payment_status', 'paid').order('created_at', { ascending: false }),
-      db.from('bookings').select(fields).eq('payment_status', 'unpaid').not('payment_id', 'is', null).order('created_at', { ascending: false }),
+      db.from('bookings').select(fields + ', id').order('created_at', { ascending: false }).limit(200),
     ]);
 
     if (paidResult.error) {
       return NextResponse.json({ error: 'Failed to fetch bookings', detail: paidResult.error.message }, { status: 500 });
     }
-    if (unpaidWithPaymentResult.error) {
-      return NextResponse.json({ error: 'Failed to fetch unpaid bookings', detail: unpaidWithPaymentResult.error.message }, { status: 500 });
+    if (allBookingsResult.error) {
+      return NextResponse.json({ error: 'Failed to fetch all bookings', detail: allBookingsResult.error.message }, { status: 500 });
     }
 
-    // Merge and deduplicate by booking_id
+    // Find bookings with CAPTURED payments in booking_payments but unpaid in bookings table
+    const unpaidBookingIds = (allBookingsResult.data || [])
+      .filter((b: any) => b.payment_status === 'unpaid')
+      .map((b: any) => b.booking_id);
+
+    let capturedPayments: any[] = [];
+    if (unpaidBookingIds.length > 0) {
+      // Query booking_payments for CAPTURED records matching unpaid bookings
+      const { data: bpData } = await db
+        .from('booking_payments')
+        .select('booking_id, payment_status')
+        .in('booking_id', unpaidBookingIds)
+        .eq('payment_status', 'CAPTURED');
+      capturedPayments = (bpData as any) || [];
+    }
+
+    const capturedBookingIds = new Set<string>((capturedPayments as any[]).map((bp: any) => bp.booking_id));
+
+    // Merge: paid bookings + bookings with captured payments but unpaid status
     const allBookings = [...(paidResult.data || [])];
-    for (const bk of unpaidWithPaymentResult.data || []) {
-      if (!allBookings.find((b: any) => b.booking_id === bk.booking_id)) {
+    for (const bk of (allBookingsResult.data as any[]) || []) {
+      if (capturedBookingIds.has((bk as any).booking_id) && !allBookings.find((b: any) => b.booking_id === (bk as any).booking_id)) {
         allBookings.push(bk);
       }
     }
