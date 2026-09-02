@@ -25,7 +25,7 @@ export class AppointmentRepository extends BaseRepository<Appointment> {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth),
-        doctor:users(id, first_name, last_name, qualification),
+        doctor:users!appointments_doctor_id_fkey(id, first_name, last_name, qualification),
         clinic:clinics(id, name, short_name),
         consultation:consultations(id, status, consultation_date)
       `)
@@ -43,7 +43,7 @@ export class AppointmentRepository extends BaseRepository<Appointment> {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid),
-        doctor:users(id, first_name, last_name),
+        doctor:users!appointments_doctor_id_fkey(id, first_name, last_name),
         clinic:clinics(id, name)
       `)
       .eq('is_deleted', false)
@@ -64,7 +64,7 @@ export class AppointmentRepository extends BaseRepository<Appointment> {
       .from('appointments')
       .select(`
         *,
-        doctor:users(id, first_name, last_name),
+        doctor:users!appointments_doctor_id_fkey(id, first_name, last_name),
         clinic:clinics(id, name),
         consultation:consultations(id, status)
       `)
