@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { loadBookingSettings, defaultSettings, type BookingSettings } from '@/lib/booking-settings';
 import { loadAllClinics } from '@/lib/clinic-settings';
-import { validateBooking, type ExistingAppointment, getStoredBookings, isActiveStatus } from '@/lib/booking-validator';
+import { validateBooking, type ExistingAppointment, getStoredBookings, isActiveStatus, isConfirmedStatus } from '@/lib/booking-validator';
 import { getCurrentPatient, type Patient } from '@/lib/patient-auth';
 import { getItem, setItem } from '@/lib/client-storage';
 import PaymentGateway, { type PaymentData } from '@/components/emr/PaymentGateway';
@@ -888,7 +888,7 @@ function BookingForm() {
         for (const b of bookings) {
           if (b.date !== formData.date) continue;
           if (b.clinicId !== formData.clinicId) continue;
-          if (!isActiveStatus(b.status)) continue;
+          if (!isConfirmedStatus(b.status)) continue;
           taken.add(b.time.replace(/\s+/g, '').toUpperCase());
         }
       }).catch(() => {})

@@ -55,7 +55,7 @@ export function isActiveStatus(status: string): boolean {
   return active.includes(status);
 }
 
-function isConfirmedStatus(status: string): boolean {
+export function isConfirmedStatus(status: string): boolean {
   const confirmed = ['confirmed', 'booked', 'CONFIRMED', 'WAITING', 'IN_PROGRESS'];
   return confirmed.includes(status);
 }
