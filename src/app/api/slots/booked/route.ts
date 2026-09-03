@@ -13,7 +13,7 @@ const EMR_CLINIC_MAP: Record<string, string> = {
 };
 
 const NON_ACTIVE_APPOINTMENTS = ['CANCELLED', 'NO_SHOW', 'COMPLETED'];
-const NON_ACTIVE_BOOKINGS = ['cancelled', 'completed', 'no_show'];
+const NON_ACTIVE_BOOKINGS = ['cancelled', 'completed', 'no_show', 'pending'];
 
 function to12Hour(time24: string): string {
   if (!time24) return '';

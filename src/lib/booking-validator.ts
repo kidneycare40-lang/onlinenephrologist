@@ -123,12 +123,12 @@ async function checkSlotConflict(
 ): Promise<ExistingAppointment | null> {
   const tTime = time.replace(/\s+/g, '').toUpperCase();
 
-  // Check localStorage bookings
+  // Check bookings — only block on CONFIRMED bookings, not pending/unpaid
   const bookings = await getStoredBookings();
   const localMatch = bookings.find((b) => {
     if (excludeBookingId && b.bookingId === excludeBookingId) return false;
     if (b.date !== date) return false;
-    if (!isActiveStatus(b.status)) return false;
+    if (!isConfirmedStatus(b.status)) return false;
     if (b.clinicId !== clinicId) return false;
     return b.time.replace(/\s+/g, '').toUpperCase() === tTime;
   });
