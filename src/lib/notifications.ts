@@ -1,6 +1,12 @@
 import { getDb } from '@/lib/db/client';
 import { DOCTOR_PHONES, buildDoctorMessage, type BookingNotification } from '@/lib/whatsapp-notify';
 import { sendBookingConfirmationEmail, sendTeamBookingEmail } from '@/lib/email';
+import {
+  sendWhatsAppTextMessage,
+  sendPatientAppointmentConfirmation,
+  sendDoctorAppointmentAlert,
+  type AppointmentNotificationData,
+} from '@/lib/whatsapp';
 
 const CALLMEBOT_API_URL = 'https://api.callmebot.com/whatsapp.php';
 
@@ -82,12 +88,25 @@ async function updateNotificationStatus(
     .eq('status', 'sending');
 }
 
+/**
+ * Send a WhatsApp message. Tries Cloud API first, falls back to CallmeBot.
+ * WhatsApp failures must NEVER block appointment booking.
+ */
 async function sendWhatsAppDirect(
   phone: string,
   message: string
 ): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  // 1. Try WhatsApp Cloud API first
+  if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
+    const cloudResult = await sendWhatsAppTextMessage({ to: phone, text: message });
+    if (cloudResult.ok) return cloudResult;
+    // Cloud API failed — log and fall back to CallmeBot
+    console.error('[notifications] Cloud API failed, falling back to CallmeBot:', cloudResult.error);
+  }
+
+  // 2. Fallback to CallmeBot
   const apiKey = process.env.CALLMEBOT_API_KEY;
-  if (!apiKey) return { ok: false, error: 'CALLMEBOT_API_KEY not set' };
+  if (!apiKey) return { ok: false, error: 'No WhatsApp provider configured' };
   try {
     const params = new URLSearchParams({ phone, text: message, apikey: apiKey });
     const res = await fetch(`${CALLMEBOT_API_URL}?${params.toString()}`);
@@ -210,7 +229,37 @@ export async function sendBookingNotifications(
 
   // 1. Team WhatsApp — per-doctor independent tracking
   const doctorMessage = buildDoctorMessage(bookingNotif);
+
+  // If Cloud API doctor phone is configured, send via Cloud API first
+  if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_DOCTOR_PHONE_NUMBER) {
+    const doctorNotifData: AppointmentNotificationData = {
+      bookingId: ctx.bookingId,
+      patientName: ctx.patientName,
+      doctorName: ctx.doctorName || 'Dr. Rajesh Goel',
+      clinicName: ctx.clinicName,
+      date: ctx.date,
+      time: ctx.time,
+      consultationType: ctx.consultationType,
+      patientPhone: ctx.patientPhone,
+    };
+    const doctorPhone = process.env.WHATSAPP_DOCTOR_PHONE_NUMBER;
+    if (await claimNotification(ctx.bookingId, 'team_whatsapp', doctorPhone)) {
+      const doctorResult = await sendDoctorAppointmentAlert(doctorNotifData);
+      await updateNotificationStatus(
+        ctx.bookingId, 'team_whatsapp', doctorPhone,
+        doctorResult.ok ? 'sent' : 'failed',
+        doctorResult.messageId,
+        doctorResult.error
+      );
+      if (doctorResult.ok) result.teamWhatsApp = true;
+    }
+  }
+
+  // Also send to legacy DOCTOR_PHONES via CallmeBot/fallback
   for (const phone of DOCTOR_PHONES) {
+    // Skip if already sent via Cloud API to the same number
+    if (process.env.WHATSAPP_DOCTOR_PHONE_NUMBER === phone && result.teamWhatsApp) continue;
+
     if (await claimNotification(ctx.bookingId, 'team_whatsapp', phone)) {
       const result_wa = await sendWhatsAppDirect(phone, doctorMessage);
       await updateNotificationStatus(
@@ -255,10 +304,29 @@ export async function sendBookingNotifications(
     }
   }
 
-  // 3. Patient WhatsApp confirmation
+  // 3. Patient WhatsApp confirmation — try Cloud API template first, fallback to text
   if (ctx.patientPhone && await claimNotification(ctx.bookingId, 'patient_whatsapp', ctx.patientPhone)) {
-    const patientMsg = buildPatientConfirmationMessage(bookingNotif);
-    const waResult = await sendWhatsAppDirect(ctx.patientPhone, patientMsg);
+    let waResult: { ok: boolean; messageId?: string; error?: string };
+
+    // Try WhatsApp Cloud API template message first
+    if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
+      const templateData: AppointmentNotificationData = {
+        bookingId: ctx.bookingId,
+        patientName: ctx.patientName,
+        doctorName: ctx.doctorName || 'Dr. Rajesh Goel',
+        clinicName: ctx.clinicName,
+        date: ctx.date,
+        time: ctx.time,
+        consultationType: ctx.consultationType,
+        patientPhone: ctx.patientPhone,
+      };
+      waResult = await sendPatientAppointmentConfirmation(templateData);
+    } else {
+      // Fallback: free-form text via CallmeBot
+      const patientMsg = buildPatientConfirmationMessage(bookingNotif);
+      waResult = await sendWhatsAppDirect(ctx.patientPhone, patientMsg);
+    }
+
     await updateNotificationStatus(
       ctx.bookingId, 'patient_whatsapp', ctx.patientPhone,
       waResult.ok ? 'sent' : 'failed',
