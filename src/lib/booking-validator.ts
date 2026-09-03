@@ -55,6 +55,11 @@ export function isActiveStatus(status: string): boolean {
   return active.includes(status);
 }
 
+function isConfirmedStatus(status: string): boolean {
+  const confirmed = ['confirmed', 'booked', 'CONFIRMED', 'WAITING', 'IN_PROGRESS'];
+  return confirmed.includes(status);
+}
+
 export async function getStoredBookings(): Promise<Booking[]> {
   try {
     const res = await fetch('/api/bookings/list-public', {
@@ -76,7 +81,8 @@ async function getAllPatients(): Promise<EMRPatient[]> {
 }
 
 /**
- * Rule 1 & 3: Check if patient already has an active booking for the same date
+ * Rule 1 & 3: Check if patient already has a CONFIRMED booking for the same date.
+ * Unpaid/pending bookings do NOT block a new attempt.
  */
 async function checkPatientDuplicate(
   phone: string,
@@ -88,7 +94,7 @@ async function checkPatientDuplicate(
   const match = bookings.find((b) => {
     if (excludeBookingId && b.bookingId === excludeBookingId) return false;
     if (b.date !== date) return false;
-    if (!isActiveStatus(b.status)) return false;
+    if (!isConfirmedStatus(b.status)) return false;
     const bPhone = normalizePhone(b.phone);
     return bPhone === searchPhone && searchPhone.length >= 5;
   });

@@ -556,7 +556,7 @@ function BookingForm() {
 
     // Run duplicate check in background (non-blocking). If a conflict is found,
     // close the payment gateway and show the duplicate dialog.
-    validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time)
+    validateBooking(cleanPhone, formData.clinicId, formData.date, formData.time, id)
       .then((validation) => {
         if (!validation.allowed && validation.existing) {
           setShowPaymentGateway(false);
