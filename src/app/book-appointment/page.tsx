@@ -2799,16 +2799,16 @@ function BookingForm() {
             </button>
 
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
-                  {duplicateType === 'duplicate_patient' ? 'Appointment Already Exists' : 'Slot Already Booked'}
+                  {duplicateType === 'duplicate_patient' ? 'Appointment Already Booked' : 'Slot Already Booked'}
                 </h3>
                 <p className="text-sm text-gray-500">
                   {duplicateType === 'duplicate_patient'
-                    ? 'You already have an appointment for this date.'
+                    ? 'You already have a confirmed appointment for this date. Please check the details below.'
                     : 'This time slot is taken. Please choose another.'}
                 </p>
               </div>
@@ -2835,9 +2835,36 @@ function BookingForm() {
                 <Clock className="h-4 w-4 text-gray-400 shrink-0" />
                 <span className="text-sm text-gray-700">{duplicateAppt.time}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{duplicateAppt.status}</span>
-              </div>
+              {duplicateAppt.status && (
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${duplicateAppt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {duplicateAppt.status === 'confirmed' ? 'Paid & Confirmed' : duplicateAppt.status}
+                  </span>
+                </div>
+              )}
+              {duplicateAppt.clinicId && duplicateAppt.clinicId !== 'online' && duplicateAppt.clinicId !== 'online-intl' && (
+                <div className="flex items-start gap-2 pt-1 border-t border-gray-200 mt-2">
+                  <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                  <div className="text-sm text-gray-700">
+                    <span className="font-medium">{duplicateAppt.clinicName}</span>
+                    <br />
+                    <span className="text-xs text-gray-500">
+                      {duplicateAppt.clinicId === 'kcc-faridabad' && 'Old Faridabad, 18A Main Market, Faridabad, Haryana'}
+                      {duplicateAppt.clinicId === 'kcc-saket' && '13 B, K-Block, Gate no. - 2, Saket, New Delhi'}
+                      {duplicateAppt.clinicId === 'psri-delhi' && 'Press Enclave Marg, Shaikh Sarai - II, New Delhi - 110017'}
+                    </span>
+                    <br />
+                    <a
+                      href={duplicateAppt.clinicId === 'kcc-saket' ? 'https://maps.app.goo.gl/VM1uNXrFBuzfWBPT6' : 'https://maps.app.goo.gl/c1AsWrWUmtPbBxGB8'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-[#0A75BB] hover:underline mt-1"
+                    >
+                      <MapPin className="h-3 w-3" /> Get directions
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2.5">
