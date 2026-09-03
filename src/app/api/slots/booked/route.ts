@@ -40,26 +40,28 @@ export async function GET(request: NextRequest) {
   const emrClinicId = clinicId ? EMR_CLINIC_MAP[clinicId] || null : null;
   const booked = new Set<string>();
 
-  // 1. Query EMR appointments table
-  try {
-    let aptQuery = db
-      .from('appointments')
-      .select('appointment_time, status')
-      .eq('appointment_date', date)
-      .eq('is_deleted', false);
+  // 1. Query EMR appointments table (physical clinics only — online slots are tracked in bookings table)
+  if (clinicId && clinicId !== 'online' && clinicId !== 'online-intl') {
+    try {
+      let aptQuery = db
+        .from('appointments')
+        .select('appointment_time, status')
+        .eq('appointment_date', date)
+        .eq('is_deleted', false);
 
-    if (emrClinicId && emrClinicId !== 'online') {
-      aptQuery = aptQuery.eq('clinic_id', emrClinicId);
-    }
-
-    const { data: aptData, error: aptError } = await aptQuery;
-    if (!aptError) {
-      for (const apt of aptData || []) {
-        if (NON_ACTIVE_APPOINTMENTS.includes(apt.status)) continue;
-        booked.add(to12Hour(apt.appointment_time));
+      if (emrClinicId && emrClinicId !== 'online') {
+        aptQuery = aptQuery.eq('clinic_id', emrClinicId);
       }
-    }
-  } catch {}
+
+      const { data: aptData, error: aptError } = await aptQuery;
+      if (!aptError) {
+        for (const apt of aptData || []) {
+          if (NON_ACTIVE_APPOINTMENTS.includes(apt.status)) continue;
+          booked.add(to12Hour(apt.appointment_time));
+        }
+      }
+    } catch {}
+  }
 
   // 2. Query Supabase bookings table
   try {
