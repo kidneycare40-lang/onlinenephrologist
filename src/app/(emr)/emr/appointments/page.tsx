@@ -284,14 +284,11 @@ export default function AppointmentsPage() {
   const refreshAppointments = useCallback(async () => {
     setLoading(true);
     try {
-      // Calculate start and end of day
       const start = dateStr + 'T00:00:00';
       const end = dateStr + 'T23:59:59';
       const data = await appointmentsApi.getByDateRange(start, end, undefined);
-      console.log('[appointments]', dateStr, '→', data?.length, 'results');
       setApiAppointments(data || []);
-    } catch (err) {
-      console.error('[appointments] fetch error:', err);
+    } catch {
       setApiAppointments([]);
     } finally {
       setLoading(false);
