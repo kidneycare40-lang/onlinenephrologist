@@ -441,10 +441,7 @@ export default function AppointmentsPage() {
               const nowMinutes = now.getHours() * 60 + now.getMinutes();
               return allSlots.filter((slot) => {
                 const [h, m] = slot.split(':').map(Number);
-                const slotMinutes = h * 60 + m;
-                if (slotMinutes >= nowMinutes) return true;
-                const normalizedSlot = slot.replace(/\s+/g, '').toUpperCase();
-                return appointmentsByTime[normalizedSlot]?.length > 0;
+                return h * 60 + m >= nowMinutes;
               });
             })().map((slot) => {
               const slotAppointments = appointmentsByTime[slot] || [];
