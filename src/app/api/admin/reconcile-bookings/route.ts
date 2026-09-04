@@ -142,7 +142,9 @@ export async function POST(request: NextRequest) {
             phone: bk.phone || '',
             age: bk.age ? Number(bk.age) : null,
             gender: bk.gender || null,
+            uhid: `ONLINE-${new Date().getFullYear()}/${Math.floor(10000 + Math.random() * 90000)}`,
             is_active: true,
+            is_deleted: false,
           })
           .select('id')
           .single();
@@ -197,7 +199,7 @@ export async function POST(request: NextRequest) {
         clinic_id: clinicId,
         appointment_date: bk.booking_date,
         appointment_time: bk.booking_time,
-        type: bk.consultation_type === 'online' ? 'ONLINE' : 'WALK_IN',
+        type: (bk.consultation_type === 'online' || bk.consultation_type === 'online_intl') ? 'ONLINE' : 'WALK_IN',
         status: 'WAITING',
         reason: bk.reason || `Reconciled from booking: ${bk.booking_id}`,
         notes: `Booking ID: ${bk.booking_id}`,
