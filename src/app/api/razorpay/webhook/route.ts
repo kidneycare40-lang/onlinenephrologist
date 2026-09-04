@@ -112,7 +112,73 @@ export async function POST(request: NextRequest) {
       .update(bookingUpdate)
       .eq('booking_id', bookingId);
 
-    // ─── AUTO-CREATE APPOINTMENT FROM BOOKING ───────────────────────
+    // ─── Step 1: EMR BRIDGE FIRST — create patient in EMR before appointment ───
+    if (newStatus === 'CAPTURED') {
+      try {
+        const { data: bookingBridge } = await db
+          .from('bookings')
+          .select('patient_account_id, phone, consultation_type, actual_patient_id')
+          .eq('booking_id', bookingId)
+          .maybeSingle();
+
+        if (bookingBridge?.patient_account_id) {
+          await autoBridgeFromBooking(bookingBridge.patient_account_id, bookingBridge.phone || '');
+          const consultType = bookingBridge.consultation_type;
+          if (consultType === 'online' || consultType === 'online_intl') {
+            await createFollowUpEntitlement(
+              bookingBridge.patient_account_id,
+              bookingId,
+              razorpayPaymentId,
+              consultType
+            );
+          }
+        } else if (bookingBridge?.phone) {
+          // No patient_account_id — try to find or create EMR patient by phone directly
+          const cleanPhone = bookingBridge.phone.replace(/\D/g, '');
+          const { data: existingPatient } = await db
+            .from('patients')
+            .select('id')
+            .or(`phone.eq.${cleanPhone},phone.eq.${bookingBridge.phone}`)
+            .eq('is_deleted', false)
+            .limit(1);
+
+          if (!existingPatient || existingPatient.length === 0) {
+            const { data: bkFull } = await db
+              .from('bookings')
+              .select('first_name, last_name, phone, age, gender, email')
+              .eq('booking_id', bookingId)
+              .maybeSingle();
+
+            if (bkFull) {
+              const uhid = `ONLINE-${new Date().getFullYear()}/${Math.floor(10000 + Math.random() * 90000)}`;
+              const { data: newPatient } = await db
+                .from('patients')
+                .insert({
+                  first_name: bkFull.first_name || 'Patient',
+                  last_name: bkFull.last_name || '',
+                  phone: bookingBridge.phone,
+                  email: bkFull.email || null,
+                  uhid,
+                  gender: bkFull.gender || null,
+                  is_active: true,
+                  is_deleted: false,
+                  created_at: new Date().toISOString(),
+                })
+                .select('id')
+                .single();
+
+              if (newPatient) {
+                console.log(`[webhook] Created EMR patient ${uhid} for booking ${bookingId}`);
+              }
+            }
+          }
+        }
+      } catch (portalErr) {
+        console.error('[webhook] EMR bridge error:', portalErr);
+      }
+    }
+
+    // ─── Step 2: AUTO-CREATE APPOINTMENT FROM BOOKING ───────────────────────
     // Bridge bookings → appointments so they show in EMR dashboard/calendar
     if (newStatus === 'CAPTURED') {
       try {
@@ -135,10 +201,11 @@ export async function POST(request: NextRequest) {
           }
           if (!emrPatientId && bk.phone) {
             const cleanPhone = bk.phone.replace(/\D/g, '');
+            const phoneVariations = [cleanPhone, bk.phone, `+${cleanPhone}`, bk.phone.replace(/^\+/, '')];
             const { data: byPhone } = await db
               .from('patients')
               .select('id')
-              .or(`phone.eq.${cleanPhone},phone.eq.${bk.phone}`)
+              .or(phoneVariations.map(p => `phone.eq.${p}`).join(','))
               .eq('is_deleted', false)
               .limit(1);
             if (byPhone && byPhone.length > 0) emrPatientId = byPhone[0].id;
@@ -166,12 +233,12 @@ export async function POST(request: NextRequest) {
           let clinicId: string | null = null;
           const { data: clinics } = await db
             .from('clinics')
-            .select('id')
+            .select('id, name')
             .eq('is_active', true)
             .limit(5);
           if (clinics && clinics.length > 0) {
             const match = clinics.find((c: any) =>
-              c.id === emrClinicId || c.slug === emrClinicId || c.name?.toLowerCase().includes(bk.clinic_id?.replace('kcc-', '') || '')
+              c.id === emrClinicId || c.name?.toLowerCase().includes(bk.clinic_id?.replace('kcc-', '') || '')
             );
             clinicId = match ? match.id : clinics[0].id;
           }
@@ -188,13 +255,15 @@ export async function POST(request: NextRequest) {
               .limit(1);
 
             if (!existingAppt || existingAppt.length === 0) {
+              const consultType = bk.consultation_type;
+              const apptType = (consultType === 'online' || consultType === 'online_intl') ? 'ONLINE' : 'WALK_IN';
               const { error: apptErr } = await db.from('appointments').insert({
                 patient_id: emrPatientId,
                 doctor_id: doctorId,
                 clinic_id: clinicId,
                 appointment_date: bk.booking_date,
                 appointment_time: bk.booking_time,
-                type: bk.consultation_type === 'online' ? 'ONLINE' : 'WALK_IN',
+                type: apptType,
                 status: 'WAITING',
                 reason: bk.reason || `Online booking: ${bookingId}`,
                 notes: `Booking ID: ${bookingId}`,
@@ -253,24 +322,7 @@ export async function POST(request: NextRequest) {
         console.error('[webhook] Auto-invoice error:', invErr);
       }
 
-      // Auto-create EMR bridge and follow-up entitlement for online consultations
-      try {
-        if (booking?.patient_account_id) {
-          await autoBridgeFromBooking(booking.patient_account_id, booking.phone || '');
-          const consultType = booking.consultation_type;
-          if (consultType === 'online' || consultType === 'online_intl') {
-            await createFollowUpEntitlement(
-              booking.patient_account_id,
-              bookingId,
-              razorpayPaymentId || null,
-              consultType
-            );
-          }
-        }
-      } catch (portalErr) {
-        console.error('[webhook] Portal bridge/entitlement error:', portalErr);
-      }
-
+      // Send notifications
       if (booking) {
         try {
           let bookedByPatientName: string | undefined;

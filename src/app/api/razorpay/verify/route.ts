@@ -141,7 +141,73 @@ export async function POST(request: NextRequest) {
       console.error('[verify] Booking', bookingId, 'not found — payment may be orphaned. Use reconciliation endpoint.');
     }
 
-    // ─── AUTO-CREATE APPOINTMENT FROM BOOKING ───────────────────────
+    // ─── Step 1: EMR BRIDGE FIRST — create patient in EMR before appointment ───
+    // The patient must exist in the patients table before we can create an appointment
+    try {
+      const { data: bookingBridge } = await db
+        .from('bookings')
+        .select('patient_account_id, phone, consultation_type, actual_patient_id')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      if (bookingBridge?.patient_account_id) {
+        await autoBridgeFromBooking(bookingBridge.patient_account_id, bookingBridge.phone || '');
+        const consultType = bookingBridge.consultation_type;
+        if (consultType === 'online' || consultType === 'online_intl') {
+          await createFollowUpEntitlement(
+            bookingBridge.patient_account_id,
+            bookingId,
+            razorpayPaymentId,
+            consultType
+          );
+        }
+      } else if (bookingBridge?.phone) {
+        // No patient_account_id — try to find or create EMR patient by phone directly
+        const cleanPhone = bookingBridge.phone.replace(/\D/g, '');
+        const { data: existingPatient } = await db
+          .from('patients')
+          .select('id')
+          .or(`phone.eq.${cleanPhone},phone.eq.${bookingBridge.phone}`)
+          .eq('is_deleted', false)
+          .limit(1);
+
+        if (!existingPatient || existingPatient.length === 0) {
+          // Create a minimal EMR patient record from booking data
+          const { data: bkFull } = await db
+            .from('bookings')
+            .select('first_name, last_name, phone, age, gender, email')
+            .eq('booking_id', bookingId)
+            .maybeSingle();
+
+          if (bkFull) {
+            const uhid = `ONLINE-${new Date().getFullYear()}/${Math.floor(10000 + Math.random() * 90000)}`;
+            const { data: newPatient } = await db
+              .from('patients')
+              .insert({
+                first_name: bkFull.first_name || 'Patient',
+                last_name: bkFull.last_name || '',
+                phone: bookingBridge.phone,
+                email: bkFull.email || null,
+                uhid,
+                gender: bkFull.gender || null,
+                is_active: true,
+                is_deleted: false,
+                created_at: new Date().toISOString(),
+              })
+              .select('id')
+              .single();
+
+            if (newPatient) {
+              console.log(`[verify] Created EMR patient ${uhid} for booking ${bookingId}`);
+            }
+          }
+        }
+      }
+    } catch (portalErr) {
+      console.error('[verify] EMR bridge error:', portalErr);
+    }
+
+    // ─── Step 2: AUTO-CREATE APPOINTMENT FROM BOOKING ───────────────────────
     // Bridge bookings → appointments so they show in EMR dashboard/calendar
     try {
       const { data: bk } = await db
@@ -163,12 +229,13 @@ export async function POST(request: NextRequest) {
           if (bridge && bridge.length > 0) emrPatientId = bridge[0].emr_patient_id;
         }
         if (!emrPatientId && bk.phone) {
-          // Try find patient by phone
+          // Try find patient by phone (with multiple format variations)
           const cleanPhone = bk.phone.replace(/\D/g, '');
+          const phoneVariations = [cleanPhone, bk.phone, `+${cleanPhone}`, bk.phone.replace(/^\+/, '')];
           const { data: byPhone } = await db
             .from('patients')
             .select('id')
-            .or(`phone.eq.${cleanPhone},phone.eq.${bk.phone}`)
+            .or(phoneVariations.map(p => `phone.eq.${p}`).join(','))
             .eq('is_deleted', false)
             .limit(1);
           if (byPhone && byPhone.length > 0) emrPatientId = byPhone[0].id;
@@ -197,19 +264,19 @@ export async function POST(request: NextRequest) {
         let clinicId: string | null = null;
         const { data: clinics } = await db
           .from('clinics')
-          .select('id')
+          .select('id, name')
           .eq('is_active', true)
           .limit(5);
         if (clinics && clinics.length > 0) {
           // Match by slug or name
           const match = clinics.find((c: any) =>
-            c.id === emrClinicId || c.slug === emrClinicId || c.name?.toLowerCase().includes(bk.clinic_id?.replace('kcc-', '') || '')
+            c.id === emrClinicId || c.name?.toLowerCase().includes(bk.clinic_id?.replace('kcc-', '') || '')
           );
           clinicId = match ? match.id : clinics[0].id;
         }
 
         if (emrPatientId && doctorId && clinicId) {
-          // Check if appointment already exists for this slot
+          // Check if appointment already exists for this booking
           const { data: existingAppt } = await db
             .from('appointments')
             .select('id')
@@ -220,13 +287,15 @@ export async function POST(request: NextRequest) {
             .limit(1);
 
           if (!existingAppt || existingAppt.length === 0) {
+            const consultType = bk.consultation_type;
+            const apptType = (consultType === 'online' || consultType === 'online_intl') ? 'ONLINE' : 'WALK_IN';
             const { error: apptErr } = await db.from('appointments').insert({
               patient_id: emrPatientId,
               doctor_id: doctorId,
               clinic_id: clinicId,
               appointment_date: bk.booking_date,
               appointment_time: bk.booking_time,
-              type: bk.consultation_type === 'online' ? 'ONLINE' : 'WALK_IN',
+              type: apptType,
               status: 'WAITING',
               reason: bk.reason || `Online booking: ${bookingId}`,
               notes: `Booking ID: ${bookingId}`,
@@ -246,34 +315,6 @@ export async function POST(request: NextRequest) {
       }
     } catch (apptBridgeErr) {
       console.error('[verify] Auto-create appointment error:', apptBridgeErr);
-    }
-
-    // Auto-create EMR bridge and follow-up entitlement for online consultations
-    try {
-      const { data: booking } = await db
-        .from('bookings')
-        .select('patient_account_id, phone, consultation_type')
-        .eq('booking_id', bookingId)
-        .maybeSingle();
-
-      if (booking?.patient_account_id) {
-        // Bridge patient_account → EMR patient
-        await autoBridgeFromBooking(booking.patient_account_id, booking.phone || '');
-
-        // Create follow-up entitlement for eligible online consultations
-        const consultType = booking.consultation_type;
-        if (consultType === 'online' || consultType === 'online_intl') {
-          await createFollowUpEntitlement(
-            booking.patient_account_id,
-            bookingId,
-            razorpayPaymentId,
-            consultType
-          );
-        }
-      }
-    } catch (portalErr) {
-      console.error('[verify] Portal bridge/entitlement error:', portalErr);
-      // Non-blocking — booking is still confirmed
     }
 
     // Auto-generate invoice + payment record in EMR billing
