@@ -371,10 +371,10 @@ export async function sendPatientAppointmentConfirmation(
  * Uses free-form text within the 24-hour service window.
  */
 export async function sendDoctorAppointmentAlert(
-  data: AppointmentNotificationData
+  data: AppointmentNotificationData & { toOverride?: string }
 ): Promise<SendResult> {
   const config = getConfig();
-  const { doctorPhone } = config;
+  const doctorPhone = data.toOverride || config.doctorPhone;
 
   if (!doctorPhone) {
     return { ok: false, error: 'WHATSAPP_DOCTOR_PHONE_NUMBER not configured' };

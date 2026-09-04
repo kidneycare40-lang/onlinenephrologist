@@ -227,11 +227,8 @@ export async function sendBookingNotifications(
     ultrasoundUploaded: ctx.ultrasoundUploaded,
   };
 
-  // 1. Team WhatsApp — per-doctor independent tracking
-  const doctorMessage = buildDoctorMessage(bookingNotif);
-
-  // If Cloud API doctor phone is configured, send via Cloud API first
-  if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_DOCTOR_PHONE_NUMBER) {
+  // 1. Team WhatsApp — send to ALL doctor phones via Cloud API
+  if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
     const doctorNotifData: AppointmentNotificationData = {
       bookingId: ctx.bookingId,
       patientName: ctx.patientName,
@@ -242,33 +239,41 @@ export async function sendBookingNotifications(
       consultationType: ctx.consultationType,
       patientPhone: ctx.patientPhone,
     };
-    const doctorPhone = process.env.WHATSAPP_DOCTOR_PHONE_NUMBER;
-    if (await claimNotification(ctx.bookingId, 'team_whatsapp', doctorPhone)) {
-      const doctorResult = await sendDoctorAppointmentAlert(doctorNotifData);
-      await updateNotificationStatus(
-        ctx.bookingId, 'team_whatsapp', doctorPhone,
-        doctorResult.ok ? 'sent' : 'failed',
-        doctorResult.messageId,
-        doctorResult.error
-      );
-      if (doctorResult.ok) result.teamWhatsApp = true;
+
+    // Send to all configured doctor phones (both Cloud API configured + DOCTOR_PHONES)
+    const allDoctorPhones = new Set<string>();
+    // Primary doctor phone from env var
+    const primaryPhone = process.env.WHATSAPP_DOCTOR_PHONE_NUMBER;
+    if (primaryPhone) allDoctorPhones.add(primaryPhone);
+    // Additional doctor phones from DOCTOR_PHONES array
+    for (const p of DOCTOR_PHONES) allDoctorPhones.add(p);
+
+      for (const doctorPhone of allDoctorPhones) {
+      if (await claimNotification(ctx.bookingId, 'team_whatsapp', doctorPhone)) {
+        const doctorResult = await sendDoctorAppointmentAlert({ ...doctorNotifData, toOverride: doctorPhone });
+        await updateNotificationStatus(
+          ctx.bookingId, 'team_whatsapp', doctorPhone,
+          doctorResult.ok ? 'sent' : 'failed',
+          doctorResult.messageId,
+          doctorResult.error
+        );
+        if (doctorResult.ok) result.teamWhatsApp = true;
+      }
     }
-  }
-
-  // Also send to legacy DOCTOR_PHONES via CallmeBot/fallback
-  for (const phone of DOCTOR_PHONES) {
-    // Skip if already sent via Cloud API to the same number
-    if (process.env.WHATSAPP_DOCTOR_PHONE_NUMBER === phone && result.teamWhatsApp) continue;
-
-    if (await claimNotification(ctx.bookingId, 'team_whatsapp', phone)) {
-      const result_wa = await sendWhatsAppDirect(phone, doctorMessage);
-      await updateNotificationStatus(
-        ctx.bookingId, 'team_whatsapp', phone,
-        result_wa.ok ? 'sent' : 'failed',
-        result_wa.messageId,
-        result_wa.error
-      );
-      if (result_wa.ok) result.teamWhatsApp = true;
+  } else if (DOCTOR_PHONES.length > 0) {
+    // No Cloud API — try CallmeBot fallback
+    const doctorMessage = buildDoctorMessage(bookingNotif);
+    for (const phone of DOCTOR_PHONES) {
+      if (await claimNotification(ctx.bookingId, 'team_whatsapp', phone)) {
+        const result_wa = await sendWhatsAppDirect(phone, doctorMessage);
+        await updateNotificationStatus(
+          ctx.bookingId, 'team_whatsapp', phone,
+          result_wa.ok ? 'sent' : 'failed',
+          result_wa.messageId,
+          result_wa.error
+        );
+        if (result_wa.ok) result.teamWhatsApp = true;
+      }
     }
   }
 
