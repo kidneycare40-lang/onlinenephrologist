@@ -1294,6 +1294,70 @@ export default function BillingPage() {
                     </section>
                   )}
 
+                  {/* Reason & Complaints */}
+                  {(selectedBookingDetail.booking?.reason || selectedBookingDetail.booking?.complaints || selectedBookingDetail.booking?.currentMedications) && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Clinical Details</h3>
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm">
+                        {selectedBookingDetail.booking?.reason && (
+                          <div>
+                            <span className="text-gray-500">Reason for Visit</span>
+                            <p className="font-medium text-gray-900">{selectedBookingDetail.booking.reason}</p>
+                          </div>
+                        )}
+                        {selectedBookingDetail.booking?.complaints && (
+                          <div>
+                            <span className="text-gray-500">Complaints</span>
+                            <p className="font-medium text-gray-900">{selectedBookingDetail.booking.complaints}</p>
+                          </div>
+                        )}
+                        {selectedBookingDetail.booking?.currentMedications && (
+                          <div>
+                            <span className="text-gray-500">Current Medications</span>
+                            <p className="font-medium text-gray-900">{selectedBookingDetail.booking.currentMedications}</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Patient Reports */}
+                  {((selectedBookingDetail.booking?.reportFiles && selectedBookingDetail.booking.reportFiles.length > 0) || selectedBookingDetail.booking?.ultrasoundFile) && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Patient Reports</h3>
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-3 text-sm">
+                        {selectedBookingDetail.booking?.reportFiles && selectedBookingDetail.booking.reportFiles.length > 0 && (
+                          <div>
+                            <span className="text-gray-500">Blood/Medical Reports</span>
+                            <div className="mt-1 space-y-1">
+                              {selectedBookingDetail.booking.reportFiles.map((f: any, i: number) => (
+                                <div key={i} className="flex items-center gap-2">
+                                  <FileText className="h-3.5 w-3.5 text-blue-500" />
+                                  <span className="font-medium text-blue-700">{typeof f === 'string' ? f.split('/').pop() : f.name || `Report ${i + 1}`}</span>
+                                  {typeof f === 'string' && f.startsWith('http') && (
+                                    <a href={f} target="_blank" rel="noopener noreferrer" className="text-xs text-[#0A75BB] hover:underline">View</a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {selectedBookingDetail.booking?.ultrasoundFile && (
+                          <div>
+                            <span className="text-gray-500">Ultrasound</span>
+                            <div className="mt-1 flex items-center gap-2">
+                              <FileText className="h-3.5 w-3.5 text-blue-500" />
+                              <span className="font-medium text-blue-700">{typeof selectedBookingDetail.booking.ultrasoundFile === 'string' ? selectedBookingDetail.booking.ultrasoundFile.split('/').pop() : 'Uploaded'}</span>
+                              {typeof selectedBookingDetail.booking.ultrasoundFile === 'string' && selectedBookingDetail.booking.ultrasoundFile.startsWith('http') && (
+                                <a href={selectedBookingDetail.booking.ultrasoundFile} target="_blank" rel="noopener noreferrer" className="text-xs text-[#0A75BB] hover:underline">View</a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
                   {/* Payment Info */}
                   <section>
                     <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Payment</h3>
