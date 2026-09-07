@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
+import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
 
 /**
  * POST /api/admin/reconcile-bookings
@@ -34,9 +35,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch all bookings', detail: allBookingsResult.error.message }, { status: 500 });
     }
 
-    // Find bookings with CAPTURED payments in booking_payments but unpaid in bookings table
+    // Find bookings with CAPTURED payments in booking_payments but unpaid/pending in bookings table
     const unpaidBookingIds = (allBookingsResult.data || [])
-      .filter((b: any) => b.payment_status === 'unpaid')
+      .filter((b: any) => b.payment_status === 'unpaid' || b.payment_status === 'pending')
       .map((b: any) => b.booking_id);
 
     let capturedPayments: any[] = [];
@@ -94,8 +95,8 @@ export async function POST(request: NextRequest) {
         .limit(1);
 
       if (existingAppt && existingAppt.length > 0) {
-        // Fix payment_status if unpaid — either via payment_id or via booking_payments CAPTURED
-        if (bk.payment_status === 'unpaid' && (bk.payment_id || capturedBookingIds.has(bk.booking_id))) {
+        // Fix payment_status if unpaid/pending — either via payment_id or via booking_payments CAPTURED
+        if ((bk.payment_status === 'unpaid' || bk.payment_status === 'pending') && (bk.payment_id || capturedBookingIds.has(bk.booking_id))) {
           await db.from('bookings').update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() }).eq('booking_id', bk.booking_id);
           results.fixedPaymentStatus = (results.fixedPaymentStatus || 0) + 1;
         }
@@ -103,8 +104,8 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Fix payment_status if unpaid — either via payment_id or via booking_payments CAPTURED
-      if (bk.payment_status === 'unpaid' && (bk.payment_id || capturedBookingIds.has(bk.booking_id))) {
+      // Fix payment_status if unpaid/pending — either via payment_id or via booking_payments CAPTURED
+      if ((bk.payment_status === 'unpaid' || bk.payment_status === 'pending') && (bk.payment_id || capturedBookingIds.has(bk.booking_id))) {
         await db.from('bookings').update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() }).eq('booking_id', bk.booking_id);
         results.fixedPaymentStatus = (results.fixedPaymentStatus || 0) + 1;
       }
@@ -215,10 +216,54 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ─── Phase 2: Create missing invoices for ALL CAPTURED bookings ───
+    let invoicesCreated = 0;
+    let invoicesSkipped = 0;
+    let invoiceErrors: string[] = [];
+
+    const allBookingIds = (allBookingsResult.data || []).map((b: any) => b.booking_id);
+    if (allBookingIds.length > 0) {
+      const { data: allPayments } = await db
+        .from('booking_payments')
+        .select('booking_id, patient_name, patient_phone, patient_email, patient_country, consultation_type, amount, currency, razorpay_payment_id, razorpay_order_id, payment_status')
+        .in('booking_id', allBookingIds)
+        .eq('payment_status', 'CAPTURED');
+
+      for (const bp of (allPayments || []) as any[]) {
+        const bkData = ((allBookingsResult.data as any[]) || []).find((b: any) => b.booking_id === bp.booking_id);
+        try {
+          const invoiceId = await autoCreateBookingInvoice({
+            bookingId: bp.booking_id,
+            patientName: bp.patient_name || bkData?.first_name || 'Patient',
+            patientPhone: bp.patient_phone || bkData?.phone || '',
+            patientEmail: bp.patient_email || bkData?.email || undefined,
+            clinicId: bkData?.clinic_id || bp.consultation_type || 'online',
+            consultationType: bkData?.consultation_type || bp.consultation_type || 'online',
+            consultationFee: bp.amount || bkData?.consultation_fee || 500,
+            currency: bp.currency || bkData?.consultation_fee_currency || 'INR',
+            paymentMethod: 'Razorpay',
+            transactionId: bp.razorpay_payment_id || undefined,
+            orderId: bp.razorpay_order_id || undefined,
+            paymentStatus: 'COMPLETED',
+          });
+          if (invoiceId) {
+            invoicesCreated++;
+          } else {
+            invoicesSkipped++;
+          }
+        } catch (invErr) {
+          invoiceErrors.push(`Invoice failed for ${bp.booking_id}: ${invErr instanceof Error ? invErr.message : String(invErr)}`);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Reconciliation complete: ${results.createdAppointments} appointments created, ${results.alreadyHaveAppointments} already existed, ${results.skippedDueToMissingData} skipped`,
+      message: `Reconciliation complete: ${results.createdAppointments} appointments created, ${results.alreadyHaveAppointments} already existed, ${results.fixedPaymentStatus} bookings payment fixed, ${invoicesCreated} invoices created, ${invoicesSkipped} invoices skipped (already exist), ${results.skippedDueToMissingData} skipped`,
       ...results,
+      invoicesCreated,
+      invoicesSkipped,
+      invoiceErrors,
     });
   } catch (error) {
     console.error('[reconcile] Error:', error);
