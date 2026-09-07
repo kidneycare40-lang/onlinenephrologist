@@ -518,30 +518,7 @@ export async function POST(request: NextRequest) {
       });
     } catch { /* non-blocking */ }
 
-    // ─── SEND BOOKING CONFIRMATION EMAIL (non-blocking) ──────────
-    if (body.email) {
-      try {
-        const firstName = (body.firstName || '').trim();
-        const lastName = (body.lastName || '').trim();
-        await sendBookingConfirmationEmail({
-          to: body.email,
-          patientName: `${firstName} ${lastName}`.trim(),
-          bookingId: body.bookingId,
-          consultationType: body.consultationType || 'online',
-          date: body.date || '',
-          time: body.time || '',
-          fee: body.consultationFeeCurrency === 'USD'
-            ? `$${body.consultationFee}`
-            : `₹${body.consultationFee}`,
-          doctorName: 'Dr. Rajesh Goel',
-          clinicName: body.clinicId || 'online',
-          relationship: body.relationship || 'self',
-        });
-        console.log(`[bookings] Confirmation email sent to ${body.email} for ${body.bookingId}`);
-      } catch (e) {
-        console.error('[bookings] Failed to send confirmation email (non-blocking):', e);
-      }
-    }
+    // ─── NO EMAIL/WHATSAPP HERE — notifications sent ONLY after payment confirmation ───
 
     return NextResponse.json({ success: true, bookingId: body.bookingId }, { status: 201 });
   } catch (error) {

@@ -499,7 +499,7 @@ function BookingForm() {
     // This eliminates the race condition where verify runs before the booking exists.
     // The booking row is created with status='pending', payment_status='unpaid'.
     // After payment verify, it gets updated to confirmed/paid.
-    const id = `KN-${Date.now().toString(36).toUpperCase()}`;
+    const id = `KN-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     setBookingId(id);
     sessionStorage.setItem('pending_booking_id', id);
 
@@ -570,7 +570,7 @@ function BookingForm() {
   };
 
   const finalizeBooking = async (pData: PaymentData | null) => {
-    const id = bookingId || `KN-${Date.now().toString(36).toUpperCase()}`;
+    const id = bookingId || `KN-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     setBookingId(id);
 
     let reportFilesData: { name: string; type: string; data: string }[] = [];
@@ -627,27 +627,8 @@ function BookingForm() {
       });
     } catch {}
 
-    // Auto-generate invoice in EMR billing for all booking types
-    // Online: invoice is PAID (Razorpay verify also creates one as backup)
-    // Offline: invoice is PENDING (patient pays at clinic)
-    try {
-      fetch('/api/bookings/auto-invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookingId: id,
-          patientName: `${formData.firstName} ${formData.lastName || ''}`.trim(),
-          patientPhone: fullPhone,
-          clinicId: formData.clinicId,
-          consultationType: formData.consultationType,
-          consultationFee: consultFee,
-          currency: consultCurrency,
-          date: formData.date,
-          reason: formData.reason,
-          paymentMethod: pData ? 'Razorpay' : 'CASH',
-        }),
-      }).catch(() => {});
-    } catch {}
+    // ─── INVOICE: handled by verify/route.ts + webhook/route.ts ───
+    // Do NOT call auto-invoice here — verify already creates it with correct PAID status.
 
     // Also add patient to emr_added_patients so they appear in EMR Patients list
     try {
@@ -712,57 +693,20 @@ function BookingForm() {
       }
     } catch {}
 
-    // Notify the doctor on WhatsApp with all booking details (every booking type)
+    // ─── NOTIFICATIONS: handled by verify/route.ts + webhook/route.ts ───
+    // Do NOT send notifications from finalizeBooking — it duplicates the server-side flow.
+
+    // Open WhatsApp from patient's browser as manual backup (user must click Send)
     const reportNames = reportFiles.map(f => f.name).join(', ') || 'None';
     const usName = ultrasoundFile?.name || 'None';
     const isOnline = formData.consultationType === 'online' || isOutsideIndia;
     const bookingTypeLabel = isOutsideIndia ? 'International Online Consultation' : isOnline ? 'Online Consultation' : 'Clinic/Hospital Visit';
     const localTimeDisplay = isOutsideIndia && formData.timezone ? convertSlotToTz(formData.time, formData.timezone) : '';
 
-    // Server-side WhatsApp notification to doctor (both numbers)
-    fetch('/api/notify/booking', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bookingId: id,
-        clinicName: selectedClinic?.name || '',
-        patientName: `${formData.firstName} ${formData.lastName}`,
-        patientPhone: fullPhone,
-        patientEmail: formData.email || undefined,
-        address: formData.address || undefined,
-        ageGender: `${formData.age} / ${formData.gender}`,
-        age: formData.age || undefined,
-        gender: formData.gender || undefined,
-        date: formData.date,
-        time: formData.time,
-        consultationType: formData.consultationType,
-        reason: formData.reason,
-        fee: formatPricing(getConsultationPricing(formData.consultationType)),
-        paymentStatus: pData ? `PAID via Razorpay` : 'UNPAID',
-        paymentId: pData?.paymentId || undefined,
-        country: isOutsideIndia ? formData.country : undefined,
-        timezone: isOutsideIndia ? formData.timezone : undefined,
-        complaints: formData.complaints || undefined,
-        medicines: formData.medicines || formData.currentMedications || undefined,
-        notes: formData.notes || undefined,
-        localTimeDisplay: localTimeDisplay || undefined,
-        relationship: patientAccountId ? (bookingFor === 'family' ? relationship : 'self') : 'self',
-        bookedByPatientName: bookingFor === 'family' && currentPatient ? currentPatient.name : undefined,
-        doctorName: 'Dr Rajesh Goel',
-        clinicCity: selectedClinic?.city || undefined,
-        reportsUploaded: reportFiles.length > 0,
-        ultrasoundUploaded: !!ultrasoundFile,
-      }),
-    }).catch(() => {});
-
-    // Also open WhatsApp from patient's browser as backup
     const doctorMsg = encodeURIComponent(
       `New Booking — ${bookingTypeLabel}\n\nBooking ID: ${id}\nClinic: ${selectedClinic?.name || ''}\nPatient: ${formData.firstName} ${formData.lastName}\nAge/Gender: ${formData.age} / ${formData.gender}\n${formData.address ? `Location: ${formData.address}\n` : ''}WhatsApp: ${fullPhone}\nDate: ${formData.date} at ${formData.time} IST${localTimeDisplay ? ` (patient local: ${localTimeDisplay})` : ''}\nReason: ${formData.reason}\nFee: ${formatPricing(getConsultationPricing(isOutsideIndia ? 'online_intl' : formData.consultationType))}\n${isOutsideIndia ? `Country: ${formData.country}\nTimezone: ${formData.timezone}\nPreferred Language: ${formData.preferredLanguage}\nInterpreter: ${formData.interpreterRequired ? 'Yes' : 'No'}\n` : ''}${pData ? `Payment: PAID via Razorpay - Payment ID: ${pData.paymentId}\n` : 'Payment: UNPAID\n'}--- Medical Details ---\nComplaints: ${formData.complaints || 'Not provided'}\nReports: ${reportNames}\nUltrasound: ${usName}\nCurrent Medicines: ${formData.medicines || formData.currentMedications || 'Not provided'}\nPrevious Kidney Issue: ${formData.previousKidneyIssue}\nNotes: ${formData.notes || 'None'}${filesLink ? `\n\nView/Download all uploaded reports: ${filesLink}` : ''}`
     );
-    // Open WhatsApp to doctor (number 1) with full booking details — patient clicks Send
     window.open(`https://wa.me/919818235613?text=${doctorMsg}`, '_blank');
-
-    // Also open WhatsApp to doctor (number 2) with same details — after a short delay
     setTimeout(() => {
       window.open(`https://wa.me/919818235688?text=${doctorMsg}`, '_blank');
     }, 1500);
@@ -2927,7 +2871,7 @@ function BookingForm() {
             <PaymentGateway
               amount={consultFee}
               currency={consultCurrency}
-              bookingId={bookingId || `KN-${Date.now().toString(36).toUpperCase()}`}
+              bookingId={bookingId || `KN-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`}
               patientName={`${formData.firstName} ${formData.lastName}`}
               patientPhone={fullPatientPhone}
               patientEmail={formData.email}
