@@ -201,6 +201,8 @@ export default function BillingPage() {
   const [onlinePaymentsLoading, setOnlinePaymentsLoading] = useState(false);
   const [onlinePaymentsError, setOnlinePaymentsError] = useState<string | null>(null);
   const [showOnlinePayments, setShowOnlinePayments] = useState(true);
+  const [bookingPaymentFilter, setBookingPaymentFilter] = useState<'CAPTURED' | 'ALL'>('CAPTURED');
+  const [deletingPayment, setDeletingPayment] = useState<string | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [clearingMocks, setClearingMocks] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -506,6 +508,38 @@ export default function BillingPage() {
     }
   }, []);
 
+  const filteredOnlinePayments = useMemo(() => {
+    if (bookingPaymentFilter === 'CAPTURED') {
+      return onlinePayments.filter((p) => {
+        const s = (p.payment_status || '').toLowerCase();
+        return s === 'captured' || s === 'paid' || s === 'authorized';
+      });
+    }
+    return onlinePayments;
+  }, [onlinePayments, bookingPaymentFilter]);
+
+  const deleteUnpaidBookingPayment = useCallback(async (bookingId: string) => {
+    if (!confirm('Delete this unpaid booking record? This removes it from the billing list.')) return;
+    setDeletingPayment(bookingId);
+    try {
+      const res = await fetch('/api/admin/bookings/delete-unpaid', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, secret: 'emr-setup-2026-kcc-admin' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Failed to delete');
+        return;
+      }
+      setOnlinePayments((prev) => prev.filter((p) => p.booking_id !== bookingId));
+    } catch {
+      alert('Failed to delete booking payment record');
+    } finally {
+      setDeletingPayment(null);
+    }
+  }, []);
+
   const todayStats = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     const todayInvoices = invoices.filter((inv) => inv.date === today);
@@ -733,13 +767,24 @@ export default function BillingPage() {
       <button onClick={() => setShowOnlinePayments(!showOnlinePayments)}
         className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
         <CreditCard className="h-4 w-4" />
-        Online Booking Payments ({onlinePayments.length})
+        Online Booking Payments ({filteredOnlinePayments.length}{bookingPaymentFilter === 'CAPTURED' ? ` of ${onlinePayments.length}` : ''})
         <span className={cn('text-xs px-2 py-0.5 rounded-full', showOnlinePayments ? 'bg-[#0A75BB]/10 text-[#0A75BB]' : 'bg-gray-100 text-gray-500')}>
           {showOnlinePayments ? 'Hide' : 'Show'}
         </span>
       </button>
       {showOnlinePayments && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {/* Filter tabs */}
+          <div className="flex items-center gap-2 px-4 pt-3">
+            <button onClick={() => setBookingPaymentFilter('CAPTURED')}
+              className={cn('px-3 py-1.5 text-xs font-medium rounded-lg transition-colors', bookingPaymentFilter === 'CAPTURED' ? 'bg-green-50 text-green-700 border border-green-200' : 'text-gray-500 hover:text-gray-700 border border-gray-200')}>
+              Paid Only
+            </button>
+            <button onClick={() => setBookingPaymentFilter('ALL')}
+              className={cn('px-3 py-1.5 text-xs font-medium rounded-lg transition-colors', bookingPaymentFilter === 'ALL' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-500 hover:text-gray-700 border border-gray-200')}>
+              All
+            </button>
+          </div>
           {onlinePaymentsLoading ? (
             <div className="py-10 text-center text-gray-400 text-sm">Loading payments...</div>
           ) : onlinePaymentsError ? (
@@ -748,11 +793,11 @@ export default function BillingPage() {
               <p className="text-sm font-medium">{onlinePaymentsError}</p>
               <button onClick={refreshData} className="mt-3 text-xs text-[#0A75BB] hover:underline">Retry</button>
             </div>
-          ) : onlinePayments.length === 0 ? (
+          ) : filteredOnlinePayments.length === 0 ? (
             <div className="py-10 text-center text-gray-500">
               <CreditCard className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-              <p className="text-sm font-medium">No online booking payments yet</p>
-              <p className="text-xs text-gray-400 mt-1">Razorpay payments from the booking page will appear here</p>
+              <p className="text-sm font-medium">{bookingPaymentFilter === 'CAPTURED' ? 'No paid booking payments yet' : 'No online booking payments yet'}</p>
+              <p className="text-xs text-gray-400 mt-1">{bookingPaymentFilter === 'CAPTURED' ? 'Paid bookings will appear here' : 'Razorpay payments from the booking page will appear here'}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -767,11 +812,11 @@ export default function BillingPage() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Razorpay ID</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Date</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Details</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {onlinePayments.map((p) => {
+                  {filteredOnlinePayments.map((p) => {
                     const pStatus = (p.payment_status || '').toLowerCase();
                     const isCaptured = pStatus === 'captured' || pStatus === 'paid' || pStatus === 'authorized';
                     const isFailed = pStatus === 'failed' || pStatus === 'refunded';
@@ -801,13 +846,24 @@ export default function BillingPage() {
                         </td>
                         <td className="px-4 py-3.5 text-sm text-gray-500 hidden md:table-cell">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</td>
                         <td className="px-4 py-3.5 text-center">
-                          <button
-                            onClick={() => fetchBookingDetail(p.booking_id)}
-                            disabled={bookingDetailLoading}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#0A75BB] bg-[#0A75BB]/10 rounded-lg hover:bg-[#0A75BB]/20 transition-colors min-h-[36px]"
-                          >
-                            <Eye className="h-3.5 w-3.5" /> View
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => fetchBookingDetail(p.booking_id)}
+                              disabled={bookingDetailLoading}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#0A75BB] bg-[#0A75BB]/10 rounded-lg hover:bg-[#0A75BB]/20 transition-colors min-h-[36px]"
+                            >
+                              <Eye className="h-3.5 w-3.5" /> View
+                            </button>
+                            {!isCaptured && (
+                              <button
+                                onClick={() => deleteUnpaidBookingPayment(p.booking_id)}
+                                disabled={deletingPayment === p.booking_id}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors min-h-[36px]"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
