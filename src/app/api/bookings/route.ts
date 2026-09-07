@@ -1,87 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
-import { autoBridgeFromBooking, getEmrPatientId, ensureEmrBridge } from '@/lib/patient-portal-server';
 import { normalizePhone } from '@/lib/phone';
-import { notifyBookingCreated } from '@/lib/emr-notifications';
-import { sendBookingConfirmationEmail } from '@/lib/email';
-
-// Find or create an EMR patient record for a relative.
-// Matches by name + DOB to avoid duplicates; falls back to phone match.
-async function findOrCreateEmrPatientForRelative(data: {
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: string;
-  gender?: string;
-  phone?: string;
-  countryCode?: string;
-}): Promise<string | null> {
-  const db = getDb();
-  const clean = (s: string) => (s || '').trim().toLowerCase();
-
-  // 1. Try match by first_name + last_name + date_of_birth
-  if (data.dateOfBirth) {
-    const { data: existing } = await db
-      .from('patients')
-      .select('id')
-      .ilike('first_name', data.firstName)
-      .ilike('last_name', data.lastName)
-      .eq('date_of_birth', data.dateOfBirth)
-      .eq('is_deleted', false)
-      .limit(1);
-    if (existing && existing.length > 0) return existing[0].id;
-  }
-
-  // 2. Try match by phone — ONLY when DOB was also provided (phone as supporting evidence, not sole identity)
-  // If DOB is missing, we skip phone-only matching to avoid false merges on shared/family numbers.
-  if (data.phone && data.dateOfBirth) {
-    const cleanPhone = data.phone.replace(/\D/g, '');
-    const { data: byPhone } = await db
-      .from('patients')
-      .select('id, first_name, last_name, date_of_birth')
-      .or(`phone.eq.${cleanPhone},phone.eq.${data.phone}`)
-      .eq('is_deleted', false)
-      .limit(5);
-    // Only match if the phone-based result also matches the name (fuzzy)
-    if (byPhone && byPhone.length > 0) {
-      const match = byPhone.find((p: any) =>
-        p.first_name?.toLowerCase().trim() === data.firstName.toLowerCase().trim() &&
-        p.last_name?.toLowerCase().trim() === data.lastName.toLowerCase().trim()
-      );
-      if (match) return match.id;
-    }
-  }
-
-  // 3. Create new EMR patient record
-  const uhidNum = String(Math.floor(Math.random() * 9000) + 1000);
-  const uhid = `ONLINE-${new Date().getFullYear()}/${uhidNum}`;
-
-  const patientRow: Record<string, unknown> = {
-    uhid,
-    first_name: data.firstName.trim(),
-    last_name: data.lastName.trim(),
-    is_active: true,
-    is_chronic: false,
-    is_international: false,
-    country_code: data.countryCode || '+91',
-    preferred_language: 'English',
-  };
-  if (data.dateOfBirth) patientRow.date_of_birth = data.dateOfBirth;
-  if (data.gender) patientRow.gender = data.gender;
-  if (data.phone) patientRow.phone = data.phone.replace(/\D/g, '');
-
-  const { data: newPatient, error } = await db
-    .from('patients')
-    .insert(patientRow)
-    .select('id')
-    .single();
-
-  if (error) {
-    console.error('[findOrCreateEmrPatientForRelative] insert error:', error);
-    return null;
-  }
-  return newPatient?.id || null;
-}
 
 // Map the booking form payload (camelCase) to the bookings table (snake_case)
 // Note: paymentStatus, paymentId, razorpayOrderId are NEVER set by the client.
@@ -453,72 +373,11 @@ export async function POST(request: NextRequest) {
 
     // ─── AUTO-CREATE PATIENT ACCOUNT END ──────────────────────────
 
-    // Resolve the actual EMR patient for this booking
-    const relationship = body.relationship || 'self';
-    const isFamilyBooking = relationship !== 'self' && patientAccountId;
+    // ─── NO EMR PATIENT/APPOINTMENT CREATION BEFORE PAYMENT ───
+    // EMR patient and appointment are created ONLY after CAPTURED payment
+    // in verify/route.ts and webhook/route.ts.
 
-    if (isFamilyBooking) {
-      // Family booking: create/find EMR patient for the relative
-      try {
-        const emrPatientId = await findOrCreateEmrPatientForRelative({
-          firstName: body.firstName,
-          lastName: body.lastName,
-          dateOfBirth: body.patientDateOfBirth || undefined,
-          gender: body.gender || undefined,
-          phone: body.patientPhone || body.phone || undefined,
-          countryCode: body.countryCode || undefined,
-        });
-        if (emrPatientId) {
-          await db.from('bookings').update({ actual_patient_id: emrPatientId }).eq('booking_id', body.bookingId);
-        }
-      } catch (e) {
-        console.error('[bookings] Failed to create EMR patient for relative:', e);
-      }
-    } else if (patientAccountId) {
-      // Self-booking: resolve EMR patient via bridge, create if missing
-      try {
-        await autoBridgeFromBooking(patientAccountId, body.phone || '');
-        let emrPatientId = await getEmrPatientId(patientAccountId);
-        if (!emrPatientId) {
-          // No bridge exists — create EMR patient from the booking/account data
-          emrPatientId = await findOrCreateEmrPatientForRelative({
-            firstName: body.firstName,
-            lastName: body.lastName,
-            dateOfBirth: body.patientDateOfBirth || undefined,
-            gender: body.gender || undefined,
-            phone: body.phone || undefined,
-            countryCode: body.countryCode || undefined,
-          });
-          if (emrPatientId) {
-            await ensureEmrBridge(patientAccountId, emrPatientId);
-          }
-        }
-        if (emrPatientId) {
-          await db.from('bookings').update({ actual_patient_id: emrPatientId }).eq('booking_id', body.bookingId);
-        }
-      } catch {
-        // Non-blocking
-      }
-    }
-
-    // Create EMR notification (non-blocking)
-    try {
-      await notifyBookingCreated({
-        bookingId: body.bookingId,
-        firstName: body.firstName,
-        lastName: body.lastName,
-        phone: body.phone,
-        consultationType: body.consultationType,
-        clinicId: body.clinicId,
-        bookingDate: body.date,
-        bookingTime: body.time,
-        consultationFee: body.consultationFee,
-        consultationFeeCurrency: body.consultationFeeCurrency,
-        isInternational: body.isInternational,
-      });
-    } catch { /* non-blocking */ }
-
-    // ─── NO EMAIL/WHATSAPP HERE — notifications sent ONLY after payment confirmation ───
+    // ─── NO EMAIL/WHATSAPP/EMR NOTIFICATIONS HERE — sent ONLY after payment ───
 
     return NextResponse.json({ success: true, bookingId: body.bookingId }, { status: 201 });
   } catch (error) {

@@ -58,7 +58,10 @@ async function resolveClinicUuid(db: ReturnType<typeof getDb>, shortName: string
   }
 
   const { data: first } = await db.from('clinics').select('id').limit(1);
-  return first && first.length > 0 ? first[0].id : '';
+  if (first && first.length > 0) return first[0].id;
+
+  console.error(`[auto-invoice] FAILED resolveClinicUuid | shortName=${shortName} | error=no_clinic_in_database`);
+  return '';
 }
 
 async function resolveDoctorId(db: ReturnType<typeof getDb>): Promise<string> {
@@ -120,33 +123,39 @@ async function findOrCreatePatient(
   db: ReturnType<typeof getDb>,
   data: BookingInvoiceData
 ): Promise<string | null> {
+  const phoneVariations: string[] = [];
   if (data.patientPhone) {
-    const cleanPhone = data.patientPhone.replace(/\D/g, '').replace(/^91/, '');
+    const raw = data.patientPhone.replace(/\D/g, '');
+    phoneVariations.push(raw);
+    const stripped = raw.replace(/^91/, '');
+    if (stripped !== raw) phoneVariations.push(stripped);
+    phoneVariations.push(data.patientPhone);
+    const withoutPlus = data.patientPhone.replace(/^\+/, '');
+    if (!phoneVariations.includes(withoutPlus)) phoneVariations.push(withoutPlus);
+  }
+
+  for (const phone of phoneVariations) {
+    if (!phone) continue;
     const { data: existing } = await db
       .from('patients')
       .select('id')
-      .eq('phone', cleanPhone)
+      .eq('phone', phone)
+      .is('is_deleted', false)
       .limit(1);
     if (existing && existing.length > 0) return existing[0].id;
-
-    const { data: existing2 } = await db
-      .from('patients')
-      .select('id')
-      .eq('phone', data.patientPhone)
-      .limit(1);
-    if (existing2 && existing2.length > 0) return existing2[0].id;
   }
 
   const [firstName, ...lastParts] = data.patientName.split(' ');
   const lastName = lastParts.join(' ') || '';
   const clinicUuid = await resolveClinicUuid(db, mapClinicShortName(data.clinicId));
+  const cleanPhone = data.patientPhone ? data.patientPhone.replace(/\D/g, '').replace(/^91/, '') : '';
 
   const { data: newPatient, error } = await db
     .from('patients')
     .insert({
-      first_name: firstName,
-      last_name: lastName,
-      phone: data.patientPhone.replace(/\D/g, '').replace(/^91/, ''),
+      first_name: firstName || 'Patient',
+      last_name: lastName || '',
+      phone: cleanPhone || null,
       email: data.patientEmail || null,
       gender: data.gender || null,
       uhid: `OB-${data.bookingId.slice(-6).toUpperCase()}`,
@@ -157,7 +166,7 @@ async function findOrCreatePatient(
     .single();
 
   if (error) {
-    console.error('[auto-invoice] Failed to create patient:', error);
+    console.error(`[auto-invoice] FAILED insert patient | booking=${data.bookingId} | uhid=OB-${data.bookingId.slice(-6).toUpperCase()} | dbError=${error.message || JSON.stringify(error)}`);
     return null;
   }
   return newPatient?.id || null;
@@ -180,17 +189,21 @@ export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promis
   // Find or create patient
   const patientId = await findOrCreatePatient(db, data);
   if (!patientId) {
-    console.error('[auto-invoice] Could not find/create patient for booking', data.bookingId);
+    console.error(`[auto-invoice] FAILED findOrCreatePatient | booking=${data.bookingId} | patientName=${data.patientName} | phone=${data.patientPhone} | error=could_not_resolve_patient_id`);
     return null;
   }
 
   // Resolve UUIDs for clinic and doctor
   const clinicShortName = mapClinicShortName(data.clinicId);
   const clinicUuid = await resolveClinicUuid(db, clinicShortName);
+  if (!clinicUuid) {
+    console.error(`[auto-invoice] FAILED resolveClinicUuid | booking=${data.bookingId} | clinicShortName=${clinicShortName} | error=no_clinic_uuid_found`);
+    return null;
+  }
   const doctorUuid = await resolveDoctorId(db);
   const invoiceNumber = await generateInvoiceNumber(db);
   const amount = data.consultationFee;
-  const isPaid = data.paymentStatus === 'COMPLETED';
+  const isPaid = data.paymentStatus === 'COMPLETED' || data.paymentStatus === 'CAPTURED';
   const consultLabel = getConsultationLabel(data.consultationType, data.clinicId);
 
   // Determine payment method
@@ -224,7 +237,7 @@ export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promis
     .single();
 
   if (invoiceError) {
-    console.error('[auto-invoice] Failed to create invoice:', invoiceError);
+    console.error(`[auto-invoice] FAILED insert invoice | booking=${data.bookingId} | invoiceNumber=${invoiceNumber} | patientId=${patientId} | clinicUuid=${clinicUuid} | dbError=${invoiceError.message || JSON.stringify(invoiceError)}`);
     return null;
   }
 
@@ -241,7 +254,7 @@ export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promis
     sort_order: 0,
   });
   if (itemError) {
-    console.error('[auto-invoice] Failed to create invoice item:', itemError);
+    console.error(`[auto-invoice] FAILED insert invoice_item | booking=${data.bookingId} | invoiceId=${invoice.id} | dbError=${itemError.message || JSON.stringify(itemError)}`);
   }
 
   // Create payment record if paid — correct columns: method, reference
@@ -259,10 +272,10 @@ export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promis
       notes: `Booking: ${data.bookingId}${data.transactionId ? ` | Txn: ${data.transactionId}` : ''}${data.orderId ? ` | Order: ${data.orderId}` : ''}`,
     });
     if (payError) {
-      console.error('[auto-invoice] Failed to create payment record:', payError);
+      console.error(`[auto-invoice] FAILED insert payment | booking=${data.bookingId} | invoiceId=${invoice.id} | dbError=${payError.message || JSON.stringify(payError)}`);
     }
   }
 
-  console.log(`[auto-invoice] Created ${isPaid ? 'PAID' : 'PENDING'} invoice ${invoiceNumber} for booking ${data.bookingId}`);
+  console.log(`[auto-invoice] SUCCESS ${isPaid ? 'PAID' : 'PENDING'} invoice=${invoiceNumber} booking=${data.bookingId} patientId=${patientId} amount=${amount}`);
   return invoice.id;
 }

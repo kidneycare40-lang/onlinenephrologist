@@ -13,7 +13,7 @@ import { getItem, setItem, removeItem } from '@/lib/client-storage';
 import { fetchBookings } from '@/lib/booking-data';
 import BillingInvoice from '@/components/emr/BillingInvoice';
 import CreateInvoiceModal from '@/components/emr/CreateInvoiceModal';
-import { billingApi } from '@/lib/api-client';
+import { billingApi, api } from '@/lib/api-client';
 import type { EMRInvoice, InvoiceStatus } from '@/types/emr';
 import type { BookingPayment } from '@/lib/db/types';
 
@@ -497,9 +497,7 @@ export default function BillingPage() {
   const fetchBookingDetail = useCallback(async (bookingId: string) => {
     setBookingDetailLoading(true);
     try {
-      const res = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`);
-      if (!res.ok) throw new Error('Failed to load booking details');
-      const data = await res.json();
+      const data = await api.get<any>(`/api/admin/bookings/${encodeURIComponent(bookingId)}`);
       setSelectedBookingDetail(data);
     } catch (err: any) {
       alert(err?.message || 'Failed to load booking details');

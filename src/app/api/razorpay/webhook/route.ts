@@ -267,6 +267,7 @@ export async function POST(request: NextRequest) {
                 status: 'WAITING',
                 reason: bk.reason || `Online booking: ${bookingId}`,
                 notes: `Booking ID: ${bookingId}`,
+                booking_id: bookingId,
                 payment_status: 'PAID',
                 amount: Number(bk.consultation_fee || 500),
                 currency: bk.consultation_fee_currency || 'INR',
@@ -303,23 +304,39 @@ export async function POST(request: NextRequest) {
       } catch {}
 
       // Auto-generate invoice + payment record in EMR billing
+      // Fetch full booking data — booking record may have richer data than paymentData
+      let invBooking: any = booking;
+      if (!invBooking) {
+        try {
+          const { data: ib } = await db
+            .from('bookings')
+            .select('patient_name, first_name, last_name, phone, patient_phone, email, patient_email, clinic_id, consultation_type, consultation_fee, consultation_fee_currency')
+            .eq('booking_id', bookingId)
+            .maybeSingle();
+          invBooking = ib;
+        } catch {}
+      }
+
       try {
-        await autoCreateBookingInvoice({
+        const invoiceId = await autoCreateBookingInvoice({
           bookingId,
-          patientName: booking?.patient_name || booking?.first_name || 'Patient',
-          patientPhone: booking?.patient_phone || booking?.phone || '',
-          patientEmail: booking?.patient_email || booking?.email || undefined,
-          clinicId: booking?.clinic_id || booking?.consultation_type || 'online',
-          consultationType: booking?.consultation_type || 'online',
-          consultationFee: booking?.consultation_fee || booking?.amount || 0,
-          currency: booking?.consultation_fee_currency || 'INR',
+          patientName: invBooking?.patient_name || `${invBooking?.first_name || ''} ${invBooking?.last_name || ''}`.trim() || 'Patient',
+          patientPhone: invBooking?.patient_phone || invBooking?.phone || '',
+          patientEmail: invBooking?.patient_email || invBooking?.email || undefined,
+          clinicId: invBooking?.clinic_id || invBooking?.consultation_type || 'online',
+          consultationType: invBooking?.consultation_type || 'online',
+          consultationFee: invBooking?.consultation_fee || 0,
+          currency: invBooking?.consultation_fee_currency || 'INR',
           paymentMethod: 'Razorpay',
           transactionId: razorpayPaymentId || undefined,
           orderId: razorpayOrderId || undefined,
           paymentStatus: 'COMPLETED',
         });
+        if (!invoiceId) {
+          console.error(`[webhook] Auto-invoice returned null for booking ${bookingId} — check [auto-invoice] logs above`);
+        }
       } catch (invErr) {
-        console.error('[webhook] Auto-invoice error:', invErr);
+        console.error(`[webhook] Auto-invoice EXCEPTION | booking=${bookingId} | error=${invErr instanceof Error ? invErr.message : String(invErr)}`);
       }
 
       // Send notifications
@@ -357,9 +374,6 @@ export async function POST(request: NextRequest) {
             paymentId: razorpayPaymentId || undefined,
             country: booking.country || undefined,
             timezone: booking.timezone || undefined,
-            complaints: booking.complaints || undefined,
-            medicines: booking.medicines || booking.current_medications || undefined,
-            notes: booking.notes || undefined,
             relationship: booking.relationship || undefined,
             bookedByPatientName,
             doctorName: booking.doctor_name || undefined,

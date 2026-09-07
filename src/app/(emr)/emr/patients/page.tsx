@@ -40,6 +40,7 @@ export default function PatientListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [clinicFilter, setClinicFilter] = useState<string>(clinicId || 'all');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
 
   // API state
   const [allPatients, setAllPatients] = useState<any[]>([]);
@@ -122,6 +123,7 @@ export default function PatientListPage() {
                 (email && allPats.some((p: any) => (p.email || '').toLowerCase() === email))) continue;
             const existingBooking = allPats.find((p: any) => p.id === b.bookingId);
             if (existingBooking) continue;
+            const isPaid = b.paymentStatus === 'paid';
             apiPatients.push({
               id: b.bookingId,
               firstName: b.firstName || '',
@@ -133,6 +135,8 @@ export default function PatientListPage() {
               clinicId: mappedClinic,
               source: 'website',
               consultationType: b.consultationType,
+              paymentStatus: isPaid ? 'paid' : 'unpaid',
+              bookingStatus: b.status || '',
               isActive: true,
               isChronic: false,
               uhid: (mappedClinic === 'online' || mappedClinic === 'online-intl') ? `ONLINE-${new Date().getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}` : `${mappedClinic === 'psri-delhi' ? 'PSRI' : 'KCC'}-${new Date().getFullYear()}-${b.bookingId.slice(-3).toUpperCase()}` || '',
@@ -188,6 +192,7 @@ export default function PatientListPage() {
             const phone = (b.phone || '').replace(/\D/g, '').replace(/^91/, '');
             if (dynamicPatients.some((p: any) => p.id === b.bookingId)) continue;
             if (phone && dynamicPatients.some((p: any) => (p.phone || '').replace(/\D/g, '').replace(/^91/, '') === phone)) continue;
+            const isPaid = b.paymentStatus === 'paid';
             dynamicPatients.push({
               id: b.bookingId,
               firstName: b.firstName || '',
@@ -199,6 +204,8 @@ export default function PatientListPage() {
               clinicId: mappedClinic,
               source: 'website',
               consultationType: b.consultationType,
+              paymentStatus: isPaid ? 'paid' : 'unpaid',
+              bookingStatus: b.status || '',
               isActive: true,
               isChronic: false,
               uhid: (mappedClinic === 'online' || mappedClinic === 'online-intl') ? `ONLINE-${new Date().getFullYear()}/${String(Math.floor(Math.random() * 9000) + 1000)}` : `${mappedClinic === 'psri-delhi' ? 'PSRI' : 'KCC'}-${new Date().getFullYear()}-${b.bookingId.slice(-3).toUpperCase()}` || '',
@@ -248,6 +255,16 @@ export default function PatientListPage() {
       });
     }
 
+    // Payment status filter
+    if (paymentFilter !== 'all') {
+      result = result.filter((p: any) => {
+        const ps = p.paymentStatus;
+        if (paymentFilter === 'paid') return ps === 'paid' || !ps;
+        if (paymentFilter === 'unpaid') return ps === 'unpaid';
+        return true;
+      });
+    }
+
     result.sort((a: any, b: any) => {
       const aDate = a.last_visit_date || a.lastVisit || '';
       const bDate = b.last_visit_date || b.lastVisit || '';
@@ -257,7 +274,7 @@ export default function PatientListPage() {
     });
 
     return result;
-  }, [allPatients, fromDate, toDate]);
+  }, [allPatients, fromDate, toDate, paymentFilter]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -266,6 +283,8 @@ export default function PatientListPage() {
     total: allPatients.length,
     chronic: allPatients.filter((p: any) => p.is_chronic || p.isChronic).length,
     active: allPatients.filter((p: any) => p.is_active !== false).length,
+    paid: allPatients.filter((p: any) => p.paymentStatus === 'paid' || !p.paymentStatus).length,
+    unpaid: allPatients.filter((p: any) => p.paymentStatus === 'unpaid').length,
     thisMonth: allPatients.filter((p: any) => {
       const d = p.last_visit_date || p.lastVisit;
       if (!d) return false;
@@ -350,6 +369,15 @@ export default function PatientListPage() {
               <option value="online-intl">Online — International</option>
             </select>
           </div>
+          {/* Payment Filter */}
+          <div className="flex items-center gap-1.5 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
+            <select value={paymentFilter} onChange={(e) => { setPaymentFilter(e.target.value as 'all' | 'paid' | 'unpaid'); setCurrentPage(1); }}
+              className="text-xs text-gray-700 focus:outline-none bg-transparent">
+              <option value="all">All Payments</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Unpaid</option>
+            </select>
+          </div>
           {/* Date Range */}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm">
             <Calendar className="h-4 w-4 text-gray-400" />
@@ -416,6 +444,12 @@ export default function PatientListPage() {
                         </span>
                         {getPatientChronic(patient) && (
                           <span className="ml-1.5 px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[11px] font-medium rounded">CKD</span>
+                        )}
+                        {patient.paymentStatus === 'unpaid' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-red-50 text-red-600 text-[11px] font-medium rounded">Unpaid</span>
+                        )}
+                        {patient.paymentStatus === 'paid' && (
+                          <span className="ml-1.5 px-1.5 py-0.5 bg-green-50 text-green-700 text-[11px] font-medium rounded">Paid</span>
                         )}
                         {patient.source === 'website' && getPatientClinic(patient) === 'online-intl' && (
                           <span className="ml-1.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-medium rounded">Web-Online Intl</span>
@@ -535,6 +569,14 @@ export default function PatientListPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Total Patients</span>
                 <span className="text-sm font-semibold text-gray-900">{stats.total}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Paid</span>
+                <span className="text-sm font-semibold text-emerald-600">{stats.paid}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Unpaid</span>
+                <span className="text-sm font-semibold text-red-600">{stats.unpaid}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Chronic (CKD)</span>

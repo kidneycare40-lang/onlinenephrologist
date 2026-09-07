@@ -1,14 +1,11 @@
 import { getDb } from '@/lib/db/client';
-import { DOCTOR_PHONES, buildDoctorMessage, type BookingNotification } from '@/lib/whatsapp-notify';
+import { DOCTOR_PHONES } from '@/lib/whatsapp-notify';
 import { sendBookingConfirmationEmail, sendTeamBookingEmail } from '@/lib/email';
 import {
-  sendWhatsAppTextMessage,
   sendPatientAppointmentConfirmation,
   sendDoctorAppointmentAlert,
   type AppointmentNotificationData,
 } from '@/lib/whatsapp';
-
-const CALLMEBOT_API_URL = 'https://api.callmebot.com/whatsapp.php';
 
 /**
  * Claim a notification slot. Returns true if this caller won the race.
@@ -23,7 +20,6 @@ async function claimNotification(
 ): Promise<boolean> {
   const db = getDb();
 
-  // Try to insert a new claim
   const { error } = await db
     .from('notification_log')
     .insert({
@@ -35,9 +31,8 @@ async function claimNotification(
     .select()
     .single();
 
-  if (!error) return true; // Won the race
+  if (!error) return true;
 
-  // Unique constraint violation — check if we can retry a failed attempt
   if (error.code === '23505') {
     const { data: existing } = await db
       .from('notification_log')
@@ -49,7 +44,6 @@ async function claimNotification(
       .single();
 
     if (existing && (existing.status === 'failed' || existing.status === 'sending')) {
-      // Reset to 'sending' so this caller can retry
       await db
         .from('notification_log')
         .update({ status: 'sending', error: null, provider_message_id: null })
@@ -58,7 +52,7 @@ async function claimNotification(
         .eq('recipient', recipient);
       return true;
     }
-    return false; // Already sent or being sent by another request
+    return false;
   }
 
   console.error('[notifications] claim error:', error);
@@ -88,82 +82,6 @@ async function updateNotificationStatus(
     .eq('status', 'sending');
 }
 
-/**
- * Send a WhatsApp message. Tries Cloud API first, falls back to CallmeBot.
- * WhatsApp failures must NEVER block appointment booking.
- */
-async function sendWhatsAppDirect(
-  phone: string,
-  message: string
-): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  // 1. Try WhatsApp Cloud API first
-  if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
-    const cloudResult = await sendWhatsAppTextMessage({ to: phone, text: message });
-    if (cloudResult.ok) return cloudResult;
-    // Cloud API failed — log and fall back to CallmeBot
-    console.error('[notifications] Cloud API failed, falling back to CallmeBot:', cloudResult.error);
-  }
-
-  // 2. Fallback to CallmeBot
-  const apiKey = process.env.CALLMEBOT_API_KEY;
-  if (!apiKey) return { ok: false, error: 'No WhatsApp provider configured' };
-  try {
-    const params = new URLSearchParams({ phone, text: message, apikey: apiKey });
-    const res = await fetch(`${CALLMEBOT_API_URL}?${params.toString()}`);
-    const body = await res.text();
-    if (!res.ok) return { ok: false, error: `WhatsApp failed: ${res.status}` };
-    return { ok: true, messageId: body };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
-  }
-}
-
-function buildPatientConfirmationMessage(n: BookingNotification): string {
-  const typeLabel =
-    n.consultationType === 'online_intl' ? 'International Online Video Consultation' :
-    n.consultationType === 'online' ? 'Online Video Consultation' :
-    n.consultationType === 'hospital' ? 'Hospital Visit' : 'In-Clinic Consultation';
-
-  const doctor = n.doctorName || 'Dr. Rajesh Goel';
-  const isOnline = n.consultationType === 'online' || n.consultationType === 'online_intl';
-
-  const lines = [
-    `*APPOINTMENT CONFIRMED*`,
-    ``,
-    `Dear ${n.patientName},`,
-    ``,
-    `Your appointment with ${doctor} — Nephrologist is confirmed.`,
-    ``,
-    `Booking ID: ${n.bookingId}`,
-    `Date: ${n.date}`,
-    `Time: ${n.time} IST${n.localTimeDisplay ? ` (local: ${n.localTimeDisplay})` : ''}`,
-    `Consultation: ${typeLabel}`,
-    `Fee: ${n.fee}`,
-    `Payment: Paid`,
-  ];
-
-  if (isOnline) {
-    lines.push(
-      ``,
-      `Video consultation link will be sent to your WhatsApp before the appointment.`,
-    );
-  } else if (n.clinicName) {
-    lines.push(
-      ``,
-      `Clinic: ${n.clinicName}`,
-    );
-  }
-
-  lines.push(
-    ``,
-    `Please keep your Booking ID for reference.`,
-    ``,
-    `Kidney Care Centre`,
-  );
-
-  return lines.join('\n');
-}
-
 export interface BookingNotificationContext {
   bookingId: string;
   clinicName: string;
@@ -181,9 +99,6 @@ export interface BookingNotificationContext {
   paymentId?: string;
   country?: string;
   timezone?: string;
-  complaints?: string;
-  medicines?: string;
-  notes?: string;
   localTimeDisplay?: string;
   relationship?: string;
   bookedByPatientName?: string;
@@ -193,42 +108,19 @@ export interface BookingNotificationContext {
   ultrasoundUploaded?: boolean;
 }
 
+/**
+ * Send booking notifications via WhatsApp (Cloud API only) and email.
+ * WhatsApp failures must NEVER block appointment booking.
+ */
 export async function sendBookingNotifications(
   ctx: BookingNotificationContext
 ): Promise<{ teamWhatsApp: boolean; teamEmail: boolean; patientWhatsApp: boolean; patientEmail: boolean }> {
   const result = { teamWhatsApp: false, teamEmail: false, patientWhatsApp: false, patientEmail: false };
 
-  const bookingNotif: BookingNotification = {
-    bookingId: ctx.bookingId,
-    clinicName: ctx.clinicName,
-    patientName: ctx.patientName,
-    patientPhone: ctx.patientPhone,
-    patientEmail: ctx.patientEmail,
-    ageGender: ctx.ageGender,
-    age: ctx.age,
-    gender: ctx.gender,
-    date: ctx.date,
-    time: ctx.time,
-    consultationType: ctx.consultationType,
-    reason: ctx.reason,
-    fee: ctx.fee,
-    paymentStatus: 'CAPTURED',
-    paymentId: ctx.paymentId,
-    country: ctx.country,
-    timezone: ctx.timezone,
-    complaints: ctx.complaints,
-    medicines: ctx.medicines,
-    notes: ctx.notes,
-    localTimeDisplay: ctx.localTimeDisplay,
-    relationship: ctx.relationship,
-    bookedByPatientName: ctx.bookedByPatientName,
-    doctorName: ctx.doctorName,
-    reportsUploaded: ctx.reportsUploaded,
-    ultrasoundUploaded: ctx.ultrasoundUploaded,
-  };
+  const cloudConfigured = !!(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
 
   // 1. Team WhatsApp — send to ALL doctor phones via Cloud API
-  if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
+  if (cloudConfigured) {
     const doctorNotifData: AppointmentNotificationData = {
       bookingId: ctx.bookingId,
       patientName: ctx.patientName,
@@ -240,15 +132,12 @@ export async function sendBookingNotifications(
       patientPhone: ctx.patientPhone,
     };
 
-    // Send to all configured doctor phones (both Cloud API configured + DOCTOR_PHONES)
     const allDoctorPhones = new Set<string>();
-    // Primary doctor phone from env var
     const primaryPhone = process.env.WHATSAPP_DOCTOR_PHONE_NUMBER;
     if (primaryPhone) allDoctorPhones.add(primaryPhone);
-    // Additional doctor phones from DOCTOR_PHONES array
     for (const p of DOCTOR_PHONES) allDoctorPhones.add(p);
 
-      for (const doctorPhone of allDoctorPhones) {
+    for (const doctorPhone of allDoctorPhones) {
       if (await claimNotification(ctx.bookingId, 'team_whatsapp', doctorPhone)) {
         const doctorResult = await sendDoctorAppointmentAlert({ ...doctorNotifData, toOverride: doctorPhone });
         await updateNotificationStatus(
@@ -260,21 +149,8 @@ export async function sendBookingNotifications(
         if (doctorResult.ok) result.teamWhatsApp = true;
       }
     }
-  } else if (DOCTOR_PHONES.length > 0) {
-    // No Cloud API — try CallmeBot fallback
-    const doctorMessage = buildDoctorMessage(bookingNotif);
-    for (const phone of DOCTOR_PHONES) {
-      if (await claimNotification(ctx.bookingId, 'team_whatsapp', phone)) {
-        const result_wa = await sendWhatsAppDirect(phone, doctorMessage);
-        await updateNotificationStatus(
-          ctx.bookingId, 'team_whatsapp', phone,
-          result_wa.ok ? 'sent' : 'failed',
-          result_wa.messageId,
-          result_wa.error
-        );
-        if (result_wa.ok) result.teamWhatsApp = true;
-      }
-    }
+  } else {
+    console.error('[notifications] WhatsApp Cloud API not configured — team WhatsApp skipped');
   }
 
   // 2. Team email
@@ -309,12 +185,11 @@ export async function sendBookingNotifications(
     }
   }
 
-  // 3. Patient WhatsApp confirmation — try Cloud API template first, fallback to text
+  // 3. Patient WhatsApp confirmation — Cloud API template only
   if (ctx.patientPhone && await claimNotification(ctx.bookingId, 'patient_whatsapp', ctx.patientPhone)) {
     let waResult: { ok: boolean; messageId?: string; error?: string };
 
-    // Try WhatsApp Cloud API template message first
-    if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
+    if (cloudConfigured) {
       const templateData: AppointmentNotificationData = {
         bookingId: ctx.bookingId,
         patientName: ctx.patientName,
@@ -327,9 +202,8 @@ export async function sendBookingNotifications(
       };
       waResult = await sendPatientAppointmentConfirmation(templateData);
     } else {
-      // Fallback: free-form text via CallmeBot
-      const patientMsg = buildPatientConfirmationMessage(bookingNotif);
-      waResult = await sendWhatsAppDirect(ctx.patientPhone, patientMsg);
+      console.error('[notifications] WhatsApp Cloud API not configured — patient WhatsApp skipped');
+      waResult = { ok: false, error: 'WhatsApp Cloud API not configured' };
     }
 
     await updateNotificationStatus(

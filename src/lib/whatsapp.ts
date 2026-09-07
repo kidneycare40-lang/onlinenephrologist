@@ -185,6 +185,7 @@ interface SendResult {
   ok: boolean;
   messageId?: string;
   error?: string;
+  errorCode?: string;
 }
 
 /**
@@ -237,7 +238,7 @@ export async function sendWhatsAppTemplateMessage(params: {
       const errMsg = data?.error?.message || `HTTP ${res.status}`;
       const errCode = data?.error?.code?.toString() || String(res.status);
       console.error('[whatsapp] Template send failed:', errCode, errMsg);
-      return { ok: false, error: errMsg };
+      return { ok: false, error: errMsg, errorCode: errCode };
     }
 
     const messageId = data?.messages?.[0]?.id;
@@ -245,7 +246,7 @@ export async function sendWhatsAppTemplateMessage(params: {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[whatsapp] Template send error:', msg);
-    return { ok: false, error: msg };
+    return { ok: false, error: msg, errorCode: 'FETCH_ERROR' };
   }
 }
 
@@ -285,7 +286,7 @@ export async function sendWhatsAppTextMessage(params: {
       const errMsg = data?.error?.message || `HTTP ${res.status}`;
       const errCode = data?.error?.code?.toString() || String(res.status);
       console.error('[whatsapp] Text send failed:', errCode, errMsg);
-      return { ok: false, error: errMsg };
+      return { ok: false, error: errMsg, errorCode: errCode };
     }
 
     const messageId = data?.messages?.[0]?.id;
@@ -293,7 +294,7 @@ export async function sendWhatsAppTextMessage(params: {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[whatsapp] Text send error:', msg);
-    return { ok: false, error: msg };
+    return { ok: false, error: msg, errorCode: 'FETCH_ERROR' };
   }
 }
 
@@ -356,7 +357,7 @@ export async function sendPatientAppointmentConfirmation(
       templateName: appointmentTemplate,
       content: `Appointment confirmation for ${data.patientName} on ${data.date} ${data.time}`,
       status: result.ok ? 'sent' : 'failed',
-      errorCode: result.ok ? undefined : 'SEND_FAILED',
+      errorCode: result.errorCode,
       errorMessage: result.error,
     });
   } catch (dbErr) {
@@ -419,7 +420,7 @@ export async function sendDoctorAppointmentAlert(
       messageType: 'text',
       content: `Doctor alert for booking ${data.bookingId}`,
       status: result.ok ? 'sent' : 'failed',
-      errorCode: result.ok ? undefined : 'SEND_FAILED',
+      errorCode: result.errorCode,
       errorMessage: result.error,
     });
   } catch (dbErr) {

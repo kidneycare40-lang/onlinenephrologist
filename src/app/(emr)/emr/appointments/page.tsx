@@ -298,8 +298,8 @@ export default function AppointmentsPage() {
   useEffect(() => { refreshAppointments(); }, [refreshAppointments]);
 
   const clinicOnlineBookings = clinicId
-    ? onlineBookings.filter((b) => BOOKING_CLINIC_MAP[b.clinicId] === clinicId && b.date === dateStr)
-    : onlineBookings.filter((b) => b.date === dateStr);
+    ? onlineBookings.filter((b) => BOOKING_CLINIC_MAP[b.clinicId] === clinicId && b.date === dateStr && b.paymentStatus === 'paid' && b.status === 'confirmed')
+    : onlineBookings.filter((b) => b.date === dateStr && b.paymentStatus === 'paid' && b.status === 'confirmed');
 
   const mergedAppointments = useMemo(() => {
     // Map API appointments to display format
