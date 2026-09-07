@@ -2,22 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 
 /**
- * POST /api/admin/cleanup-unpaid
- * Cancels pending unpaid bookings older than the specified TTL (default: 30 minutes).
- * This frees up slots that were held by users who never completed payment.
+ * GET /api/admin/cleanup-unpaid
+ * Called by Vercel Cron every 10 minutes.
+ * Cancels pending unpaid bookings older than 30 minutes to free up slots.
  *
- * Body: { "secret": "<SETUP_KEY>", "ttlMinutes": 30 }
- * 
- * Safe to run via cron every 5-10 minutes.
+ * Auth: Vercel Cron sends Authorization: Bearer <CRON_SECRET>
+ * Also supports: ?secret=<SETUP_KEY> for manual calls
  */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const body = await request.json();
-    if (body.secret !== process.env.SETUP_KEY) {
+    // Auth: Vercel Cron header OR query param
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    const querySecret = new URL(request.url).searchParams.get('secret');
+
+    const isVercelCron = authHeader === `Bearer ${cronSecret}` && cronSecret;
+    const isManualAuth = querySecret === process.env.SETUP_KEY;
+
+    if (!isVercelCron && !isManualAuth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const ttlMinutes = body.ttlMinutes || 30;
+    const ttlMinutes = 30;
     const cutoff = new Date(Date.now() - ttlMinutes * 60 * 1000).toISOString();
 
     const db = getDb();
