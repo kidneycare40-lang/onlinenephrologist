@@ -3,19 +3,37 @@ import { getDb } from '@/lib/db/client';
 import { autoCreateBookingInvoice } from '@/lib/auto-invoice';
 
 /**
- * POST /api/admin/reconcile-bookings
+ * GET /api/admin/reconcile-bookings?secret=<SETUP_KEY>
+ * POST /api/admin/reconcile-bookings  Body: { "secret": "<SETUP_KEY>" }
+ * 
  * Detects PAID bookings that have no corresponding appointment record.
  * Creates missing appointments. Idempotent — safe to run multiple times.
- * 
- * Body: { "secret": "<SETUP_KEY>" }
+ * Also creates missing invoices for CAPTURED payments.
  */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const secret = searchParams.get('secret');
+  if (secret !== process.env.SETUP_KEY) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  return runReconcile();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     if (body.secret !== process.env.SETUP_KEY) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    return runReconcile();
+  } catch (error) {
+    console.error('[reconcile] Error:', error);
+    return NextResponse.json({ error: 'Reconciliation failed' }, { status: 500 });
+  }
+}
 
+async function runReconcile(): Promise<NextResponse> {
+  try {
     const db = getDb();
 
     // Find bookings that need fixing:
