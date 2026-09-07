@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>KCC Reconcile Bookings</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+  .card { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  h1 { color: #0A75BB; }
+  button { background: #0A75BB; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 16px; cursor: pointer; margin: 10px 0; }
+  button:hover { background: #085a94; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  #result { white-space: pre-wrap; background: #f0f0f0; padding: 16px; border-radius: 8px; margin-top: 20px; font-family: monospace; font-size: 13px; max-height: 500px; overflow-y: auto; display: none; }
+  .success { color: green; }
+  .error { color: red; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>KCC Reconcile Bookings</h1>
+  <p>This will fix all existing bookings in the Supabase database:</p>
+  <ul>
+    <li>Update booking statuses from "pending" to "paid" for CAPTURED payments</li>
+    <li>Create missing invoices for all CAPTURED payments</li>
+    <li>Create missing EMR appointments</li>
+  </ul>
+  <button id="runBtn" onclick="runReconcile()">Run Reconcile Now</button>
+  <div id="result"></div>
+</div>
+<script>
+async function runReconcile() {
+  const btn = document.getElementById('runBtn');
+  const result = document.getElementById('result');
+  btn.disabled = true;
+  btn.textContent = 'Running...';
+  result.style.display = 'block';
+  result.textContent = 'Connecting to server...\n';
+  try {
+    const res = await fetch('/api/admin/reconcile-bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: 'emr-setup-2026-kcc-admin' })
+    });
+    const data = await res.json();
+    result.textContent = JSON.stringify(data, null, 2);
+    if (data.success) {
+      result.className = 'success';
+      btn.textContent = 'Done! Click to run again';
+    } else {
+      result.className = 'error';
+      btn.textContent = 'Failed - Click to retry';
+    }
+  } catch (err) {
+    result.textContent = 'Error: ' + err.message;
+    result.className = 'error';
+    btn.textContent = 'Error - Click to retry';
+  }
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
