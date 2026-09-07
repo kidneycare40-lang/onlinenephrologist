@@ -29,6 +29,17 @@ export async function GET(
       .limit(1)
       .maybeSingle();
 
+    // If no booking found in bookings table, still return payment record + payment info
+    if (!booking) {
+      return NextResponse.json({
+        booking: null,
+        emrPatient: null,
+        booker: null,
+        notifications: [],
+        paymentRecord: null,
+      });
+    }
+
     // 2. Fetch the actual EMR patient (if linked)
     let emrPatient = null;
     if (booking.actual_patient_id) {
