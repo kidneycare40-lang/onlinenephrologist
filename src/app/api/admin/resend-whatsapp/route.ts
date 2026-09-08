@@ -6,7 +6,8 @@ import { sendDoctorAppointmentAlert, sendPatientAppointmentConfirmation, type Ap
  * POST /api/admin/resend-whatsapp
  * Body: { bookingId, target: 'doctor' | 'patient' }
  * 
- * Tries Cloud API first. If it fails, returns wa.me fallback URL.
+ * Tries Meta Cloud API first. If it fails, returns wa.me URL
+ * with ALL booking details + link to the website.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -18,16 +19,17 @@ export async function POST(request: NextRequest) {
     }
 
     const db = getDb();
+
     const { data: bp } = await db
       .from('booking_payments')
-      .select('booking_id, patient_name, patient_phone, consultation_type, amount, currency')
+      .select('*')
       .eq('booking_id', bookingId)
       .limit(1)
       .single();
 
     const { data: bk } = await db
       .from('bookings')
-      .select('booking_id, first_name, last_name, phone, booking_date, booking_time, consultation_type, doctor_name, clinic_id, clinic_name')
+      .select('*')
       .eq('booking_id', bookingId)
       .limit(1)
       .single();
@@ -39,11 +41,24 @@ export async function POST(request: NextRequest) {
     const time = bk?.booking_time || '';
     const doctorName = bk?.doctor_name || 'Dr. Rajesh Goel';
     const clinicName = bk?.clinic_name || bk?.clinic_id || '';
+    const amount = bp?.amount || bk?.consultation_fee || '';
+    const currency = bp?.currency || bk?.consultation_fee_currency || 'INR';
+    const email = bp?.patient_email || bk?.email || '';
+    const age = bk?.age || '';
+    const gender = bk?.gender || '';
+    const reason = bk?.reason || '';
+    const country = bp?.patient_country || bk?.country || '';
+    const relationship = bk?.relationship || 'self';
+    const paymentStatus = bp?.payment_status || bk?.payment_status || '';
+    const razorpayId = bp?.razorpay_payment_id || bk?.payment_id || '';
 
     const typeLabel =
       consultType === 'online_intl' ? 'International Online Video' :
       consultType === 'online' ? 'Online Video' :
       consultType === 'hospital' ? 'Hospital Visit' : 'In-Clinic';
+
+    const amountLabel = currency === 'USD' ? `$${amount}` : `₹${amount}`;
+    const emrUrl = 'https://www.onlinenephrologist.com/emr/billing';
 
     const notifData: AppointmentNotificationData = {
       bookingId,
@@ -56,6 +71,7 @@ export async function POST(request: NextRequest) {
       patientPhone,
     };
 
+    // ─── DOCTOR ────────────────────────────────────────────────
     if (target === 'doctor') {
       const result = await sendDoctorAppointmentAlert(notifData);
 
@@ -64,10 +80,33 @@ export async function POST(request: NextRequest) {
       }
 
       const doctorPhone = process.env.WHATSAPP_DOCTOR_PHONE_NUMBER || '919818235613';
-      const message = encodeURIComponent(
-        `*NEW APPOINTMENT — PAYMENT CONFIRMED*\n\nBooking: ${bookingId}\nPatient: ${patientName}\nType: ${typeLabel}\nDate: ${date}\nTime: ${time} IST\nPhone: ${patientPhone}\n\nCheck EMR for details.`
-      );
-      const waMeUrl = `https://wa.me/${doctorPhone}?text=${message}`;
+      const message = [
+        `*NEW BOOKING — PAYMENT CONFIRMED*`,
+        ``,
+        `Booking ID: ${bookingId}`,
+        `Patient: ${patientName}`,
+        age || gender ? `Age/Gender: ${age}${age && gender ? '/' : ''}${gender}` : '',
+        `Phone: ${patientPhone}`,
+        email ? `Email: ${email}` : '',
+        country ? `Country: ${country}` : '',
+        relationship !== 'self' ? `Booked by: ${relationship}` : '',
+        ``,
+        `Type: ${typeLabel}`,
+        `Doctor: ${doctorName}`,
+        `Clinic: ${clinicName || 'Online'}`,
+        `Date: ${date}`,
+        `Time: ${time} IST`,
+        ``,
+        `Amount: ${amountLabel}`,
+        `Payment: ${(paymentStatus || '').toUpperCase()}`,
+        razorpayId ? `Razorpay ID: ${razorpayId}` : '',
+        reason ? `Reason: ${reason}` : '',
+        ``,
+        `View all details in EMR:`,
+        emrUrl,
+      ].filter(Boolean).join('\n');
+
+      const waMeUrl = `https://wa.me/${doctorPhone}?text=${encodeURIComponent(message)}`;
 
       return NextResponse.json({
         success: false,
@@ -78,6 +117,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ─── PATIENT ───────────────────────────────────────────────
     if (target === 'patient' && patientPhone) {
       const result = await sendPatientAppointmentConfirmation(notifData);
 
@@ -86,10 +126,25 @@ export async function POST(request: NextRequest) {
       }
 
       const cleanPhone = patientPhone.replace(/\D/g, '');
-      const message = encodeURIComponent(
-        `Dear ${patientName},\n\nYour appointment with ${doctorName} is confirmed!\n\nBooking: ${bookingId}\nDate: ${date}\nTime: ${time} IST\nType: ${typeLabel}\n\nPlease check your email for details.`
-      );
-      const waMeUrl = `https://wa.me/${cleanPhone}?text=${message}`;
+      const message = [
+        `Dear ${patientName},`,
+        ``,
+        `Your appointment is confirmed!`,
+        ``,
+        `Booking ID: ${bookingId}`,
+        `Doctor: ${doctorName}`,
+        `Type: ${typeLabel}`,
+        `Date: ${date}`,
+        `Time: ${time} IST`,
+        `Amount Paid: ${amountLabel}`,
+        ``,
+        `View your booking:`,
+        emrUrl,
+        ``,
+        `For queries, reply to this message.`,
+      ].filter(Boolean).join('\n');
+
+      const waMeUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 
       return NextResponse.json({
         success: false,
@@ -100,7 +155,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: 'Invalid target' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid target or missing patient phone' }, { status: 400 });
   } catch (error) {
     console.error('[resend-whatsapp] Error:', error);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
