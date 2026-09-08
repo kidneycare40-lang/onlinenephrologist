@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/admin/cleanup-unpaid",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
