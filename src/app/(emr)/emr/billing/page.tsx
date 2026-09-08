@@ -208,6 +208,7 @@ export default function BillingPage() {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [selectedBookingDetail, setSelectedBookingDetail] = useState<any>(null);
   const [bookingDetailLoading, setBookingDetailLoading] = useState(false);
+  const [resendingWa, setResendingWa] = useState<string | null>(null);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
@@ -507,6 +508,31 @@ export default function BillingPage() {
       setBookingDetailLoading(false);
     }
   }, []);
+
+  const resendWhatsApp = useCallback(async (bookingId: string, target: 'doctor' | 'patient') => {
+    setResendingWa(target);
+    try {
+      const res = await fetch('/api/admin/resend-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, target }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`WhatsApp sent via Cloud API (${data.method})`);
+        fetchBookingDetail(bookingId);
+      } else if (data.waMeUrl) {
+        window.open(data.waMeUrl, '_blank');
+        alert('Cloud API failed. Opened WhatsApp web — tap Send to deliver the message.');
+      } else {
+        alert(data.error || 'Failed to send');
+      }
+    } catch {
+      alert('Failed to resend WhatsApp');
+    } finally {
+      setResendingWa(null);
+    }
+  }, [fetchBookingDetail]);
 
   const filteredOnlinePayments = useMemo(() => {
     if (bookingPaymentFilter === 'CAPTURED') {
@@ -1492,6 +1518,42 @@ export default function BillingPage() {
                       </div>
                     )}
                   </section>
+
+                  {/* Resend WhatsApp */}
+                  {selectedBookingDetail.booking?.bookingId && selectedBookingDetail.booking?.paymentStatus === 'CAPTURED' && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Resend WhatsApp</h3>
+                      <div className="bg-green-50 rounded-xl p-4 flex flex-wrap gap-3">
+                        <button
+                          onClick={() => resendWhatsApp(selectedBookingDetail.booking.bookingId, 'doctor')}
+                          disabled={resendingWa === 'doctor'}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          {resendingWa === 'doctor' ? 'Sending...' : 'Send to Doctor'}
+                        </button>
+                        {selectedBookingDetail.booking?.phone && (
+                          <button
+                            onClick={() => resendWhatsApp(selectedBookingDetail.booking.bookingId, 'patient')}
+                            disabled={resendingWa === 'patient'}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            {resendingWa === 'patient' ? 'Sending...' : 'Send to Patient'}
+                          </button>
+                        )}
+                        <a
+                          href={`https://wa.me/919818235613?text=${encodeURIComponent(`NEW BOOKING\nBooking: ${selectedBookingDetail.booking.bookingId}\nPatient: ${selectedBookingDetail.booking.firstName} ${selectedBookingDetail.booking.lastName}\nDate: ${selectedBookingDetail.booking.bookingDate} ${selectedBookingDetail.booking.bookingTime}\nType: ${selectedBookingDetail.booking.consultationType}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-lg hover:bg-green-100 transition-colors"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          Open WhatsApp (Manual)
+                        </a>
+                      </div>
+                    </section>
+                  )}
                 </>
               )}
             </div>
