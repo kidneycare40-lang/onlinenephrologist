@@ -15,6 +15,7 @@ const footerLinks = {
     { label: 'Medicines & Treatment Guide', href: '/medicines' },
     { label: 'Medical Abbreviations', href: '/medical-abbreviations' },
     { label: 'Health Calculators', href: '/calculators' },
+    { label: 'Vaccination Record', href: '/vaccination' },
   ],
   doctor: [
     { label: 'Dr Rajesh Goel', href: '/dr-rajesh-goel' },

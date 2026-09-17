@@ -19,6 +19,7 @@ const navItems = [
       { label: 'Videos', href: '/videos', desc: 'Educational kidney health content' },
       { label: 'Medicines', href: '/medicines', desc: 'Treatment guide for kidney patients' },
       { label: 'Medical Terms', href: '/medical-abbreviations', desc: 'OD, BD, SOS & more explained' },
+      { label: 'Vaccination Record', href: '/vaccination', desc: 'Track vaccinations for kidney patients' },
     ],
   },
   { label: 'Calculators', href: '/calculators' },
