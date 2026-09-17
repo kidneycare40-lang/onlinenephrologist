@@ -206,9 +206,10 @@ export async function GET() {
       y += 54;
     }
 
-    // ===== EMERGENCY =====
+    // ===== EMERGENCY MEDICINES TABLE =====
     function drawEmergency() {
-      checkPage(40);
+      checkPage(50);
+      // Title
       doc.setFillColor(254, 242, 242);
       doc.roundedRect(LM, y, CW, 10, 2, 2, 'F');
       font('bold', 10);
@@ -216,44 +217,69 @@ export async function GET() {
       doc.text('Emergency Medicine for Adults with Kidney Diseases', LM + 3, y + 4.5);
       font('normal', 7);
       doc.setTextColor(120, 80, 80);
-      doc.text('Aapatkalin gurda rogiyon ke liye', LM + 3, y + 8.5);
+      doc.text('Aapatkalin gurda rogiyon ke liye (SOS dawaiyan)', LM + 3, y + 8.5);
       y += 14;
+
+      const TABLE_W = CW - 4;
+      const tableX = LM + 2;
+      const colWidths = [32, 40, 46, TABLE_W - 32 - 40 - 46];
+      const headers = ['Problem (Samasya)', 'Medicine (Dawai)', 'How to Take (Kaise lein)', 'Dose'];
+
+      // Header row
+      doc.setFillColor(180, 30, 30);
+      doc.roundedRect(tableX, y, TABLE_W, 6, 1, 1, 'F');
+      font('bold', 6.5);
+      doc.setTextColor(255, 255, 255);
+      let x = tableX;
+      for (let i = 0; i < headers.length; i++) { doc.text(headers[i], x + 2, y + 4); x += colWidths[i]; }
+      y += 6;
+
       const meds = [
-        ['1. FEVER (Bukhar)', 'Tab. Dolo 650 mg / Tab Crocin 500mg SOS'],
-        ['2. PAIN (Dard)', 'Tab. Ultracet 37 mg / Tab. Dolo 650 mg / Cap Tramazac P 37.5 mg SOS'],
-        ['3. VOMITING (Ulti)', 'Tab. Emset 4mg / Tab Zofer MD 4mg / Tab. Vomikind 4 mg SOS'],
-        ['4. RENAL COLIC', 'Tab. Drotin DS/ Drotinkind 80 mg / DVN Plus sos, Inj. Tramadol 100 mg IMI SOS'],
-        ['5. SWELLING (Soojan)', 'Tab. Tor 20 mg/ Tab. Dtor 20 mg / Tab. Torget 20 mg SOS'],
+        ['Fever (Bukhar)', 'Tab Dolo 650 mg / Crocin 500mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Pain (Dard)', 'Tab Ultracet 37 mg / Cap Tramazac P 37.5 mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Vomiting (Ulti)', 'Tab Emset 4mg / Tab Zofer MD 4mg', 'Before food (khane s phle)', '1 tab SOS'],
+        ['Renal Colic (Pet dard)', 'Tab Drotin DS 80 mg / Inj Tramadol 100 mg IM', 'After food (khane k bad)', '1 tab / SOS'],
+        ['Swelling (Soojan)', 'Tab Tor 20 mg / Tab Dtor 20 mg', 'After food (khane k bad)', '1 tab SOS'],
       ];
-      for (const [name, dose] of meds) {
-        doc.setFillColor(252, 245, 245);
-        doc.roundedRect(LM + 2, y, CW - 4, 6, 1, 1, 'F');
-        font('bold', 7); doc.setTextColor(...DARK); doc.text(name, LM + 5, y + 4);
-        font('normal', 7); doc.setTextColor(80, 80, 80); doc.text(dose, LM + 55, y + 4);
-        y += 7.5;
+
+      font('normal', 6.5);
+      for (let r = 0; r < meds.length; r++) {
+        if (r % 2 === 0) { doc.setFillColor(254, 248, 248); doc.rect(tableX, y, TABLE_W, 7, 'F'); }
+        doc.setDrawColor(230, 200, 200); doc.setLineWidth(0.1); doc.line(tableX, y + 7, tableX + TABLE_W, y + 7);
+        x = tableX;
+        for (let c = 0; c < meds[r].length; c++) {
+          if (c === 0) { doc.setFont('helvetica', 'bold'); doc.setTextColor(120, 20, 20); }
+          else { doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70); }
+          doc.text(meds[r][c], x + 2, y + 4.5);
+          x += colWidths[c];
+        }
+        y += 7;
       }
-      y += 2;
+      font('bold', 5.5);
+      doc.setTextColor(180, 30, 30);
+      doc.text('SOS = Zarurat padne par (As needed)', tableX, y + 3);
+      y += 7;
     }
 
-    // ===== COMMON MEDICINES TABLE (additional medicines not in emergency) =====
+    // ===== COMMON MEDICINES TABLE =====
     function drawMedicinesTable() {
       checkPage(55);
       doc.setFillColor(240, 248, 245);
       doc.roundedRect(LM, y, CW, 10, 2, 2, 'F');
       font('bold', 10);
       doc.setTextColor(13, 148, 136);
-      doc.text('Other Common Medicines (Kidney Patients)', LM + 3, y + 4.5);
+      doc.text('Other Common Medicines (Anya Samanya Dawaiyan)', LM + 3, y + 4.5);
       font('normal', 7);
       doc.setTextColor(100, 120, 110);
-      doc.text('Additional medicines with Hindi names - How to take', LM + 3, y + 8.5);
+      doc.text('Additional medicines for kidney patients - How to take', LM + 3, y + 8.5);
       y += 14;
 
       const TABLE_W = CW - 4;
       const tableX = LM + 2;
-      const colWidths = [38, 30, 42, TABLE_W - 38 - 30 - 42];
-      const headers = ['Medicine', 'Use', 'How to Take', 'Dose'];
+      const colWidths = [32, 40, 46, TABLE_W - 32 - 40 - 46];
+      const headers = ['Medicine (Dawai)', 'Use (Upyog)', 'How to Take (Kaise lein)', 'Dose (Matra)'];
 
-      // Header
+      // Header row
       doc.setFillColor(13, 148, 136);
       doc.roundedRect(tableX, y, TABLE_W, 6, 1, 1, 'F');
       font('bold', 6.5);
@@ -263,26 +289,25 @@ export async function GET() {
       y += 6;
 
       const medicines = [
-        ['Pan 40 / Razo', 'Acidity (acidty)', 'Before breakfast (nashte s phle)', '1 tab daily'],
-        ['Telma 40 / Amlodac', 'BP (uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
-        ['Dynapres / Telmikind', 'BP (uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
-        ['Ondem / Zofer 4mg', 'Nausea (ji michlana)', 'Before food (khane s phle)', '1 tab SOS'],
-        ['Duphaston', 'Hormone (harmon)', 'After food (khane k bad)', 'As directed'],
+        ['Pan 40 / Razo', 'Acidity (Acidty)', 'Before breakfast (nashte s phle)', '1 tab daily'],
+        ['Telma 40 / Amlodac', 'BP (Uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
+        ['Dynapres / Telmikind', 'BP (Uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
+        ['Ondem / Zofer 4mg', 'Nausea (Ji michlana)', 'Before food (khane s phle)', '1 tab SOS'],
+        ['Duphaston', 'Hormone (Harmon)', 'After food (khane k bad)', 'As directed'],
       ];
 
       font('normal', 6.5);
       for (let r = 0; r < medicines.length; r++) {
-        if (r % 2 === 0) { doc.setFillColor(245, 252, 250); doc.rect(tableX, y, TABLE_W, 6, 'F'); }
-        doc.setDrawColor(210, 225, 220); doc.setLineWidth(0.1); doc.line(tableX, y + 6, tableX + TABLE_W, y + 6);
+        if (r % 2 === 0) { doc.setFillColor(245, 252, 250); doc.rect(tableX, y, TABLE_W, 7, 'F'); }
+        doc.setDrawColor(210, 225, 220); doc.setLineWidth(0.1); doc.line(tableX, y + 7, tableX + TABLE_W, y + 7);
         x = tableX;
         for (let c = 0; c < medicines[r].length; c++) {
-          doc.setTextColor(c === 0 ? 30 : 70, c === 0 ? 30 : 70, c === 0 ? 30 : 70);
-          if (c === 0) doc.setFont('helvetica', 'bold');
-          else doc.setFont('helvetica', 'normal');
-          doc.text(medicines[r][c], x + 2, y + 4);
+          if (c === 0) { doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 30, 30); }
+          else { doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70); }
+          doc.text(medicines[r][c], x + 2, y + 4.5);
           x += colWidths[c];
         }
-        y += 6;
+        y += 7;
       }
       font('normal', 5.5);
       doc.setTextColor(150, 150, 150);

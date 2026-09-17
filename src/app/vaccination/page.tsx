@@ -265,15 +265,53 @@ export default function VaccinationPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0"><AlertTriangle className="h-4 w-4 text-red-600" /></div>
-              <div><h2 className="text-lg font-bold text-gray-900">Emergency Medicine for Adults with Kidney Diseases</h2><p className="text-sm text-gray-500 font-medium">Aapatkalin gurda rogiyon ke liye</p></div>
+              <div><h2 className="text-lg font-bold text-gray-900">Emergency Medicine for Adults with Kidney Diseases</h2><p className="text-sm text-gray-500 font-medium">Aapatkalin gurda rogiyon ke liye (SOS dawaiyan)</p></div>
             </div>
-            <div className="ml-11 space-y-3 text-sm text-gray-700">
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">1. FEVER (Bukhar / बुखार)</p><p>Tab. Dolo 650 mg / Tab Crocin 500mg SOS</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">2. PAIN (Dard / दर्द)</p><p>Tab. Ultracet 37 mg / Tab. Dolo 650 mg / Cap Tramazac P 37.5 mg SOS</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">3. VOMITING (Ulti / उल्टी)</p><p>Tab. Emset 4mg / Tab Zofer MD 4mg / Tab. Vomikind 4 mg SOS</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">4. RENAL COLIC (Pet dard / पेट दर्द)</p><p>Tab. Drotin DS/ Drotinkind 80 mg / DVN Plus sos, Inj. Tramadol 100 mg IMI SOS</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">5. SWELLING (Soojan / सूजन)</p><p>Tab. Tor 20 mg/ Tab. Dtor 20 mg / Tab. Torget 20 mg SOS</p></div>
+            <div className="ml-11 overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-[#B41E1E] text-white">
+                    <th className="px-3 py-2.5 text-left rounded-tl-lg">Problem (समस्या)</th>
+                    <th className="px-3 py-2.5 text-left">Medicine (दवाई)</th>
+                    <th className="px-3 py-2.5 text-left">How to Take (कैसे लें)</th>
+                    <th className="px-3 py-2.5 text-left rounded-tr-lg">Dose (मात्रा)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100 bg-red-50/50">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Fever (बुखार)</td>
+                    <td className="px-3 py-2.5 font-medium">Tab Dolo 650 mg / Crocin 500mg</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5">1 tab SOS</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Pain (दर्द)</td>
+                    <td className="px-3 py-2.5 font-medium">Tab Ultracet 37 mg / Cap Tramazac P 37.5 mg</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5">1 tab SOS</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 bg-red-50/50">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Vomiting (उल्टी)</td>
+                    <td className="px-3 py-2.5 font-medium">Tab Emset 4mg / Tab Zofer MD 4mg</td>
+                    <td className="px-3 py-2.5">Before food (खाने से पहले)</td>
+                    <td className="px-3 py-2.5">1 tab SOS</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Renal Colic (पेट दर्द)</td>
+                    <td className="px-3 py-2.5 font-medium">Tab Drotin DS 80 mg / Inj Tramadol 100 mg IM</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5">1 tab / SOS</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2.5 font-semibold text-red-800 rounded-bl-lg">Swelling (सूजन)</td>
+                    <td className="px-3 py-2.5 font-medium">Tab Tor 20 mg / Tab Dtor 20 mg</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5 rounded-br-lg">1 tab SOS</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
+            <p className="mt-3 ml-11 text-xs text-red-600 font-semibold">SOS = जरूरत पड़ने पर (As needed)</p>
           </div>
 
           {/* Other Common Medicines */}
