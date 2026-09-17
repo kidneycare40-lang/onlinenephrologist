@@ -5,235 +5,14 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { BreadcrumbSchema, WebPageSchema } from '@/components/seo/JsonLd';
 import {
-  Syringe, Download, AlertTriangle, Shield, Calendar, Pill, Loader2,
+  Syringe, Download, AlertTriangle, Shield, Calendar, Pill,
 } from 'lucide-react';
 
-function buildPdfHtml(): string {
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; background: #fff; padding: 20px; width: 794px; }
-  .header { border-bottom: 3px solid #0A75BB; padding-bottom: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
-  .header img { width: 46px; height: 46px; }
-  .header h1 { font-size: 20px; color: #0A75BB; margin: 0; }
-  .header p { font-size: 11px; color: #555; margin: 1px 0 0; }
-  .title-bar { background: #0A75BB; color: #fff; padding: 10px 16px; border-radius: 6px; margin-bottom: 14px; text-align: center; }
-  .title-bar h2 { font-size: 17px; letter-spacing: 1px; }
-  .title-bar p { font-size: 10px; opacity: 0.9; margin-top: 3px; }
-  .note { background: #FFF8E1; border: 1px solid #F9A825; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; }
-  .note p { font-size: 10px; font-weight: bold; color: #E65100; }
-  .note ol { margin: 3px 0 0; padding-left: 16px; font-size: 9.5px; color: #5D4037; }
-  .card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
-  .card-head { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
-  .num { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; flex-shrink: 0; }
-  .card-head h3 { font-size: 13px; margin: 0; }
-  .card-head .sub { font-size: 9.5px; color: #666; margin: 1px 0 0; }
-  .body { margin-left: 29px; font-size: 10.5px; }
-  .body p { margin: 2px 0; }
-  table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-  th { background: #f5f5f5; padding: 3px 6px; text-align: left; font-size: 9.5px; font-weight: bold; border-bottom: 1px solid #ddd; }
-  td { padding: 3px 6px; font-size: 9.5px; border-bottom: 1px solid #eee; }
-  .gray-box { background: #f9f9f9; border-radius: 4px; padding: 5px 8px; margin-bottom: 3px; font-size: 10px; }
-  .footer { border-top: 2px solid #0A75BB; padding-top: 10px; margin-top: 16px; font-size: 9.5px; color: #555; display: flex; justify-content: space-between; }
-  .footer p { margin: 1px 0; }
-  .footer strong { color: #0A75BB; }
-  .disclaimer { text-align: center; font-size: 8.5px; color: #999; border-top: 1px solid #eee; padding-top: 6px; margin-top: 8px; }
-</style></head><body>
-
-<div class="header">
-  <img src="https://onlinenephrologist.com/favicon.png" alt="Logo" />
-  <div>
-    <h1>Online Nephrologist / Kidney Care Centre</h1>
-    <p>Dr Rajesh Goel | MBBS, DNB Internal Medicine, DNB Nephrology, Fellow Kidney Transplant Medicine</p>
-    <p>Reg. No: DMC/R/734 | 20+ Years Experience</p>
-  </div>
-</div>
-
-<div class="title-bar">
-  <h2>VACCINATION RECORD</h2>
-  <p>Recommended vaccinations for chronic kidney disease patients</p>
-</div>
-
-<div class="note">
-  <p>Above doses applicable in case of chronic kidney disease</p>
-  <ol>
-    <li>To check for adequate immune (protective against hepatitis B) response of vaccine - Anti HBs antibody titres to be done every 6 monthly.</li>
-    <li>Protective titres for kidney disease patients are &gt;100 miu/ml.</li>
-  </ol>
-</div>
-
-<!-- 1. Hepatitis B -->
-<div class="card">
-  <div class="card-head">
-    <div class="num" style="background:#FFEBEE;color:#C62828">1</div>
-    <div><h3>Hepatitis B</h3><p class="sub">Engerix-B / Shanvac-B / Enivac B (or any brand)</p></div>
-  </div>
-  <div class="body">
-    <p><strong>Route:</strong> Injection into a muscle (upper arm for adults, thigh for infants)</p>
-    <p><strong>Dose:</strong> 2 ml (40 mcg) IM each time</p>
-    <table>
-      <thead><tr><th>Dose</th><th>Schedule</th><th>Date Given</th></tr></thead>
-      <tbody>
-        <tr><td>1st Dose</td><td>Day 0</td><td style="color:#aaa">____/____/____</td></tr>
-        <tr><td>2nd Dose</td><td>1st month</td><td style="color:#aaa">____/____/____</td></tr>
-        <tr><td>3rd Dose</td><td>2nd month</td><td style="color:#aaa">____/____/____</td></tr>
-        <tr><td>4th Dose</td><td>6th month</td><td style="color:#aaa">____/____/____</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- 2. Influenza -->
-<div class="card">
-  <div class="card-head">
-    <div class="num" style="background:#FFF3E0;color:#E65100">2</div>
-    <div><h3>Influenza Vaccine Inj.</h3><p class="sub">Influvac (or any brand)</p></div>
-  </div>
-  <div class="body">
-    <p><strong>Dose:</strong> 0.5 ml I/M stat (once a year) - (May/June)</p>
-    <table>
-      <thead><tr><th>Dose</th><th>Schedule</th><th>Date Given</th></tr></thead>
-      <tbody>
-        <tr><td>Annual</td><td>Once a year (May/June)</td><td style="color:#aaa">____/____/____</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- 3. Pneumococcal -->
-<div class="card">
-  <div class="card-head">
-    <div class="num" style="background:#F3E5F5;color:#6A1B9A">3</div>
-    <div><h3>Pneumococcal Vaccine</h3></div>
-  </div>
-  <div class="body">
-    <div class="gray-box">
-      <p><strong>A)</strong> Injection Prevenar 20 vaccine (PCV 20) IM - No need to repeat</p>
-      <p><strong>B)</strong> If received 1st Inj Prevenar 13 - 0.5 ml/IM on day 0, then give injection Prevenar 20 after 1 year</p>
-      <p><strong>C)</strong> If received both Prevenar 13 and injection Pneumovax 23 then no need of any pneumonia vaccine</p>
-    </div>
-    <table>
-      <thead><tr><th>Vaccine Given</th><th>Date Given</th></tr></thead>
-      <tbody><tr><td style="color:#aaa">____________________</td><td style="color:#aaa">____/____/____</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- 4. Varicella Zoster -->
-<div class="card">
-  <div class="card-head">
-    <div class="num" style="background:#E8F5E9;color:#2E7D32">4</div>
-    <div><h3>Varicella Zoster</h3></div>
-  </div>
-  <div class="body">
-    <p><strong>For:</strong> Healthy individuals above 50 years or adults above 18 years in high-risk patients</p>
-    <p><strong>Vaccine:</strong> Shingrix - total 2 doses each of 0.5 ml</p>
-    <table>
-      <thead><tr><th>Dose</th><th>Schedule</th><th>Date Given</th></tr></thead>
-      <tbody>
-        <tr><td>1st Dose</td><td>Month 0</td><td style="color:#aaa">____/____/____</td></tr>
-        <tr><td>2nd Dose</td><td>2-6 months after 1st</td><td style="color:#aaa">____/____/____</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- 5. Anti HBs -->
-<div class="card">
-  <div class="card-head">
-    <div class="num" style="background:#E0F7FA;color:#00695C">5</div>
-    <div><h3>Anti HBs Antibody Titres</h3></div>
-  </div>
-  <div class="body">
-    <p><strong>Purpose:</strong> Check for adequate immune response against hepatitis B</p>
-    <p><strong>Frequency:</strong> Every 6 months | <strong>Target:</strong> &gt;100 miu/ml</p>
-    <table>
-      <thead><tr><th>Date</th><th>Value (miu/ml)</th></tr></thead>
-      <tbody>
-        <tr><td style="color:#aaa">____/____/____</td><td style="color:#aaa">____________</td></tr>
-        <tr><td style="color:#aaa">____/____/____</td><td style="color:#aaa">____________</td></tr>
-        <tr><td style="color:#aaa">____/____/____</td><td style="color:#aaa">____________</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Injection Site -->
-<div class="card">
-  <div class="card-head"><div><h3>Injection Site</h3></div></div>
-  <div class="body">
-    <p><strong>Route:</strong> Injection into the deltoid muscle (upper arm)</p>
-    <ul style="margin:3px 0 0 16px;font-size:10.5px">
-      <li>0.5 ml to 1.0 ml for adults</li>
-      <li>Inject into the muscle, not subcutaneous</li>
-    </ul>
-  </div>
-</div>
-
-<!-- Emergency Medicines -->
-<div class="card">
-  <div class="card-head"><div><h3 style="color:#C62828">Emergency Medicine for Adults with Kidney Diseases</h3><p class="sub">Aapatkalin gurda rogiyon ke liye</p></div></div>
-  <div class="body">
-    <div class="gray-box"><strong>1. FEVER (Bukhar)</strong> - Tab. Dolo 650 mg / Tab Crocin 500mg SOS</div>
-    <div class="gray-box"><strong>2. PAIN (Dard)</strong> - Tab. Ultracet 37 mg / Tab. Dolo 650 mg / Cap Tramazac P 37.5 mg SOS</div>
-    <div class="gray-box"><strong>3. VOMITING (Ulti)</strong> - Tab. Emset 4mg / Tab Zofer MD 4mg / Tab. Vomikind 4 mg SOS</div>
-    <div class="gray-box"><strong>4. STOMACH ACHE / RENAL COLIC</strong> - Tab. Drotin DS/ Drotinkind 80 mg / DVN Plus sos, Inj. Tramadol 100 mg IMI SOS</div>
-    <div class="gray-box"><strong>5. SWELLING (Soojan)</strong> - Tab. Tor 20 mg/ Tab. Dtor 20 mg / Tab. Torget 20 mg SOS</div>
-  </div>
-</div>
-
-<div class="footer">
-  <div>
-    <p><strong>Dr Rajesh Goel</strong></p>
-    <p>Senior Nephrologist &amp; Kidney Transplant Physician</p>
-    <p>MBBS, DNB Internal Medicine, DNB Nephrology, Fellow Kidney Transplant Medicine</p>
-  </div>
-  <div style="text-align:right">
-    <p><strong>Online Nephrologist</strong></p>
-    <p>info@onlinenephrologist.com</p>
-    <p>+91 9818235613</p>
-    <p>www.onlinenephrologist.com</p>
-  </div>
-</div>
-<p class="disclaimer">This document is for informational purposes only. Always consult your treating nephrologist before starting any vaccination.</p>
-
-</body></html>`;
-}
-
-async function generatePDF() {
-  const html2pdf = (await import('html2pdf.js')).default;
-
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;top:0;left:0;width:794px;z-index:99999;background:#fff;';
-  container.innerHTML = buildPdfHtml();
-  document.body.appendChild(container);
-
-  const opt = {
-    margin: [10, 10, 10, 10] as [number, number, number, number],
-    filename: 'Vaccination-Record-Kidney-Patient.pdf',
-    image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-    jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
-    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-  };
-
-  await html2pdf().set(opt).from(container).save();
-  document.body.removeChild(container);
+function handlePrint() {
+  window.print();
 }
 
 export default function VaccinationPage() {
-  const [downloading, setDownloading] = useState(false);
-
-  const handleDownload = async () => {
-    setDownloading(true);
-    try {
-      await generatePDF();
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   return (
     <>
       <Navbar />
@@ -250,18 +29,15 @@ export default function VaccinationPage() {
           <p className="text-blue-100 text-lg max-w-2xl mx-auto">
             Recommended vaccinations for chronic kidney disease patients
           </p>
-          <button onClick={handleDownload} disabled={downloading} className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-white text-[#0A75BB] font-semibold rounded-xl hover:bg-blue-50 transition-all shadow-lg disabled:opacity-50">
-            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            {downloading ? 'Generating PDF...' : 'Download PDF'}
+          <button onClick={handlePrint} className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-white text-[#0A75BB] font-semibold rounded-xl hover:bg-blue-50 transition-all shadow-lg">
+            <Download className="h-4 w-4" /> Download PDF
           </button>
         </div>
       </section>
 
-      {/* Page content (visible on screen) */}
-      <section className="py-8 md:py-12 bg-gray-50 min-h-[60vh]">
+      {/* Screen-only content */}
+      <section className="py-8 md:py-12 bg-gray-50 min-h-[60vh] print:hidden">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          {/* Important Note */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-sm text-amber-800">
@@ -273,18 +49,14 @@ export default function VaccinationPage() {
             </div>
           </div>
 
-          {/* 1. Hepatitis B */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0"><Syringe className="h-4 w-4 text-red-600" /></div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">1. Hepatitis B</h2>
-                <p className="text-sm text-gray-600 font-medium">Engerix-B / Shanvac-B / Enivac B (or any brand)</p>
-              </div>
+              <div><h2 className="text-lg font-bold text-gray-900">1. Hepatitis B</h2><p className="text-sm text-gray-600 font-medium">Engerix-B / Shanvac-B / Enivac B (or any brand)</p></div>
             </div>
             <div className="ml-11 space-y-3 text-sm text-gray-700">
               <p><span className="font-semibold">Route:</span> Injection into a muscle (usually upper arm for adults, thigh for infants)</p>
-              <p><span className="font-semibold">Dose:</span> 2 ml (40 mcg) IM (Intramuscularly) each time</p>
+              <p><span className="font-semibold">Dose:</span> 2 ml (40 mcg) IM each time</p>
               <div className="bg-gray-50 rounded-lg p-4 mt-3">
                 <p className="font-semibold text-gray-900 mb-2">Schedule:</p>
                 <ul className="space-y-1.5">
@@ -297,67 +69,37 @@ export default function VaccinationPage() {
             </div>
           </div>
 
-          {/* 2. Influenza */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center shrink-0"><Syringe className="h-4 w-4 text-orange-600" /></div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">2. Influenza Vaccine Inj.</h2>
-                <p className="text-sm text-gray-600 font-medium">Influvac (or any brand)</p>
-              </div>
+              <div><h2 className="text-lg font-bold text-gray-900">2. Influenza Vaccine Inj.</h2><p className="text-sm text-gray-600 font-medium">Influvac (or any brand)</p></div>
             </div>
-            <div className="ml-11 space-y-2 text-sm text-gray-700">
-              <p><span className="font-semibold">Dose:</span> 0.5 ml I/M stat (once a year) - (May/June)</p>
-            </div>
+            <div className="ml-11 text-sm text-gray-700"><p><span className="font-semibold">Dose:</span> 0.5 ml I/M stat (once a year) - (May/June)</p></div>
           </div>
 
-          {/* 3. Pneumococcal */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center shrink-0"><Shield className="h-4 w-4 text-purple-600" /></div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">3. Pneumococcal Vaccine</h2>
-              </div>
+              <div><h2 className="text-lg font-bold text-gray-900">3. Pneumococcal Vaccine</h2></div>
             </div>
-            <div className="ml-11 space-y-4 text-sm text-gray-700">
+            <div className="ml-11 text-sm text-gray-700">
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">A</span>
-                  <div>
-                    <p className="font-semibold">Injection Prevenar 20 vaccine (PCV 20) IM</p>
-                    <p className="text-gray-600">No need to repeat</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">B</span>
-                  <div>
-                    <p className="font-semibold">If received 1st Inj Prevenar 13 - 0.5 ml/IM on day 0</p>
-                    <p className="text-gray-600">Then give injection Prevenar 20 after 1 year</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">C</span>
-                  <div>
-                    <p className="font-semibold">If received both Prevenar 13 and injection Pneumovax 23</p>
-                    <p className="text-gray-600">Then no need of any pneumonia vaccine</p>
-                  </div>
-                </div>
+                <p><strong>A)</strong> Injection Prevenar 20 vaccine (PCV 20) IM - No need to repeat</p>
+                <p><strong>B)</strong> If received 1st Inj Prevenar 13 - 0.5 ml/IM on day 0, then give injection Prevenar 20 after 1 year</p>
+                <p><strong>C)</strong> If received both Prevenar 13 and injection Pneumovax 23 then no need of any pneumonia vaccine</p>
               </div>
             </div>
           </div>
 
-          {/* 4. Varicella Zoster */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center shrink-0"><Syringe className="h-4 w-4 text-green-600" /></div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">4. Varicella Zoster</h2>
-              </div>
+              <div><h2 className="text-lg font-bold text-gray-900">4. Varicella Zoster</h2></div>
             </div>
-            <div className="ml-11 space-y-3 text-sm text-gray-700">
-              <p><span className="font-semibold">For:</span> Healthy individuals above 50 years of age or adults above 18 years in high-risk patients with weak immunity</p>
-              <p><span className="font-semibold">Vaccine:</span> Shingrix vaccine - total 2 doses each of 0.5 ml</p>
-              <div className="bg-gray-50 rounded-lg p-4">
+            <div className="ml-11 text-sm text-gray-700">
+              <p><span className="font-semibold">For:</span> Healthy individuals above 50 years or adults above 18 years in high-risk patients</p>
+              <p><span className="font-semibold">Vaccine:</span> Shingrix - total 2 doses each of 0.5 ml</p>
+              <div className="bg-gray-50 rounded-lg p-4 mt-3">
                 <p className="font-semibold text-gray-900 mb-2">Schedule:</p>
                 <ul className="space-y-1.5">
                   <li className="flex items-center gap-2"><span className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">1</span> <strong>First dose - Month 0</strong></li>
@@ -367,26 +109,17 @@ export default function VaccinationPage() {
             </div>
           </div>
 
-          {/* 5. Anti HBs */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center shrink-0"><Calendar className="h-4 w-4 text-cyan-600" /></div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">5. Anti HBs Antibody Titres</h2>
-              </div>
+              <div><h2 className="text-lg font-bold text-gray-900">5. Anti HBs Antibody Titres</h2></div>
             </div>
-            <div className="ml-11 space-y-2 text-sm text-gray-700">
-              <p><span className="font-semibold">Purpose:</span> To check for adequate immune (protective against hepatitis B) response of vaccine</p>
-              <p><span className="font-semibold">Frequency:</span> Every 6 months</p>
-              <p><span className="font-semibold">Target:</span> Protective titres for kidney disease patients are {`>`}100 miu/ml</p>
+            <div className="ml-11 text-sm text-gray-700">
+              <p><span className="font-semibold">Purpose:</span> Check for adequate immune response against hepatitis B</p>
+              <p><span className="font-semibold">Frequency:</span> Every 6 months | <span className="font-semibold">Target:</span> {`>`}100 miu/ml</p>
               <div className="mt-3 bg-gray-50 rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Date</th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Value (miu/ml)</th>
-                    </tr>
-                  </thead>
+                  <thead><tr className="bg-gray-100"><th className="px-4 py-2 text-left font-semibold text-gray-700">Date</th><th className="px-4 py-2 text-left font-semibold text-gray-700">Value (miu/ml)</th></tr></thead>
                   <tbody>
                     <tr className="border-t border-gray-200"><td className="px-4 py-3 text-gray-400">________________</td><td className="px-4 py-3 text-gray-400">________________</td></tr>
                     <tr className="border-t border-gray-200"><td className="px-4 py-3 text-gray-400">________________</td><td className="px-4 py-3 text-gray-400">________________</td></tr>
@@ -397,51 +130,177 @@ export default function VaccinationPage() {
             </div>
           </div>
 
-          {/* Injection Site */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0"><Pill className="h-4 w-4 text-blue-600" /></div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Injection Site</h2>
-              </div>
+              <div><h2 className="text-lg font-bold text-gray-900">Injection Site</h2></div>
             </div>
             <div className="ml-11 text-sm text-gray-700">
               <p><span className="font-semibold">Route:</span> Injection into the deltoid muscle (upper arm)</p>
-              <ul className="list-disc ml-5 mt-2 space-y-1">
-                <li>0.5 ml to 1.0 ml for adults</li>
-                <li>Inject into the muscle, not subcutaneous</li>
-              </ul>
+              <ul className="list-disc ml-5 mt-2 space-y-1"><li>0.5 ml to 1.0 ml for adults</li><li>Inject into the muscle, not subcutaneous</li></ul>
             </div>
           </div>
 
-          {/* Emergency Medicines */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0"><AlertTriangle className="h-4 w-4 text-red-600" /></div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Emergency Medicine for Adults with Kidney Diseases</h2>
-                <p className="text-sm text-gray-500 font-medium">Aapatkalin gurda rogiyon ke liye</p>
-              </div>
+              <div><h2 className="text-lg font-bold text-gray-900">Emergency Medicine for Adults with Kidney Diseases</h2><p className="text-sm text-gray-500 font-medium">Aapatkalin gurda rogiyon ke liye</p></div>
             </div>
-            <div className="ml-11 space-y-4 text-sm text-gray-700">
+            <div className="ml-11 space-y-3 text-sm text-gray-700">
               <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">1. FEVER (Bukhar)</p><p>Tab. Dolo 650 mg / Tab Crocin 500mg SOS</p></div>
               <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">2. PAIN (Dard)</p><p>Tab. Ultracet 37 mg / Tab. Dolo 650 mg / Cap Tramazac P 37.5 mg SOS</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">3. VOMITING (Ulti)</p><p>Tab. Emset 4mg / Tab Zofer MD 4mg / Tab. Vomikind 4 mg. SOS</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">4. STOMACH ACHE / RENAL COLIC (Pet dard / Gurde ki pathri ka dard)</p><p>Tab. Drotin DS/ Drotinkind 80 mg / DVN Plus sos, Inj. Tramadol 100 mg IMI SOS</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">5. SWELLING (Soojan)</p><p>Tab. Tor 20 mg/ Tab. Dtor 20 mg / Tab. Torget 20 mg. SOS</p></div>
+              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">3. VOMITING (Ulti)</p><p>Tab. Emset 4mg / Tab Zofer MD 4mg / Tab. Vomikind 4 mg SOS</p></div>
+              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">4. STOMACH ACHE / RENAL COLIC</p><p>Tab. Drotin DS/ Drotinkind 80 mg / DVN Plus sos, Inj. Tramadol 100 mg IMI SOS</p></div>
+              <div className="bg-gray-50 rounded-lg p-3"><p className="font-bold text-gray-900">5. SWELLING (Soojan)</p><p>Tab. Tor 20 mg/ Tab. Dtor 20 mg / Tab. Torget 20 mg SOS</p></div>
             </div>
           </div>
 
-          {/* Download button */}
-          <div className="text-center mt-8 print:hidden">
-            <button onClick={handleDownload} disabled={downloading} className="inline-flex items-center gap-2 px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-all shadow-lg disabled:opacity-50">
-              {downloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-              {downloading ? 'Generating PDF...' : 'Download PDF'}
+          <div className="text-center mt-8">
+            <button onClick={handlePrint} className="inline-flex items-center gap-2 px-8 py-3 bg-[#0A75BB] text-white font-semibold rounded-xl hover:bg-[#085a94] transition-all shadow-lg">
+              <Download className="h-5 w-5" /> Download PDF
             </button>
           </div>
-
         </div>
       </section>
+
+      {/* ========== PRINT-ONLY CONTENT (visible only in print) ========== */}
+      <div className="hidden print:block">
+        {/* PDF Header */}
+        <div style={{ borderBottom: '3px solid #0A75BB', paddingBottom: '12px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '42px', height: '42px', background: '#0A75BB', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold', fontSize: '18px' }}>K</div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold', color: '#0A75BB', fontFamily: 'Arial, sans-serif' }}>Online Nephrologist / Kidney Care Centre</h1>
+            <p style={{ margin: '1px 0 0', fontSize: '10px', color: '#555', fontFamily: 'Arial, sans-serif' }}>Dr Rajesh Goel | MBBS, DNB Internal Medicine, DNB Nephrology, Fellow Kidney Transplant Medicine</p>
+            <p style={{ margin: '1px 0 0', fontSize: '9.5px', color: '#777', fontFamily: 'Arial, sans-serif' }}>Reg. No: DMC/R/734 | 20+ Years Experience | www.onlinenephrologist.com</p>
+          </div>
+        </div>
+
+        {/* Title */}
+        <div style={{ background: '#0A75BB', color: '#fff', padding: '8px 16px', borderRadius: '4px', marginBottom: '12px', textAlign: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', letterSpacing: '1px', fontFamily: 'Arial, sans-serif' }}>VACCINATION RECORD</h2>
+          <p style={{ margin: '2px 0 0', fontSize: '9px', opacity: 0.9, fontFamily: 'Arial, sans-serif' }}>Recommended vaccinations for chronic kidney disease patients</p>
+        </div>
+
+        {/* Note */}
+        <div style={{ background: '#FFF8E1', border: '1px solid #F9A825', borderRadius: '4px', padding: '6px 10px', marginBottom: '12px', fontFamily: 'Arial, sans-serif' }}>
+          <p style={{ margin: 0, fontSize: '9px', fontWeight: 'bold', color: '#E65100' }}>Above doses applicable in case of chronic kidney disease</p>
+          <ol style={{ margin: '2px 0 0', paddingLeft: '14px', fontSize: '8.5px', color: '#5D4037' }}>
+            <li>Anti HBs antibody titres to be done every 6 months.</li>
+            <li>Protective titres for kidney disease patients are &gt;100 miu/ml.</li>
+          </ol>
+        </div>
+
+        {/* 1. Hepatitis B */}
+        <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '8px 10px', marginBottom: '8px', fontFamily: 'Arial, sans-serif' }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 'bold' }}>1. Hepatitis B (Engerix-B / Shanvac-B / Enivac B or any brand)</h3>
+          <p style={{ margin: '1px 0', fontSize: '9px' }}><strong>Route:</strong> IM (upper arm for adults, thigh for infants) | <strong>Dose:</strong> 2 ml (40 mcg) IM each time</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px' }}>
+            <thead><tr style={{ background: '#f5f5f5' }}><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Dose</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Schedule</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Date Given</th></tr></thead>
+            <tbody>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>1st Dose</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>Day 0</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____/____/____</td></tr>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>2nd Dose</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>1st month</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____/____/____</td></tr>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>3rd Dose</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>2nd month</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____/____/____</td></tr>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px' }}>4th Dose</td><td style={{ padding: '2px 6px', fontSize: '8.5px' }}>6th month</td><td style={{ padding: '2px 6px', fontSize: '8.5px', color: '#aaa' }}>____/____/____</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 2. Influenza */}
+        <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '8px 10px', marginBottom: '8px', fontFamily: 'Arial, sans-serif' }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 'bold' }}>2. Influenza Vaccine Inj. (Influvac or any brand)</h3>
+          <p style={{ margin: '1px 0', fontSize: '9px' }}><strong>Dose:</strong> 0.5 ml I/M stat (once a year) - May/June</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px' }}>
+            <thead><tr style={{ background: '#f5f5f5' }}><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Dose</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Schedule</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Date Given</th></tr></thead>
+            <tbody><tr><td style={{ padding: '2px 6px', fontSize: '8.5px' }}>Annual</td><td style={{ padding: '2px 6px', fontSize: '8.5px' }}>Once a year (May/June)</td><td style={{ padding: '2px 6px', fontSize: '8.5px', color: '#aaa' }}>____/____/____</td></tr></tbody>
+          </table>
+        </div>
+
+        {/* 3. Pneumococcal */}
+        <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '8px 10px', marginBottom: '8px', fontFamily: 'Arial, sans-serif' }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 'bold' }}>3. Pneumococcal Vaccine</h3>
+          <div style={{ fontSize: '9px', background: '#f9f9f9', borderRadius: '3px', padding: '4px 8px', marginBottom: '4px' }}>
+            <p style={{ margin: '1px 0' }}><strong>A)</strong> Injection Prevenar 20 (PCV 20) IM - No need to repeat</p>
+            <p style={{ margin: '1px 0' }}><strong>B)</strong> If received Prevenar 13 on day 0, give Prevenar 20 after 1 year</p>
+            <p style={{ margin: '1px 0' }}><strong>C)</strong> If received both Prevenar 13 + Pneumovax 23, no further vaccine needed</p>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr style={{ background: '#f5f5f5' }}><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Vaccine Given</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Date Given</th></tr></thead>
+            <tbody><tr><td style={{ padding: '2px 6px', fontSize: '8.5px', color: '#aaa' }}>____________________</td><td style={{ padding: '2px 6px', fontSize: '8.5px', color: '#aaa' }}>____/____/____</td></tr></tbody>
+          </table>
+        </div>
+
+        {/* 4. Varicella Zoster */}
+        <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '8px 10px', marginBottom: '8px', fontFamily: 'Arial, sans-serif' }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 'bold' }}>4. Varicella Zoster (Shingrix - 2 doses of 0.5 ml)</h3>
+          <p style={{ margin: '1px 0', fontSize: '9px' }}><strong>For:</strong> Adults above 50 years or above 18 in high-risk patients</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px' }}>
+            <thead><tr style={{ background: '#f5f5f5' }}><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Dose</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Schedule</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Date Given</th></tr></thead>
+            <tbody>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>1st Dose</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee' }}>Month 0</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____/____/____</td></tr>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px' }}>2nd Dose</td><td style={{ padding: '2px 6px', fontSize: '8.5px' }}>2-6 months after 1st</td><td style={{ padding: '2px 6px', fontSize: '8.5px', color: '#aaa' }}>____/____/____</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* 5. Anti HBs */}
+        <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '8px 10px', marginBottom: '8px', fontFamily: 'Arial, sans-serif' }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 'bold' }}>5. Anti HBs Antibody Titres</h3>
+          <p style={{ margin: '1px 0', fontSize: '9px' }}><strong>Purpose:</strong> Check immune response to Hep B vaccine | <strong>Frequency:</strong> Every 6 months | <strong>Target:</strong> &gt;100 miu/ml</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px' }}>
+            <thead><tr style={{ background: '#f5f5f5' }}><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Date</th><th style={{ padding: '2px 6px', textAlign: 'left', fontSize: '8.5px', fontWeight: 'bold', borderBottom: '1px solid #ddd' }}>Value (miu/ml)</th></tr></thead>
+            <tbody>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____/____/____</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____________</td></tr>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____/____/____</td><td style={{ padding: '2px 6px', fontSize: '8.5px', borderBottom: '1px solid #eee', color: '#aaa' }}>____________</td></tr>
+              <tr><td style={{ padding: '2px 6px', fontSize: '8.5px', color: '#aaa' }}>____/____/____</td><td style={{ padding: '2px 6px', fontSize: '8.5px', color: '#aaa' }}>____________</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Injection Site */}
+        <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '8px 10px', marginBottom: '8px', fontFamily: 'Arial, sans-serif' }}>
+          <h3 style={{ margin: '0 0 3px', fontSize: '11px', fontWeight: 'bold' }}>Injection Site</h3>
+          <p style={{ margin: 0, fontSize: '9px' }}><strong>Route:</strong> Deltoid muscle (upper arm) | 0.5 to 1.0 ml for adults | Inject into muscle, not subcutaneous</p>
+        </div>
+
+        {/* Emergency Medicines */}
+        <div style={{ border: '1px solid #ddd', borderRadius: '4px', padding: '8px 10px', marginBottom: '10px', fontFamily: 'Arial, sans-serif' }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: 'bold', color: '#C62828' }}>Emergency Medicine for Adults with Kidney Diseases</h3>
+          <div style={{ fontSize: '9px' }}>
+            <div style={{ background: '#f9f9f9', borderRadius: '3px', padding: '3px 6px', marginBottom: '2px' }}><strong>1. FEVER</strong> - Tab. Dolo 650 mg / Tab Crocin 500mg SOS</div>
+            <div style={{ background: '#f9f9f9', borderRadius: '3px', padding: '3px 6px', marginBottom: '2px' }}><strong>2. PAIN</strong> - Tab. Ultracet 37 mg / Tab. Dolo 650 mg / Cap Tramazac P 37.5 mg SOS</div>
+            <div style={{ background: '#f9f9f9', borderRadius: '3px', padding: '3px 6px', marginBottom: '2px' }}><strong>3. VOMITING</strong> - Tab. Emset 4mg / Tab Zofer MD 4mg / Tab. Vomikind 4 mg SOS</div>
+            <div style={{ background: '#f9f9f9', borderRadius: '3px', padding: '3px 6px', marginBottom: '2px' }}><strong>4. RENAL COLIC</strong> - Tab. Drotin DS/ Drotinkind 80 mg / DVN Plus sos, Inj. Tramadol 100 mg IMI SOS</div>
+            <div style={{ background: '#f9f9f9', borderRadius: '3px', padding: '3px 6px' }}><strong>5. SWELLING</strong> - Tab. Tor 20 mg/ Tab. Dtor 20 mg / Tab. Torget 20 mg SOS</div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ borderTop: '2px solid #0A75BB', paddingTop: '8px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif' }}>
+          <div style={{ fontSize: '9px', color: '#555' }}>
+            <p style={{ margin: 0, fontWeight: 'bold', color: '#0A75BB' }}>Dr Rajesh Goel</p>
+            <p style={{ margin: '1px 0 0' }}>Senior Nephrologist &amp; Kidney Transplant Physician</p>
+            <p style={{ margin: '1px 0 0' }}>MBBS, DNB Internal Medicine, DNB Nephrology, Fellow Kidney Transplant Medicine</p>
+          </div>
+          <div style={{ fontSize: '9px', color: '#555', textAlign: 'right' }}>
+            <p style={{ margin: 0, fontWeight: 'bold', color: '#0A75BB' }}>Online Nephrologist</p>
+            <p style={{ margin: '1px 0 0' }}>info@onlinenephrologist.com | +91 9818235613</p>
+            <p style={{ margin: '1px 0 0' }}>www.onlinenephrologist.com</p>
+          </div>
+        </div>
+        <p style={{ textAlign: 'center', fontSize: '7.5px', color: '#999', marginTop: '6px', fontFamily: 'Arial, sans-serif' }}>
+          This document is for informational purposes only. Always consult your treating nephrologist before starting any vaccination.
+        </p>
+      </div>
+
+      {/* Print CSS */}
+      <style jsx global>{`
+        @media print {
+          @page { size: A4; margin: 12mm; }
+          body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print\\:hidden { display: none !important; }
+          .print\\:block { display: block !important; }
+        }
+      `}</style>
 
       <Footer />
     </>
