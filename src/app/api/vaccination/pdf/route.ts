@@ -222,8 +222,8 @@ export async function GET() {
 
       const TABLE_W = CW - 4;
       const tableX = LM + 2;
-      const colWidths = [32, 40, 46, TABLE_W - 32 - 40 - 46];
-      const headers = ['Problem (Samasya)', 'Medicine (Dawai)', 'How to Take (Kaise lein)', 'Dose'];
+      const colWidths = [28, 55, 42, TABLE_W - 28 - 55 - 42];
+      const headers = ['Problem', 'Medicine', 'How to Take', 'Dose'];
 
       // Header row
       doc.setFillColor(180, 30, 30);
@@ -235,11 +235,11 @@ export async function GET() {
       y += 6;
 
       const meds = [
-        ['Fever (Bukhar)', 'Tab Dolo 650 mg / Crocin 500mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Fever (Bukhar)', 'Tab Dolo 650 / Crocin 500 mg', 'After food (khane k bad)', '1 tab SOS'],
         ['Pain (Dard)', 'Tab Ultracet 37 mg / Cap Tramazac P 37.5 mg', 'After food (khane k bad)', '1 tab SOS'],
-        ['Vomiting (Ulti)', 'Tab Emset 4mg / Tab Zofer MD 4mg', 'Before food (khane s phle)', '1 tab SOS'],
+        ['Vomiting (Ulti)', 'Tab Emset 4mg / Tab Zofer 4mg', 'Before food (khane s phle)', '1 tab SOS'],
         ['Renal Colic (Pet dard)', 'Tab Drotin DS 80 mg / Inj Tramadol 100 mg IM', 'After food (khane k bad)', '1 tab / SOS'],
-        ['Swelling (Soojan)', 'Tab Tor 20 mg / Tab Dtor 20 mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Swelling (Soojan)', 'Tab Tor 20 / Dtor 20 mg', 'After food (khane k bad)', '1 tab SOS'],
       ];
 
       font('normal', 6.5);
@@ -276,7 +276,7 @@ export async function GET() {
 
       const TABLE_W = CW - 4;
       const tableX = LM + 2;
-      const colWidths = [32, 40, 46, TABLE_W - 32 - 40 - 46];
+      const colWidths = [28, 55, 42, TABLE_W - 28 - 55 - 42];
       const headers = ['Medicine (Dawai)', 'Use (Upyog)', 'How to Take (Kaise lein)', 'Dose (Matra)'];
 
       // Header row
