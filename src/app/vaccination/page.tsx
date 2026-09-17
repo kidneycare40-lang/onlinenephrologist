@@ -276,16 +276,16 @@ export default function VaccinationPage() {
             </div>
           </div>
 
-          {/* Common Medicines Guide */}
+          {/* Other Common Medicines */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center shrink-0"><Heart className="h-4 w-4 text-teal-600" /></div>
-              <div><h2 className="text-lg font-bold text-gray-900">Common Medicines Guide (सामान्य दवाइयों की जानकारी)</h2><p className="text-sm text-gray-500 font-medium">How to take medicines for kidney patients</p></div>
+              <div><h2 className="text-lg font-bold text-gray-900">Other Common Medicines (अन्य सामान्य दवाइयाँ)</h2><p className="text-sm text-gray-500 font-medium">Additional medicines for kidney patients - with Hindi names</p></div>
             </div>
             <div className="ml-11 overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="bg-[#0A75BB] text-white">
+                  <tr className="bg-[#0D9488] text-white">
                     <th className="px-3 py-2.5 text-left rounded-tl-lg">Medicine (दवाई)</th>
                     <th className="px-3 py-2.5 text-left">Use (उपयोग)</th>
                     <th className="px-3 py-2.5 text-left">How to Take (कैसे लें)</th>
@@ -294,64 +294,34 @@ export default function VaccinationPage() {
                 </thead>
                 <tbody>
                   <tr className="border-b border-gray-100 bg-gray-50">
-                    <td className="px-3 py-2.5 font-medium">Dolo 650 / Crocin 500<br/><span className="text-gray-500 text-xs">डोलो 650 / क्रोसिन 500</span></td>
-                    <td className="px-3 py-2.5">Fever (बुखार)</td>
-                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
-                    <td className="px-3 py-2.5">1 tablet SOS</td>
-                  </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="px-3 py-2.5 font-medium">Ultracet<br/><span className="text-gray-500 text-xs">अल्ट्रासेट</span></td>
-                    <td className="px-3 py-2.5">Pain (दर्द)</td>
-                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
-                    <td className="px-3 py-2.5">1 tablet SOS</td>
-                  </tr>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <td className="px-3 py-2.5 font-medium">Emset / Vomikind<br/><span className="text-gray-500 text-xs">एमसेट / वोमिकिंड</span></td>
-                    <td className="px-3 py-2.5">Vomiting (उल्टी)</td>
-                    <td className="px-3 py-2.5">Before food (खाने से पहले)</td>
-                    <td className="px-3 py-2.5">1 tablet SOS</td>
-                  </tr>
-                  <tr className="border-b border-gray-100">
-                    <td className="px-3 py-2.5 font-medium">Drotin DS<br/><span className="text-gray-500 text-xs">ड्रोटिन DS</span></td>
-                    <td className="px-3 py-2.5">Stomach ache / Colic (पेट दर्द)</td>
-                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
-                    <td className="px-3 py-2.5">1 tablet SOS</td>
-                  </tr>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <td className="px-3 py-2.5 font-medium">Tor 20 / Dtor<br/><span className="text-gray-500 text-xs">टोर 20 / डीटोर</span></td>
-                    <td className="px-3 py-2.5">Swelling (सूजन)</td>
-                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
-                    <td className="px-3 py-2.5">1 tablet SOS</td>
-                  </tr>
-                  <tr className="border-b border-gray-100">
                     <td className="px-3 py-2.5 font-medium">Pan 40 / Razo<br/><span className="text-gray-500 text-xs">पैन 40 / रेजो</span></td>
                     <td className="px-3 py-2.5">Acidity (एसिडिटी)</td>
                     <td className="px-3 py-2.5">Before breakfast (नाश्ते से पहले)</td>
                     <td className="px-3 py-2.5">1 tablet daily</td>
                   </tr>
-                  <tr className="border-b border-gray-100 bg-gray-50">
+                  <tr className="border-b border-gray-100">
                     <td className="px-3 py-2.5 font-medium">Telma 40 / Amlodac<br/><span className="text-gray-500 text-xs">टेल्मा 40 / एम्लोडैक</span></td>
                     <td className="px-3 py-2.5">BP (उच्च रक्तचाप)</td>
                     <td className="px-3 py-2.5">Any time (किसी भी समय)</td>
                     <td className="px-3 py-2.5">1 tablet daily</td>
                   </tr>
-                  <tr className="border-b border-gray-100">
+                  <tr className="border-b border-gray-100 bg-gray-50">
                     <td className="px-3 py-2.5 font-medium">Dynapres / Telmikind<br/><span className="text-gray-500 text-xs">डायनाप्रेस / टेल्मीकिंड</span></td>
                     <td className="px-3 py-2.5">BP (उच्च रक्तचाप)</td>
                     <td className="px-3 py-2.5">Any time (किसी भी समय)</td>
                     <td className="px-3 py-2.5">1 tablet daily</td>
                   </tr>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <td className="px-3 py-2.5 font-medium">Duphaston<br/><span className="text-gray-500 text-xs">ड्यूफास्टन</span></td>
-                    <td className="px-3 py-2.5">Hormone (हार्मोन)</td>
-                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
-                    <td className="px-3 py-2.5">As directed</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2.5 font-medium rounded-bl-lg">Ondem / Zofer<br/><span className="text-gray-500 text-xs">ओंडेम / ज़ोफर</span></td>
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2.5 font-medium">Ondem / Zofer<br/><span className="text-gray-500 text-xs">ओंडेम / ज़ोफर</span></td>
                     <td className="px-3 py-2.5">Nausea (जी मिचलाना)</td>
                     <td className="px-3 py-2.5">Before food (खाने से पहले)</td>
-                    <td className="px-3 py-2.5 rounded-br-lg">1 tablet SOS</td>
+                    <td className="px-3 py-2.5">1 tablet SOS</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2.5 font-medium rounded-bl-lg">Duphaston<br/><span className="text-gray-500 text-xs">ड्यूफास्टन</span></td>
+                    <td className="px-3 py-2.5">Hormone (हार्मोन)</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5 rounded-br-lg">As directed</td>
                   </tr>
                 </tbody>
               </table>

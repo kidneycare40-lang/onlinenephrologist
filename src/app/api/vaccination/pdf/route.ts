@@ -235,17 +235,17 @@ export async function GET() {
       y += 2;
     }
 
-    // ===== COMMON MEDICINES TABLE =====
+    // ===== COMMON MEDICINES TABLE (additional medicines not in emergency) =====
     function drawMedicinesTable() {
-      checkPage(75);
+      checkPage(55);
       doc.setFillColor(240, 248, 245);
       doc.roundedRect(LM, y, CW, 10, 2, 2, 'F');
       font('bold', 10);
       doc.setTextColor(13, 148, 136);
-      doc.text('Common Medicines Guide (Samanya dawaiyon ki jankari)', LM + 3, y + 4.5);
+      doc.text('Other Common Medicines (Kidney Patients)', LM + 3, y + 4.5);
       font('normal', 7);
       doc.setTextColor(100, 120, 110);
-      doc.text('How to take medicines for kidney patients', LM + 3, y + 8.5);
+      doc.text('Additional medicines with Hindi names - How to take', LM + 3, y + 8.5);
       y += 14;
 
       const TABLE_W = CW - 4;
@@ -263,15 +263,11 @@ export async function GET() {
       y += 6;
 
       const medicines = [
-        ['Dolo 650 / Crocin 500', 'Fever (bukhar)', 'After food (khane k bad)', '1 tab SOS'],
-        ['Ultracet 37 mg', 'Pain (dard)', 'After food (khane k bad)', '1 tab SOS'],
-        ['Emset / Vomikind 4mg', 'Vomiting (ulti)', 'Before food (khane s phle)', '1 tab SOS'],
-        ['Drotin DS / Drotinkind', 'Stomach ache (pet dard)', 'After food (khane k bad)', '1 tab SOS'],
-        ['Tor 20 / Dtor 20', 'Swelling (soojan)', 'After food (khane k bad)', '1 tab SOS'],
         ['Pan 40 / Razo', 'Acidity (acidty)', 'Before breakfast (nashte s phle)', '1 tab daily'],
         ['Telma 40 / Amlodac', 'BP (uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
         ['Dynapres / Telmikind', 'BP (uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
         ['Ondem / Zofer 4mg', 'Nausea (ji michlana)', 'Before food (khane s phle)', '1 tab SOS'],
+        ['Duphaston', 'Hormone (harmon)', 'After food (khane k bad)', 'As directed'],
       ];
 
       font('normal', 6.5);
