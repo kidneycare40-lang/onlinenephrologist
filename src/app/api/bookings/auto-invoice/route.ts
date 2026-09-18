@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       paymentStatus: 'PENDING',
     });
 
-    return NextResponse.json({ success: true, invoiceId });
+    return NextResponse.json({ success: !!invoiceId, invoiceId });
   } catch (error) {
     console.error('[auto-invoice API] Error:', error);
     return apiError('Failed to create invoice', 500);

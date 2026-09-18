@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (existing && existing.length > 0) {
-      await db
+      const { error: updateErr } = await db
         .from('booking_payments')
         .update({
           payment_status: newStatus,
@@ -85,14 +85,16 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('booking_id', bookingId);
+      if (updateErr) console.error('[webhook] booking_payments update FAILED:', updateErr.message);
     } else {
-      await db.from('booking_payments').insert({
+      const { error: insertErr } = await db.from('booking_payments').insert({
         booking_id: bookingId,
         razorpay_order_id: razorpayOrderId,
         razorpay_payment_id: razorpayPaymentId,
         payment_status: newStatus,
         updated_at: new Date().toISOString(),
       });
+      if (insertErr) console.error('[webhook] booking_payments insert FAILED:', insertErr.message);
     }
 
     // Keep the bookings table payment status in sync
@@ -107,10 +109,11 @@ export async function POST(request: NextRequest) {
     if (newStatus === 'CAPTURED') {
       bookingUpdate.status = 'confirmed';
     }
-    await db
+    const { error: bookingUpdateErr } = await db
       .from('bookings')
       .update(bookingUpdate)
       .eq('booking_id', bookingId);
+    if (bookingUpdateErr) console.error('[webhook] bookings update FAILED:', bookingUpdateErr.message);
 
     // ─── Step 1: EMR BRIDGE FIRST — create patient in EMR before appointment ───
     if (newStatus === 'CAPTURED') {

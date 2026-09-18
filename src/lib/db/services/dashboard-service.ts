@@ -20,13 +20,6 @@ export class DashboardService {
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
 
-    // Build filters
-    const filters: string[] = ['is_deleted = false'];
-    if (params.clinicId) filters.push(`clinic_id = '${params.clinicId}'`);
-    if (params.doctorId) filters.push(`doctor_id = '${params.doctorId}'`);
-
-    const filterStr = filters.join(' AND ');
-
     // Parallel queries
     const [
       totalPatients,
@@ -95,7 +88,7 @@ export class DashboardService {
     let query = db
       .from('appointments')
       .select(`
-        id, appointment_time, appointment_type, status, reason,
+        id, appointment_time, type as appointment_type, status, reason,
         patient:patients(id, first_name, last_name, phone, uhid),
         doctor:users(id, first_name, last_name),
         clinic:clinics(id, name)
@@ -126,7 +119,7 @@ export class DashboardService {
         id, consultation_date, status, chief_complaint,
         patient:patients(id, first_name, last_name, uhid),
         doctor:users(id, first_name, last_name),
-        diagnoses:diagnoses(diagnosis_name, is_primary)
+        diagnoses:diagnoses(name as diagnosis_name, is_primary)
       `)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })

@@ -268,7 +268,10 @@ export class BillingService {
         total: item.unit_price * (item.quantity || 1),
         sort_order: item.sort_order ?? i,
       }));
-      await getDb().from('invoice_items').insert(itemRecords as any);
+      const { error: itemError } = await getDb().from('invoice_items').insert(itemRecords as any);
+      if (itemError) {
+        console.error('[billing-service] createInvoice items FAILED:', itemError.message || JSON.stringify(itemError));
+      }
     }
 
     return this.invoiceRepo.findByIdWithRelations(invoice.id);
@@ -281,18 +284,27 @@ export class BillingService {
   // --- Payments ---
 
   async recordPayment(data: PaymentCreate & { createdBy?: string }): Promise<Payment | null> {
-    const payment = await this.paymentRepo.create({
-      ...data,
+    const db = getDb();
+    const { error } = await db.from('payments').insert({
+      invoice_id: data.invoice_id,
+      patient_id: data.patient_id,
+      amount: data.amount,
+      method: data.payment_method,
+      reference: data.reference_number || null,
       status: data.status || 'COMPLETED',
-      created_by: data.createdBy,
-    } as Partial<Payment>);
+      created_by: data.createdBy || null,
+      payment_date: new Date().toISOString(),
+    });
 
-    if (!payment) return null;
+    if (error) {
+      console.error('[billing-service] recordPayment FAILED:', error.message || JSON.stringify(error));
+      return null;
+    }
 
     // Update invoice paid_amount and status
     await this.syncInvoiceStatus(data.invoice_id);
 
-    return payment;
+    return { ...data, id: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), is_deleted: false } as Payment;
   }
 
   async getInvoicePayments(invoiceId: string): Promise<Payment[]> {
@@ -317,20 +329,28 @@ export class BillingService {
     if (!existing) return null;
 
     // Create refund record
-    const refund = await this.paymentRepo.create({
+    const refundData = {
       invoice_id: existing.invoice_id,
       patient_id: existing.patient_id,
       amount: -existing.amount,
-      payment_method: existing.payment_method,
-      status: 'REFUNDED',
-      reference_number: `REF-${existing.reference_number || ''}`,
+      method: existing.method,
+      reference: `REF-${existing.reference || ''}`,
+      status: 'REFUNDED' as const,
       notes: reason || 'Refund',
-    } as Partial<Payment>);
+      payment_date: new Date().toISOString(),
+    };
+
+    const { data: refund, error: refundError } = await getDb().from('payments').insert(refundData).select().single();
+
+    if (refundError) {
+      console.error('[billing-service] refundPayment insert FAILED:', refundError.message || JSON.stringify(refundError));
+      return null;
+    }
 
     // Sync invoice
     await this.syncInvoiceStatus(existing.invoice_id);
 
-    return refund;
+    return refund as unknown as Payment;
   }
 
   private async syncInvoiceStatus(invoiceId: string): Promise<void> {
@@ -359,6 +379,7 @@ export class BillingService {
 
     await this.invoiceRepo.update(invoiceId, {
       paid_amount: totalPaid,
+      balance: invoice.grand_total - totalPaid,
       status,
     } as Partial<Invoice>);
   }
@@ -366,9 +387,19 @@ export class BillingService {
   async updateInvoice(id: string, data: { status?: string; paid_amount?: number; payment_method?: string; notes?: string }): Promise<boolean> {
     const updatePayload: Record<string, any> = {};
     if (data.status) updatePayload.status = data.status;
-    if (data.paid_amount !== undefined) updatePayload.paid_amount = data.paid_amount;
-    if (data.payment_method !== undefined) updatePayload.payment_method = data.payment_method;
     if (data.notes !== undefined) updatePayload.notes = data.notes;
+
+    if (data.paid_amount !== undefined) {
+      // Recalculate balance from grand_total
+      const { data: invoice } = await getDb()
+        .from('invoices')
+        .select('grand_total')
+        .eq('id', id)
+        .single();
+      const grandTotal = invoice?.grand_total || 0;
+      updatePayload.paid_amount = data.paid_amount;
+      updatePayload.balance = grandTotal - data.paid_amount;
+    }
 
     const { error } = await getDb()
       .from('invoices')

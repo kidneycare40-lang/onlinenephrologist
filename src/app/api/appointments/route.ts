@@ -83,7 +83,8 @@ export async function POST(request: NextRequest) {
     }
 
     const appointment = await appointmentService.create(body, user!.userId);
-    withAudit('CREATE', 'appointment', user!.userId, appointment?.id, undefined, {
+    if (!appointment) return apiError('Failed to create appointment', 500);
+    withAudit('CREATE', 'appointment', user!.userId, appointment.id, undefined, {
       patient_id: body.patient_id, doctor_id: body.doctor_id, date: body.appointment_date, time: body.appointment_time
     });
     return NextResponse.json(appointment, { status: 201 });
@@ -116,6 +117,7 @@ export async function PUT(request: NextRequest) {
       if (cancelPerm) return cancelPerm;
 
       const appointment = await appointmentService.cancel(id);
+      if (!appointment) return apiError('Appointment not found', 404);
       withAudit('UPDATE', 'appointment', user!.userId, id, undefined, { status: 'CANCELLED' });
       return NextResponse.json(appointment);
     }
@@ -125,16 +127,19 @@ export async function PUT(request: NextRequest) {
       if (reschedulePerm) return reschedulePerm;
 
       const appointment = await appointmentService.reschedule(id, updateData.newDate, updateData.newTime);
+      if (!appointment) return apiError('Appointment not found', 404);
       withAudit('UPDATE', 'appointment', user!.userId, id, undefined, { rescheduled: true, date: updateData.newDate, time: updateData.newTime });
       return NextResponse.json(appointment);
     }
 
     if (action === 'checkin') {
       const appointment = await appointmentService.updateStatus(id, 'CHECKED_IN');
+      if (!appointment) return apiError('Appointment not found', 404);
       return NextResponse.json(appointment);
     }
 
     const appointment = await appointmentService.updateStatus(id, updateData.status || 'SCHEDULED');
+    if (!appointment) return apiError('Appointment not found', 404);
     withAudit('UPDATE', 'appointment', user!.userId, id, undefined, { status: updateData.status });
     return NextResponse.json(appointment);
   } catch (error: any) {

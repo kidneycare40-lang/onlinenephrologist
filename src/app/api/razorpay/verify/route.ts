@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('booking_id', bookingId)
+      .eq('razorpay_order_id', razorpayOrderId)
       .select()
       .single();
 

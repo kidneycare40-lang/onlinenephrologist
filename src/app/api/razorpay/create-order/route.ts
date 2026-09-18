@@ -115,13 +115,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Store order record — check for existing record first, then update or insert
-    const { data: existingRecord } = await db
-      .from('booking_payments')
-      .select('id, payment_status')
-      .eq('booking_id', bookingId)
-      .limit(1);
-
+    // Store order record — use upsert to avoid race condition
     const paymentRow = {
       booking_id: bookingId,
       patient_name: patientName,
@@ -143,8 +137,18 @@ export async function POST(request: NextRequest) {
       clinic_id: clinicId || null,
     };
 
+    // Check if record already exists — only update payment status if not already captured
+    const { data: existingRecord } = await db
+      .from('booking_payments')
+      .select('id, payment_status')
+      .eq('booking_id', bookingId)
+      .limit(1);
+
     if (existingRecord && existingRecord.length > 0) {
-      await db.from('booking_payments').update(paymentRow).eq('id', existingRecord[0].id);
+      // Don't overwrite CAPTURED payments with a new order
+      if (existingRecord[0].payment_status !== 'CAPTURED') {
+        await db.from('booking_payments').update(paymentRow).eq('id', existingRecord[0].id);
+      }
     } else {
       const { error: insertError } = await db.from('booking_payments').insert(paymentRow);
       if (insertError) {
