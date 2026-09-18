@@ -54,7 +54,18 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     if (existing && existing.length > 0 && existing[0].payment_status === 'CAPTURED') {
-      return NextResponse.json({ success: true, alreadyProcessed: true });
+      // Already processed — but still try notifications if they haven't been sent
+      const { data: notifCheck } = await db
+        .from('notification_log')
+        .select('id')
+        .eq('booking_id', bookingId)
+        .limit(1);
+      if (!notifCheck || notifCheck.length === 0) {
+        console.log(`[verify] Already processed but no notifications found for ${bookingId} — retrying notifications`);
+        // Fall through to notification logic below
+      } else {
+        return NextResponse.json({ success: true, alreadyProcessed: true });
+      }
     }
 
     // Try to update existing record
@@ -321,6 +332,7 @@ export async function POST(request: NextRequest) {
     // Auto-generate invoice + payment record in EMR billing
     // Fetch full booking data — paymentData may have null phone from Razorpay order notes fallback
     let invBooking: any = null;
+    let invoiceNumberForNotif: string | undefined;
     try {
       const { data: ib } = await db
         .from('bookings')
@@ -348,18 +360,81 @@ export async function POST(request: NextRequest) {
       if (!invoiceId) {
         console.error(`[verify] Auto-invoice returned null for booking ${bookingId} — check [auto-invoice] logs above`);
       }
+
+      // Fetch invoice number for notifications
+      if (invoiceId) {
+        try {
+          const { data: inv } = await db.from('invoices').select('invoice_number').eq('id', invoiceId).single();
+          if (inv) invoiceNumberForNotif = inv.invoice_number;
+        } catch {}
+      }
     } catch (invErr) {
       console.error(`[verify] Auto-invoice EXCEPTION | booking=${bookingId} | error=${invErr instanceof Error ? invErr.message : String(invErr)}`);
     }
 
     // Send notifications (idempotent — deduplication via notification_log)
     try {
-      const { data: fullBooking } = await db
-        .from('bookings')
-        .select('*')
-        .eq('booking_id', bookingId)
-        .limit(1)
-        .single();
+      let fullBooking: any = null;
+      try {
+        const result = await db
+          .from('bookings')
+          .select('*')
+          .eq('booking_id', bookingId)
+          .limit(1)
+          .single();
+        fullBooking = result.data;
+      } catch {}
+
+      // Fallback: read from booking_payments table
+      if (!fullBooking && paymentData) {
+        try {
+          const { data: payRow } = await db
+            .from('booking_payments')
+            .select('*')
+            .eq('booking_id', bookingId)
+            .limit(1)
+            .single();
+          if (payRow) {
+            fullBooking = {
+              booking_id: bookingId,
+              patient_name: payRow.patient_name || 'Patient',
+              first_name: (payRow.patient_name || 'Patient').split(' ')[0],
+              last_name: (payRow.patient_name || '').split(' ').slice(1).join(' ') || '',
+              phone: payRow.patient_phone || '',
+              patient_phone: payRow.patient_phone || '',
+              email: payRow.patient_email || null,
+              patient_email: payRow.patient_email || null,
+              consultation_type: payRow.consultation_type || 'online',
+              clinic_id: payRow.clinic_id || payRow.consultation_type || 'online',
+              consultation_fee: payRow.amount || 500,
+              consultation_fee_currency: payRow.currency || 'INR',
+              booking_date: payRow.booking_date || '',
+              booking_time: payRow.booking_time || '',
+              age: payRow.age || '',
+              gender: payRow.gender || '',
+              reason: payRow.reason || '',
+            };
+          }
+        } catch {}
+      }
+
+      // Last fallback to paymentData if booking_payments is also missing
+      if (!fullBooking && paymentData) {
+        fullBooking = {
+          booking_id: bookingId,
+          patient_name: paymentData.patient_name || 'Patient',
+          first_name: paymentData.patient_name?.split(' ')[0] || 'Patient',
+          last_name: paymentData.patient_name?.split(' ').slice(1).join(' ') || '',
+          phone: paymentData.patient_phone || '',
+          patient_phone: paymentData.patient_phone || '',
+          email: paymentData.patient_email || null,
+          patient_email: paymentData.patient_email || null,
+          consultation_type: paymentData.consultation_type || 'online',
+          clinic_id: paymentData.clinic_id || 'online',
+          consultation_fee: paymentData.amount || 500,
+          consultation_fee_currency: paymentData.currency || 'INR',
+        };
+      }
 
       if (fullBooking) {
         let bookedByPatientName: string | undefined;
@@ -400,6 +475,8 @@ export async function POST(request: NextRequest) {
           doctorName: fullBooking.doctor_name || undefined,
           reportsUploaded: !!(fullBooking.report_files && (Array.isArray(fullBooking.report_files) ? fullBooking.report_files.length : true)),
           ultrasoundUploaded: !!fullBooking.ultrasound_file,
+          invoiceNumber: invoiceNumberForNotif,
+          emrBillingUrl: 'https://www.onlinenephrologist.com/emr/billing',
         });
       }
     } catch (notifyErr) {

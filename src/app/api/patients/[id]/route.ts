@@ -125,7 +125,7 @@ async function handleTimeline(db: ReturnType<typeof getDb>, patientId: string) {
     db
       .from('invoices')
       .select(`
-        id, invoice_number, invoice_date, total_amount, paid_amount, status, notes,
+        id, invoice_number, invoice_date, grand_total, paid_amount, status, notes,
         doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
         clinic:clinics!invoices_clinic_id_fkey(id, name),
         items:invoice_items(id, item_name, quantity, unit_price, total_price)
@@ -310,11 +310,11 @@ async function handleTimeline(db: ReturnType<typeof getDb>, patientId: string) {
       id: inv.id,
       type: 'invoice',
       date: inv.invoice_date,
-      title: `${inv.invoice_number} - ₹${inv.total_amount}`,
+      title: `${inv.invoice_number} - ₹${inv.grand_total}`,
       description: inv.notes || null,
       details: {
         invoice_number: inv.invoice_number,
-        total_amount: inv.total_amount,
+        grand_total: inv.grand_total,
         paid_amount: inv.paid_amount,
         status: inv.status,
         items: items.map((it: any) => ({

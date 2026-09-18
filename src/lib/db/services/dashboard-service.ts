@@ -55,7 +55,7 @@ export class DashboardService {
       // Monthly revenue
       db.from('payments').select('amount').eq('is_deleted', false).eq('status', 'COMPLETED').gte('payment_date', startOfMonth).lte('payment_date', endOfMonth),
       // Pending dues
-      db.from('invoices').select('total_amount, paid_amount').eq('is_deleted', false).in('status', ['PENDING', 'OVERDUE', 'PARTIAL']),
+      db.from('invoices').select('grand_total, paid_amount, balance').eq('is_deleted', false).in('status', ['PENDING', 'OVERDUE', 'PARTIAL']),
       // Recent patients
       db.from('patients').select('id, first_name, last_name, uhid, phone, last_visit_date, total_visits').eq('is_deleted', false).order('created_at', { ascending: false }).limit(5),
       // Appointments by status today
@@ -63,7 +63,7 @@ export class DashboardService {
     ]);
 
     const totalRevenue = (monthlyRevenue.data || []).reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-    const pendingAmount = (pendingDues.data || []).reduce((sum: number, inv: any) => sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)), 0);
+    const pendingAmount = (pendingDues.data || []).reduce((sum: number, inv: any) => sum + ((inv.grand_total || 0) - (inv.paid_amount || 0)), 0);
 
     // Group appointments by status
     const statusCounts: Record<string, number> = {};

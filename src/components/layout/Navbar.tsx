@@ -13,6 +13,7 @@ const navItems = [
     label: 'Services',
     children: [
       { label: 'Kidney Conditions', href: '/conditions', desc: 'CKD, Dialysis, Transplant & more' },
+      { label: 'Diet Guides', href: '/diet/ckd', desc: 'CKD, Dialysis, Transplant & Stone diets' },
       { label: 'Kidney Tests', href: '/tests-for-kidney-disease', desc: 'eGFR, Creatinine, Urine tests' },
       { label: 'Medical Tourism', href: '/medical-tourism', desc: 'International patient care' },
       { label: 'International Patients', href: '/international-patients', desc: 'Video consultation worldwide' },

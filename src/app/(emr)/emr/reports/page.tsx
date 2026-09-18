@@ -95,11 +95,11 @@ export default function ReportsPage() {
     const byService: Record<string, number> = {};
     invoices.forEach((inv) => {
       inv.items?.forEach((item) => {
-        const desc = item.description || item.item_name || '';
+        const desc = item.description || '';
         const key = desc.includes('Online') ? 'Online Consultation' :
                     desc.includes('Consultation') ? 'In-Clinic Consultation' :
                     desc;
-        if (key) byService[key] = (byService[key] || 0) + (item.total_price || item.unit_price || 0);
+        if (key) byService[key] = (byService[key] || 0) + (item.total || item.amount || item.rate || 0);
       });
     });
     const revenueByService = Object.entries(byService).map(([name, value], i) => ({
@@ -139,7 +139,7 @@ export default function ReportsPage() {
     const thisYear = invoices.filter((inv) => new Date(inv.invoice_date).getFullYear() === currentYear);
 
     const totalRevenue = invoices.reduce((s, i) => s + (i.paid_amount || 0), 0);
-    const totalPending = invoices.reduce((s, i) => s + ((i.total_amount || 0) - (i.paid_amount || 0)), 0);
+    const totalPending = invoices.reduce((s, i) => s + ((i.grand_total || 0) - (i.paid_amount || 0)), 0);
     const totalItems = invoices.reduce((s, i) => s + (i.items?.length || 0), 0);
 
     return {
@@ -236,8 +236,8 @@ export default function ReportsPage() {
       inv.invoice_number,
       inv.patient ? `${inv.patient.first_name} ${inv.patient.last_name}` : '',
       clinicLabels[inv.clinic_id] || inv.clinic_id,
-      inv.invoice_date, inv.total_amount, inv.paid_amount,
-      (inv.total_amount || 0) - (inv.paid_amount || 0), inv.status,
+      inv.invoice_date, inv.grand_total, inv.paid_amount,
+      (inv.grand_total || 0) - (inv.paid_amount || 0), inv.status,
     ]);
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });

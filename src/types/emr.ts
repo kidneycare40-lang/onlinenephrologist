@@ -276,7 +276,7 @@ export interface PatientSummary {
 
 export type InvoiceStatus = 'PAID' | 'PENDING' | 'PARTIAL' | 'CANCELLED';
 
-export type PaymentMethod = 'CASH' | 'UPI' | 'CARD' | 'BANK_TRANSFER' | 'CHEQUE' | 'ONLINE' | 'PAYPAL';
+export type PaymentMethod = 'CASH' | 'UPI' | 'CARD' | 'BANK_TRANSFER' | 'CHEQUE' | 'ONLINE' | 'PAYPAL' | 'RAZORPAY';
 
 export type VisitType = 'NEW' | 'FOLLOW_UP';
 

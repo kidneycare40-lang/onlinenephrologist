@@ -236,6 +236,10 @@ export interface TeamBookingEmail {
   localTimeDisplay?: string;
   reportsUploaded?: boolean;
   ultrasoundUploaded?: boolean;
+  doctorWaMeUrls?: { phone: string; label: string; url: string }[];
+  patientWaMeUrl?: string;
+  invoiceNumber?: string;
+  emrBillingUrl?: string;
 }
 
 export async function sendTeamBookingEmail(
@@ -374,6 +378,12 @@ export async function sendTeamBookingEmail(
                   <td style="padding:10px 16px;color:#0f172a;font-size:13px;font-family:monospace;border-bottom:1px solid #e2e8f0;">${data.paymentId}</td>
                 </tr>
                 ` : ''}
+                ${data.invoiceNumber ? `
+                <tr>
+                  <td style="padding:10px 16px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Invoice Number</td>
+                  <td style="padding:10px 16px;color:#0f172a;font-size:13px;font-weight:700;font-family:monospace;border-bottom:1px solid #e2e8f0;">${data.invoiceNumber}</td>
+                </tr>
+                ` : ''}
                 <tr${data.paymentId ? '' : ' style="background:#f8fafc;"'}>
                   <td style="padding:10px 16px;color:#64748b;font-size:13px;">Reason</td>
                   <td style="padding:10px 16px;color:#0f172a;font-size:13px;">${data.reason || 'Not provided'}</td>
@@ -395,6 +405,35 @@ export async function sendTeamBookingEmail(
                 </tr>
               </table>
             </div>
+
+            ${data.doctorWaMeUrls && data.doctorWaMeUrls.length > 0 || data.patientWaMeUrl ? `
+            <!-- One-Click WhatsApp Buttons -->
+            <div style="padding:0 40px 24px;">
+              <h3 style="color:#0A75BB;font-size:14px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.5px;">Quick Actions</h3>
+              <p style="color:#475569;font-size:13px;margin:0 0 12px;">Click below to send booking details via WhatsApp:</p>
+              ${data.doctorWaMeUrls && data.doctorWaMeUrls.length > 0 ? data.doctorWaMeUrls.map(d => `
+              <a href="${d.url}" target="_blank" style="display:inline-block;background:#25D366;color:#fff;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;margin:0 8px 8px 0;">
+                📱 Send to ${d.label}
+              </a>
+              `).join('') : ''}
+              ${data.patientWaMeUrl ? `
+              <a href="${data.patientWaMeUrl}" target="_blank" style="display:inline-block;background:#25D366;color:#fff;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;margin:0 8px 8px 0;">
+                📱 Send to Patient
+              </a>
+              ` : ''}
+              <p style="color:#94a3b8;font-size:11px;margin:8px 0 0;">Opens WhatsApp with pre-filled booking details. Just tap Send.</p>
+            </div>
+            ` : ''}
+
+            ${data.invoiceNumber ? `
+            <!-- EMR Billing Link -->
+            <div style="padding:0 40px 24px;">
+              <a href="${data.emrBillingUrl || 'https://www.onlinenephrologist.com/emr/billing'}" target="_blank" style="display:inline-block;background:#0A75BB;color:#fff;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;">
+                📋 Open EMR & Billing
+              </a>
+              <p style="color:#94a3b8;font-size:11px;margin:8px 0 0;">Invoice #${data.invoiceNumber} — View patient record, create/edit bills, and manage payments.</p>
+            </div>
+            ` : ''}
 
             <!-- Important Notes -->
             <div style="padding:0 40px 28px;">

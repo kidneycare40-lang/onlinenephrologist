@@ -33,6 +33,7 @@ const navLinks = [
   { label: 'Billing', href: '/emr/billing', icon: Receipt },
   { label: 'Kidney Charts', href: '/emr/kidney-charts', icon: TrendingUp },
   { label: 'Reports', href: '/emr/reports', icon: TrendingUp },
+  { label: 'Admin', href: '/emr/admin', icon: Settings, adminOnly: true },
   { label: 'Settings', href: '/emr/settings', icon: Settings },
 ];
 
@@ -388,7 +389,7 @@ export default function TopNav() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-0.5 ml-4">
-            {navLinks.map((link) => {
+            {navLinks.filter(link => !link.adminOnly || user?.role === 'super_admin').map((link) => {
               const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
               return (
                 <Link

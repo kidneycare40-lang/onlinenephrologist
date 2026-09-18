@@ -33,12 +33,13 @@ function buildDoctorWaMeUrl(data: BookingNotificationContext, phone: string): st
     `Amount: ${amountLabel}`,
     `Payment: CONFIRMED`,
     data.paymentId ? `Payment ID: ${data.paymentId}` : '',
+    data.invoiceNumber ? `Invoice: ${data.invoiceNumber}` : '',
     data.reason ? `Reason: ${data.reason}` : '',
     data.reportsUploaded ? `Reports: Uploaded` : '',
     data.ultrasoundUploaded ? `Ultrasound: Uploaded` : '',
-    ``,
-    `View all details in EMR:`,
-    `https://www.onlinenephrologist.com/emr/billing`,
+    '',
+    `View EMR & Billing:`,
+    data.emrBillingUrl || `https://www.onlinenephrologist.com/emr/billing`,
   ].filter(Boolean).join('\n');
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
@@ -60,9 +61,10 @@ function buildPatientWaMeUrl(data: BookingNotificationContext, phone: string): s
     `Date: ${data.date}`,
     `Time: ${data.time} IST`,
     `Amount Paid: ${amountLabel}`,
-    ``,
+    '',
+    data.invoiceNumber ? `Invoice: ${data.invoiceNumber}` : '',
     `View your booking:`,
-    `https://www.onlinenephrologist.com/emr/billing`,
+    data.emrBillingUrl || `https://www.onlinenephrologist.com/emr/billing`,
     ``,
     `For queries, reply to this message.`,
   ].filter(Boolean).join('\n');
@@ -169,6 +171,8 @@ export interface BookingNotificationContext {
   clinicCity?: string;
   reportsUploaded?: boolean;
   ultrasoundUploaded?: boolean;
+  invoiceNumber?: string;
+  emrBillingUrl?: string;
 }
 
 /**
@@ -181,6 +185,10 @@ export async function sendBookingNotifications(
   const result = { teamWhatsApp: false, teamEmail: false, patientWhatsApp: false, patientEmail: false };
 
   const cloudConfigured = !!(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID);
+
+  // Format fee with currency symbol for emails
+  const feeCurrency = ctx.feeCurrency || 'INR';
+  const formattedFee = feeCurrency === 'USD' ? `$${ctx.fee}` : `₹${ctx.fee}`;
 
   // 1. Team WhatsApp — send to ALL doctor phones via Cloud API + wa.me fallback
   {
@@ -223,9 +231,28 @@ export async function sendBookingNotifications(
     }
   }
 
-  // 2. Team email
+  // 2. Team email (with wa.me buttons)
   if (await claimNotification(ctx.bookingId, 'team_email', 'doctors')) {
     try {
+      // Build wa.me URLs for each doctor phone
+      const allDoctorPhonesForEmail = new Set<string>();
+      const primaryPhoneForEmail = process.env.WHATSAPP_DOCTOR_PHONE_NUMBER;
+      if (primaryPhoneForEmail) allDoctorPhonesForEmail.add(primaryPhoneForEmail);
+      for (const p of DOCTOR_PHONES) allDoctorPhonesForEmail.add(p);
+
+      const doctorWaMeUrls = Array.from(allDoctorPhonesForEmail).map(phone => {
+        const cleanPhone = phone.replace(/\D/g, '');
+        return {
+          phone: cleanPhone,
+          label: cleanPhone === '919818235613' ? 'KCC Team' : 'Dr. Rajesh Goel',
+          url: buildDoctorWaMeUrl(ctx, cleanPhone),
+        };
+      });
+
+      // Build patient wa.me URL
+      const cleanPatientPhone = ctx.patientPhone.replace(/\D/g, '');
+      const patientWaMeUrl = buildPatientWaMeUrl(ctx, cleanPatientPhone);
+
       await sendTeamBookingEmail({
         bookingId: ctx.bookingId,
         patientName: ctx.patientName,
@@ -234,7 +261,7 @@ export async function sendBookingNotifications(
         consultationType: ctx.consultationType,
         date: ctx.date,
         time: ctx.time,
-        fee: ctx.fee,
+        fee: formattedFee,
         reason: ctx.reason,
         paymentId: ctx.paymentId,
         relationship: ctx.relationship,
@@ -247,6 +274,10 @@ export async function sendBookingNotifications(
         localTimeDisplay: ctx.localTimeDisplay,
         reportsUploaded: ctx.reportsUploaded,
         ultrasoundUploaded: ctx.ultrasoundUploaded,
+        doctorWaMeUrls,
+        patientWaMeUrl,
+        invoiceNumber: ctx.invoiceNumber,
+        emrBillingUrl: ctx.emrBillingUrl,
       });
       await updateNotificationStatus(ctx.bookingId, 'team_email', 'doctors', 'sent');
       result.teamEmail = true;
@@ -299,7 +330,7 @@ export async function sendBookingNotifications(
         consultationType: ctx.consultationType,
         date: ctx.date,
         time: ctx.time,
-        fee: ctx.fee,
+        fee: formattedFee,
         paymentId: ctx.paymentId,
         relationship: ctx.relationship,
         bookedByPatientName: ctx.bookedByPatientName,

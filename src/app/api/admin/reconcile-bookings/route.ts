@@ -36,9 +36,64 @@ async function runReconcile(): Promise<NextResponse> {
   try {
     const db = getDb();
 
-    // Find bookings that need fixing:
-    // 1. PAID bookings without appointments
-    // 2. Bookings where booking_payments says CAPTURED but bookings table still says unpaid
+    // ─── Phase 1: Create missing `bookings` rows for CAPTURED booking_payments ───
+    let bookingsCreated = 0;
+    let bookingsSkipped = 0;
+    let bookingCreateErrors: string[] = [];
+
+    const allCapturedPayments = await db
+      .from('booking_payments')
+      .select('id, booking_id, patient_name, patient_phone, patient_email, patient_country, amount, currency, razorpay_order_id, razorpay_payment_id, payment_status, consultation_type, created_at')
+      .eq('payment_status', 'CAPTURED')
+      .order('created_at', { ascending: true });
+
+    if (!allCapturedPayments.error && allCapturedPayments.data) {
+      for (const bp of allCapturedPayments.data as any[]) {
+        const { data: existingBk } = await db
+          .from('bookings')
+          .select('booking_id')
+          .eq('booking_id', bp.booking_id)
+          .limit(1);
+        if (existingBk && existingBk.length > 0) {
+          bookingsSkipped++;
+          continue;
+        }
+
+        const nameParts = (bp.patient_name || 'Patient').trim().split(/\s+/);
+        const firstName = nameParts[0] || 'Patient';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const { error: insertErr } = await db.from('bookings').insert({
+          booking_id: bp.booking_id,
+          first_name: firstName,
+          last_name: lastName,
+          phone: bp.patient_phone || '',
+          email: bp.patient_email || '',
+          country: bp.patient_country || '',
+          consultation_type: bp.consultation_type || 'online',
+          clinic_id: bp.consultation_type === 'online' ? 'online' : 'kcc-faridabad',
+          consultation_fee: bp.amount || 500,
+          consultation_fee_currency: bp.currency || 'INR',
+          payment_status: 'paid',
+          status: 'confirmed',
+          payment_id: bp.razorpay_payment_id || '',
+          razorpay_order_id: bp.razorpay_order_id || '',
+          booked_by_patient_account_id: null,
+          actual_patient_id: null,
+          created_at: bp.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+        if (insertErr) {
+          bookingCreateErrors.push(`Failed to create bookings row for ${bp.booking_id}: ${insertErr.message}`);
+        } else {
+          bookingsCreated++;
+        }
+      }
+    }
+
+    // ─── Phase 2: Create missing appointments for PAID bookings ───
+    // Re-query all bookings after Phase 1 may have created new ones
     const fields = 'booking_id, actual_patient_id, patient_account_id, phone, first_name, last_name, age, gender, consultation_type, clinic_id, booking_date, booking_time, reason, doctor_name, consultation_fee, consultation_fee_currency, status, payment_status, payment_id';
 
     const [paidResult, allBookingsResult] = await Promise.all([
@@ -60,7 +115,6 @@ async function runReconcile(): Promise<NextResponse> {
 
     let capturedPayments: any[] = [];
     if (unpaidBookingIds.length > 0) {
-      // Query booking_payments for CAPTURED records matching unpaid bookings
       const { data: bpData } = await db
         .from('booking_payments')
         .select('booking_id, payment_status')
@@ -234,7 +288,7 @@ async function runReconcile(): Promise<NextResponse> {
       }
     }
 
-    // ─── Phase 2: Create missing invoices for ALL CAPTURED bookings ───
+    // ─── Phase 3: Create missing invoices for ALL CAPTURED bookings ───
     let invoicesCreated = 0;
     let invoicesSkipped = 0;
     let invoiceErrors: string[] = [];
@@ -277,7 +331,10 @@ async function runReconcile(): Promise<NextResponse> {
 
     return NextResponse.json({
       success: true,
-      message: `Reconciliation complete: ${results.createdAppointments} appointments created, ${results.alreadyHaveAppointments} already existed, ${results.fixedPaymentStatus} bookings payment fixed, ${invoicesCreated} invoices created, ${invoicesSkipped} invoices skipped (already exist), ${results.skippedDueToMissingData} skipped`,
+      message: `Reconcile: ${bookingsCreated} bookings rows created (${bookingsSkipped} existed), ${results.createdAppointments} appointments created (${results.alreadyHaveAppointments} existed), ${results.fixedPaymentStatus} payment status fixed, ${invoicesCreated} invoices created (${invoicesSkipped} existed), ${results.skippedDueToMissingData} skipped`,
+      bookingsCreated,
+      bookingsSkipped,
+      bookingCreateErrors,
       ...results,
       invoicesCreated,
       invoicesSkipped,

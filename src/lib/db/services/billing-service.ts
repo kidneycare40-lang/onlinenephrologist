@@ -47,7 +47,7 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
       .select(`
         *,
         doctor:users(id, first_name, last_name),
-        items:invoice_items(item_name, quantity, unit_price, total_price),
+        items:invoice_items(description, quantity, rate, amount, total, gst_rate, gst_amount),
         payments:payments(amount, payment_method, payment_date)
       `)
       .eq('patient_id', patientId)
@@ -66,7 +66,7 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
         doctor:users(id, first_name, last_name),
-        items:invoice_items(item_name, quantity, unit_price, total_price),
+        items:invoice_items(description, quantity, rate, amount, total, gst_rate, gst_amount),
         payments:payments(amount, payment_method, payment_date)
       `)
       .eq('status', status)
@@ -240,12 +240,14 @@ export class BillingService {
       clinic_id: data.clinic_id,
       consultation_id: data.consultation_id || null,
       subtotal,
-      tax_rate: data.tax_rate || 0,
-      tax_amount: taxAmount,
+      gst_rate: data.tax_rate || 0,
+      gst_amount: taxAmount,
+      total_tax: taxAmount,
+      grand_total: totalAmount,
       discount: data.discount || 0,
-      total_amount: totalAmount,
       paid_amount: data.paid_amount || 0,
       payment_method: data.payment_method || null,
+      balance: totalAmount - (data.paid_amount || 0),
       status: (data.paid_amount || 0) >= totalAmount ? 'PAID' : (data.paid_amount || 0) > 0 ? 'PARTIAL' : (data.initial_status || 'PENDING'),
       notes: data.notes || null,
       created_by: data.createdBy,
@@ -257,8 +259,13 @@ export class BillingService {
     if (data.items.length > 0) {
       const itemRecords = data.items.map((item, i) => ({
         invoice_id: invoice.id,
-        ...item,
-        total_price: item.unit_price * (item.quantity || 1),
+        description: item.description || '',
+        quantity: item.quantity || 1,
+        rate: item.unit_price,
+        amount: item.unit_price * (item.quantity || 1),
+        gst_rate: item.gst_rate || 0,
+        gst_amount: item.gst_amount || 0,
+        total: item.unit_price * (item.quantity || 1),
         sort_order: item.sort_order ?? i,
       }));
       await getDb().from('invoice_items').insert(itemRecords as any);
@@ -331,14 +338,14 @@ export class BillingService {
 
     const { data: invoice } = await getDb()
       .from('invoices')
-      .select('total_amount, invoice_date')
+      .select('grand_total, invoice_date, paid_amount')
       .eq('id', invoiceId)
       .single();
 
     if (!invoice) return;
 
     let status = 'PENDING';
-    if (totalPaid >= invoice.total_amount) {
+    if (totalPaid >= invoice.grand_total) {
       status = 'PAID';
     } else if (totalPaid > 0) {
       status = 'PARTIAL';

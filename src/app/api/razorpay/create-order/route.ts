@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (rlError) return rlError;
 
     const body = await request.json();
-    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType: ct, clinicId } = body;
+    const { bookingId, patientName, patientPhone, patientEmail, patientCountry, consultationType: ct, clinicId, siteId, date, time, age, gender, reason } = body;
     consultationType = ct;
 
     if (!bookingId || !patientName) {
@@ -101,8 +101,17 @@ export async function POST(request: NextRequest) {
       notes: {
         booking_id: bookingId,
         patient_name: patientName,
+        patient_phone: patientPhone || '',
+        patient_email: patientEmail || '',
         consultation_type: consultationType || '',
         patient_country: patientCountry || '',
+        amount: amount,
+        booking_date: date || '',
+        booking_time: time || '',
+        age: age || '',
+        gender: gender || '',
+        reason: reason || '',
+        clinic_id: clinicId || '',
       },
     });
 
@@ -125,6 +134,13 @@ export async function POST(request: NextRequest) {
       razorpay_order_id: order.id,
       payment_status: 'CREATED',
       updated_at: new Date().toISOString(),
+      site_id: siteId || 'online',
+      booking_date: date || null,
+      booking_time: time || null,
+      age: age || null,
+      gender: gender || null,
+      reason: reason || null,
+      clinic_id: clinicId || null,
     };
 
     if (existingRecord && existingRecord.length > 0) {

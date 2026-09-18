@@ -4,6 +4,52 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, CheckCircle2, X, Loader2, AlertTriangle, Globe } from 'lucide-react';
 import { getConsultationPricing } from '@/lib/pricing';
 
+function classifyRazorpayError(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes('international') && (lower.includes('card') || lower.includes('transaction') || lower.includes('not allowed'))) {
+    return 'This card is not supported. Your card appears to be issued outside India.';
+  }
+  if (lower.includes('bad_request_error')) {
+    return 'Payment request could not be processed. Please try a different payment method.';
+  }
+  if (lower.includes('card expired')) {
+    return 'Your card has expired. Please use a different card.';
+  }
+  if (lower.includes('insufficient') || lower.includes('not sufficient')) {
+    return 'Insufficient funds. Please try a different card or payment method.';
+  }
+  if (lower.includes('invalid card')) {
+    return 'Invalid card details. Please check and try again.';
+  }
+  if (lower.includes('transaction') && lower.includes('declined')) {
+    return 'Transaction was declined by your bank. Please try a different payment method.';
+  }
+  if (lower.includes('two factor') || lower.includes('3d') || lower.includes('otp')) {
+    return 'Payment failed during bank verification. Please try again and complete the OTP step.';
+  }
+  if (lower.includes('cancelled') || lower.includes('aborted')) {
+    return 'Payment was cancelled.';
+  }
+  return raw;
+}
+
+function getPaymentHelp(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes('international') && (lower.includes('card') || lower.includes('transaction') || lower.includes('not allowed'))) {
+    return 'Please try paying via UPI (Google Pay, PhonePe, Paytm) or use a domestic Indian debit/credit card. International cards are currently not accepted.';
+  }
+  if (lower.includes('insufficient') || lower.includes('not sufficient')) {
+    return 'Try a different card or use UPI/Netbanking instead.';
+  }
+  if (lower.includes('declined')) {
+    return 'Contact your bank or try a different card/UPI.';
+  }
+  if (lower.includes('expired')) {
+    return 'Use a different card that is not expired.';
+  }
+  return '';
+}
+
 interface PaymentGatewayProps {
   amount: number;
   currency: string;
@@ -14,6 +60,13 @@ interface PaymentGatewayProps {
   patientCountry?: string;
   consultationType: string;
   isInternational?: boolean;
+  siteId?: string;
+  date?: string;
+  time?: string;
+  age?: string;
+  gender?: string;
+  reason?: string;
+  clinicId?: string;
   onPaymentSuccess: (paymentData: PaymentData) => void;
   onPaymentFailed: (reason: string) => void;
   onSkipPayment: () => void;
@@ -39,12 +92,20 @@ export default function PaymentGateway({
   patientCountry,
   consultationType,
   isInternational,
+  siteId,
+  date,
+  time,
+  age,
+  gender,
+  reason,
+  clinicId,
   onPaymentSuccess,
   onPaymentFailed,
 }: PaymentGatewayProps) {
   const [processing, setProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
   const [failureReason, setFailureReason] = useState('');
+  const [failureHelp, setFailureHelp] = useState('');
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
 
   const pricing = getConsultationPricing(consultationType);
@@ -73,6 +134,13 @@ export default function PaymentGateway({
         consultationType,
         amount: displayAmount,
         currency: displayCurrency,
+        siteId: siteId || '',
+        date: date || '',
+        time: time || '',
+        age: age || '',
+        gender: gender || '',
+        reason: reason || '',
+        clinicId: clinicId || '',
       }),
     });
     const data = await res.json();
@@ -103,6 +171,7 @@ export default function PaymentGateway({
     setProcessing(true);
     setPaymentStatus('processing');
     setFailureReason('');
+    setFailureHelp('');
 
     let order;
     try {
@@ -112,6 +181,7 @@ export default function PaymentGateway({
       setPaymentStatus('failed');
       const msg = e instanceof Error ? e.message : 'Failed to create payment order';
       setFailureReason(msg);
+      setFailureHelp(getPaymentHelp(msg));
       onPaymentFailed(msg);
       return;
     }
@@ -120,6 +190,7 @@ export default function PaymentGateway({
       setProcessing(false);
       setPaymentStatus('failed');
       setFailureReason('Razorpay checkout failed to load. Please try again.');
+      setFailureHelp('Check your internet connection and try again.');
       onPaymentFailed('Razorpay not loaded');
       return;
     }
@@ -165,6 +236,7 @@ export default function PaymentGateway({
           setProcessing(false);
           setPaymentStatus('failed');
           setFailureReason('Payment cancelled by user');
+          setFailureHelp('You can try again by clicking the Pay button below.');
           onPaymentFailed('Payment cancelled by user');
         },
       },
@@ -175,8 +247,10 @@ export default function PaymentGateway({
       rzp.on('payment.failed', function (response: any) {
         setProcessing(false);
         setPaymentStatus('failed');
-        const msg = response.error?.description || 'Payment failed';
+        const rawMsg = response.error?.description || 'Payment failed';
+        const msg = classifyRazorpayError(rawMsg);
         setFailureReason(msg);
+        setFailureHelp(getPaymentHelp(rawMsg));
         onPaymentFailed(msg);
       });
       rzp.open();
@@ -244,6 +318,9 @@ export default function PaymentGateway({
               <div>
                 <p className="text-sm font-semibold text-red-700">Payment was not completed</p>
                 <p className="text-xs text-red-600 mt-0.5">{failureReason || 'Your booking has not been marked as paid.'}</p>
+                {failureHelp && (
+                  <p className="text-xs text-amber-700 mt-2 bg-amber-50 rounded-lg px-2 py-1.5 border border-amber-200">{failureHelp}</p>
+                )}
               </div>
             </div>
           )}

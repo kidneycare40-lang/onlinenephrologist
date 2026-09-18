@@ -289,23 +289,82 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send WhatsApp + email notifications (non-blocking, best-effort)
-    if (newStatus === 'CAPTURED') {
-      // Fetch booking data for invoice + WhatsApp
-      let booking: any = null;
-      try {
-        const result = await db
-          .from('bookings')
-          .select('*')
-          .eq('booking_id', bookingId)
-          .limit(1)
-          .single();
-        booking = result.data;
-      } catch {}
+      // Send WhatsApp + email notifications (non-blocking, best-effort)
+      if (newStatus === 'CAPTURED') {
+        // Fetch booking data for invoice + WhatsApp
+        let booking: any = null;
+        try {
+          const result = await db
+            .from('bookings')
+            .select('*')
+            .eq('booking_id', bookingId)
+            .limit(1)
+            .single();
+          booking = result.data;
+        } catch {}
+
+        // Fallback: read from booking_payments table (has date/time/age/gender/reason)
+        if (!booking) {
+          try {
+            const { data: payRow } = await db
+              .from('booking_payments')
+              .select('*')
+              .eq('booking_id', bookingId)
+              .limit(1)
+              .single();
+            if (payRow) {
+              booking = {
+                booking_id: bookingId,
+                patient_name: payRow.patient_name || 'Patient',
+                first_name: (payRow.patient_name || 'Patient').split(' ')[0],
+                last_name: (payRow.patient_name || '').split(' ').slice(1).join(' ') || '',
+                phone: payRow.patient_phone || '',
+                patient_phone: payRow.patient_phone || '',
+                email: payRow.patient_email || null,
+                patient_email: payRow.patient_email || null,
+                consultation_type: payRow.consultation_type || 'online',
+                clinic_id: payRow.clinic_id || payRow.consultation_type || 'online',
+                consultation_fee: payRow.amount || 500,
+                consultation_fee_currency: payRow.currency || 'INR',
+                booking_date: payRow.booking_date || '',
+                booking_time: payRow.booking_time || '',
+                age: payRow.age || '',
+                gender: payRow.gender || '',
+                reason: payRow.reason || '',
+              };
+            }
+          } catch {}
+        }
+
+        // Fallback to Razorpay order notes if both bookings and booking_payments are missing
+        if (!booking) {
+          const patientName = paymentEntity?.notes?.patient_name || orderEntity?.notes?.patient_name || 'Patient';
+          const patientPhone = paymentEntity?.notes?.patient_phone || orderEntity?.notes?.patient_phone || '';
+          booking = {
+            booking_id: bookingId,
+            patient_name: patientName,
+            first_name: patientName.split(' ')[0] || 'Patient',
+            last_name: patientName.split(' ').slice(1).join(' ') || '',
+            phone: patientPhone,
+            patient_phone: patientPhone,
+            email: paymentEntity?.notes?.patient_email || orderEntity?.notes?.patient_email || null,
+            patient_email: paymentEntity?.notes?.patient_email || orderEntity?.notes?.patient_email || null,
+            consultation_type: paymentEntity?.notes?.consultation_type || orderEntity?.notes?.consultation_type || 'online',
+            clinic_id: paymentEntity?.notes?.clinic_id || orderEntity?.notes?.clinic_id || 'online',
+            consultation_fee: paymentEntity?.notes?.amount ? Number(paymentEntity.notes.amount) : (orderEntity?.amount ? Number(orderEntity.amount) / 100 : 500),
+            consultation_fee_currency: paymentEntity?.notes?.currency || 'INR',
+            booking_date: paymentEntity?.notes?.booking_date || orderEntity?.notes?.booking_date || '',
+            booking_time: paymentEntity?.notes?.booking_time || orderEntity?.notes?.booking_time || '',
+            age: paymentEntity?.notes?.age || orderEntity?.notes?.age || '',
+            gender: paymentEntity?.notes?.gender || orderEntity?.notes?.gender || '',
+            reason: paymentEntity?.notes?.reason || orderEntity?.notes?.reason || '',
+          };
+        }
 
       // Auto-generate invoice + payment record in EMR billing
       // Fetch full booking data — booking record may have richer data than paymentData
       let invBooking: any = booking;
+      let invoiceNumberForNotif: string | undefined;
       if (!invBooking) {
         try {
           const { data: ib } = await db
@@ -334,6 +393,11 @@ export async function POST(request: NextRequest) {
         });
         if (!invoiceId) {
           console.error(`[webhook] Auto-invoice returned null for booking ${bookingId} — check [auto-invoice] logs above`);
+        } else {
+          try {
+            const { data: inv } = await db.from('invoices').select('invoice_number').eq('id', invoiceId).single();
+            if (inv) invoiceNumberForNotif = inv.invoice_number;
+          } catch {}
         }
       } catch (invErr) {
         console.error(`[webhook] Auto-invoice EXCEPTION | booking=${bookingId} | error=${invErr instanceof Error ? invErr.message : String(invErr)}`);
@@ -380,6 +444,8 @@ export async function POST(request: NextRequest) {
             doctorName: booking.doctor_name || undefined,
             reportsUploaded: !!(booking.report_files && (Array.isArray(booking.report_files) ? booking.report_files.length : true)),
             ultrasoundUploaded: !!booking.ultrasound_file,
+            invoiceNumber: invoiceNumberForNotif,
+            emrBillingUrl: 'https://www.onlinenephrologist.com/emr/billing',
           });
         } catch (notifyErr) {
           console.error('[webhook] Notification error:', notifyErr);

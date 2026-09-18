@@ -46,6 +46,7 @@ function toRow(body: any) {
     razorpay_order_id: null,
     doctor_name: body.doctorName || 'Dr Rajesh Goel',
     status: body.status || 'pending',
+    site_id: body.siteId || 'online',
   };
 }
 
@@ -88,6 +89,7 @@ function rowToBooking(row: any) {
     bookedByPatientAccountId: row.booked_by_patient_account_id || null,
     relationship: row.relationship || 'self',
     actualPatientId: row.actual_patient_id || null,
+    siteId: row.site_id || 'online',
   };
 }
 

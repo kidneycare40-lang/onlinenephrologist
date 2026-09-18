@@ -747,11 +747,14 @@ export interface Invoice extends BaseEntity, SoftDeletable {
   invoice_date: string;
   due_date: string | null;
   subtotal: number;
-  tax_rate: number;
-  tax_amount: number;
+  gst_rate: number;
+  gst_amount: number;
+  total_tax: number;
   discount: number;
-  total_amount: number;
+  grand_total: number;
   paid_amount: number;
+  balance: number;
+  payment_method: string | null;
   status: InvoiceStatus;
   notes: string | null;
   created_by: string | null;
@@ -770,23 +773,27 @@ export interface InvoiceWithRelations extends Invoice {
 export interface InvoiceItem {
   id: string;
   invoice_id: string;
-  item_name: string;
-  description: string | null;
+  description: string;
   hsn_code: string | null;
   quantity: number;
-  unit_price: number;
-  total_price: number;
+  rate: number;
+  amount: number;
+  gst_rate: number;
+  gst_amount: number;
+  total: number;
   sort_order: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export interface InvoiceItemCreate {
-  item_name: string;
-  description?: string;
+  description: string;
   hsn_code?: string;
   quantity?: number;
   unit_price: number;
+  gst_rate?: number;
+  gst_amount?: number;
+  total_price?: number;
   sort_order?: number;
 }
 

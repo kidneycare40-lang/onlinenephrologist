@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { SITE_CONFIG, DOCTOR_INFO } from '@/lib/constants';
+import { getSiteConfig, type SiteConfig } from '@/lib/site-config';
 import {
   Video, Building2, CheckCircle2, MapPin, Clock, IndianRupee, AlertTriangle,
   Phone, Calendar, User, Users, FileText, ChevronRight, ChevronLeft, Star, Info,
@@ -218,7 +219,9 @@ const COLOR_MAP: Record<string, { bg: string; border: string; selectedBg: string
 
 function BookingForm() {
   const searchParams = useSearchParams();
-  const initialType = searchParams.get('type') || 'online';
+  const siteId = searchParams.get('site') || '';
+  const siteConfig = siteId ? getSiteConfig(siteId) : null;
+  const initialType = siteConfig?.consultationType || searchParams.get('type') || 'online';
   const forceInternational = initialType === 'online_intl';
   const isEmbed = searchParams.get('embed') === '1';
 
@@ -275,13 +278,14 @@ function BookingForm() {
   }, [step]);
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: '', address: '', age: '', gender: 'Male',
-    consultationType: forceInternational ? 'online' : initialType,
-    clinicId: (initialType === 'online' || initialType === 'online_intl') ? (initialType === 'online_intl' ? 'online-intl' : 'online') : '',
+    consultationType: siteConfig?.consultationType || (forceInternational ? 'online' : initialType),
+    clinicId: siteConfig?.clinicId || ((initialType === 'online' || initialType === 'online_intl') ? (initialType === 'online_intl' ? 'online-intl' : 'online') : ''),
     date: '', time: '', reason: '', previousKidneyIssue: 'no',
     currentMedications: '', notes: '', complaints: '', medicines: '',
     currentLocation: forceInternational ? 'outside_india' as 'india' | 'outside_india' : 'india' as 'india' | 'outside_india',
     isInternational: forceInternational, country: '', countryCode: '', timezone: '', passportNumber: '',
     whatsappNumber: '', preferredLanguage: 'English', interpreterRequired: false,
+    siteId: siteConfig?.id || '',
   });
   const [reportFiles, setReportFiles] = useState<File[]>([]);
   const [ultrasoundFile, setUltrasoundFile] = useState<File | null>(null);
@@ -611,6 +615,7 @@ function BookingForm() {
       reportFiles: reportFilesData.length > 0 ? reportFilesData : undefined,
       ultrasoundFile: ultrasoundData || undefined,
       bookingMedicines: bookingMedicines.filter(m => m.name.trim()),
+      siteId: siteConfig?.id || formData.siteId || '',
     };
 
     // Save the booking to Supabase (primary storage)
@@ -1081,7 +1086,22 @@ function BookingForm() {
   }
 
   return (
-    <div className={`${isEmbed ? '' : 'min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white'} overflow-x-hidden`}>
+    <div className={`${isEmbed ? '' : 'min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white'} overflow-x-hidden`}
+      style={siteConfig ? {
+        '--site-primary': siteConfig.primaryColor,
+        '--site-secondary': siteConfig.secondaryColor,
+        '--site-accent': siteConfig.accentColor,
+      } as React.CSSProperties : undefined}
+    >
+      {siteConfig && (
+        <style dangerouslySetInnerHTML={{ __html: `
+          :root { --site-primary: ${siteConfig.primaryColor}; --site-secondary: ${siteConfig.secondaryColor}; --site-accent: ${siteConfig.accentColor}; }
+          .bg-\\[\\#0A75BB\\] { background-color: ${siteConfig.primaryColor} !important; }
+          .text-\\[\\#0A75BB\\] { color: ${siteConfig.primaryColor} !important; }
+          .border-\\[\\#0A75BB\\] { border-color: ${siteConfig.primaryColor} !important; }
+          .hover\\:bg-\\[\\#085a94\\]:hover { background-color: ${siteConfig.accentColor} !important; }
+        ` }} />
+      )}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -1121,8 +1141,8 @@ function BookingForm() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <img src="/favicon.png" alt="Online Nephrologist" className="h-9 w-9" />
-            <span className="text-lg font-bold text-[#0A75BB] hidden sm:block">Online Nephrologist</span>
+            <img src="/favicon.png" alt={siteConfig?.name || "Online Nephrologist"} className="h-9 w-9" />
+            <span className="text-lg font-bold text-[#0A75BB] hidden sm:block">{siteConfig?.name || "Online Nephrologist"}</span>
           </Link>
           <Link href="/" className="text-sm text-slate-600 hover:text-[#0A75BB] font-medium flex items-center gap-1">
             &larr; Back to Home
@@ -1132,7 +1152,7 @@ function BookingForm() {
       )}
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white">
+      <div className="bg-gradient-to-r from-[#0A75BB] to-[#085D94] text-white" style={siteConfig ? { background: `linear-gradient(to right, ${siteConfig.primaryColor}, ${siteConfig.accentColor})` } : undefined}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-10">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-3 md:gap-6">
             <Link href="/dr-rajesh-goel" className="w-16 h-20 md:w-24 md:h-32 rounded-2xl bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center shrink-0 overflow-hidden hover:border-white/60 transition-colors">
@@ -2878,6 +2898,13 @@ function BookingForm() {
               patientCountry={formData.country}
               consultationType={formData.consultationType}
               isInternational={isIntlBooking}
+              siteId={siteConfig?.id || formData.siteId}
+              date={formData.date}
+              time={formData.time}
+              age={formData.age}
+              gender={formData.gender}
+              reason={formData.reason}
+              clinicId={formData.clinicId}
               onPaymentSuccess={async (pd) => await finalizeBooking(pd)}
               onPaymentFailed={(reason) => { /* keep modal open — the gateway shows the failure reason inside; user can retry or close */ }}
               onSkipPayment={async () => await finalizeBooking(null)}

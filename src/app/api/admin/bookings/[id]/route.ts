@@ -21,7 +21,7 @@ export async function GET(
 
     const db = getDb();
 
-    // 1. Fetch the booking (may not exist for failed/incomplete payments)
+    // 1. Fetch the booking (may not exist for old-system or failed/incomplete payments)
     const { data: booking } = await db
       .from('bookings')
       .select('*')
@@ -29,14 +29,116 @@ export async function GET(
       .limit(1)
       .maybeSingle();
 
-    // If no booking found in bookings table, still return payment record + payment info
+    // 5. Fetch the Razorpay payment record for this booking (needed even if no bookings row)
+    let paymentRecord = null;
+    {
+      const { data } = await db
+        .from('booking_payments')
+        .select('id, booking_id, patient_name, patient_phone, patient_email, patient_country, amount, currency, razorpay_order_id, razorpay_payment_id, payment_status, consultation_type, created_at')
+        .eq('booking_id', bookingId)
+        .limit(1);
+      paymentRecord = data && data.length > 0 ? data[0] : null;
+    }
+
+    // If no booking found in bookings table, construct a virtual booking from payment record
     if (!booking) {
+      // Fetch notifications even if no bookings row
+      const { data: notifications } = await db
+        .from('notification_log')
+        .select('id, notification_type, recipient, status, provider_message_id, error, sent_at, created_at')
+        .eq('booking_id', bookingId)
+        .order('created_at', { ascending: true });
+
+      // Try to find EMR patient by phone from payment record
+      let emrPatient = null;
+      if (paymentRecord?.patient_phone) {
+        const cleanPhone = paymentRecord.patient_phone.replace(/\D/g, '');
+        const { data: byPhone } = await db
+          .from('patients')
+          .select('id, uhid, first_name, last_name, phone, email, date_of_birth, gender, is_active, is_chronic, is_international, country_code, created_at')
+          .or(`phone.eq.${cleanPhone},phone.eq.${paymentRecord.patient_phone}`)
+          .eq('is_deleted', false)
+          .limit(1);
+        emrPatient = byPhone && byPhone.length > 0 ? byPhone[0] : null;
+      }
+
       return NextResponse.json({
-        booking: null,
-        emrPatient: null,
+        booking: paymentRecord ? {
+          bookingId: paymentRecord.booking_id,
+          firstName: paymentRecord.patient_name || null,
+          lastName: null,
+          phone: paymentRecord.patient_phone || null,
+          email: paymentRecord.patient_email || null,
+          age: null,
+          gender: null,
+          currentLocation: null,
+          country: paymentRecord.patient_country || null,
+          timezone: null,
+          preferredLanguage: null,
+          interpreterRequired: null,
+          consultationType: paymentRecord.consultation_type || null,
+          clinicId: null,
+          bookingDate: null,
+          bookingTime: null,
+          reason: null,
+          complaints: null,
+          currentMedications: null,
+          notes: null,
+          previousKidneyIssue: null,
+          reportFiles: null,
+          ultrasoundFile: null,
+          consultationFee: paymentRecord.amount || null,
+          consultationFeeCurrency: paymentRecord.currency || 'INR',
+          paymentStatus: paymentRecord.payment_status === 'CAPTURED' ? 'CAPTURED' : 'pending',
+          paymentId: paymentRecord.razorpay_payment_id || null,
+          razorpayOrderId: paymentRecord.razorpay_order_id || null,
+          doctorName: null,
+          status: paymentRecord.payment_status === 'CAPTURED' ? 'confirmed' : 'pending',
+          relationship: null,
+          createdAt: paymentRecord.created_at || null,
+          updatedAt: null,
+          _source: 'booking_payments',
+        } : null,
+        emrPatient: emrPatient ? {
+          id: emrPatient.id,
+          uhid: emrPatient.uhid,
+          firstName: emrPatient.first_name,
+          lastName: emrPatient.last_name,
+          phone: emrPatient.phone,
+          email: emrPatient.email,
+          dateOfBirth: emrPatient.date_of_birth,
+          gender: emrPatient.gender,
+          isActive: emrPatient.is_active,
+          isChronic: emrPatient.is_chronic,
+          isInternational: emrPatient.is_international,
+          countryCode: emrPatient.country_code,
+          createdAt: emrPatient.created_at,
+        } : null,
         booker: null,
-        notifications: [],
-        paymentRecord: null,
+        notifications: (notifications || []).map((n: any) => ({
+          id: n.id,
+          type: n.notification_type,
+          recipient: n.recipient,
+          status: n.status,
+          providerMessageId: n.provider_message_id,
+          error: n.error,
+          sentAt: n.sent_at,
+          createdAt: n.created_at,
+        })),
+        paymentRecord: paymentRecord ? {
+          id: paymentRecord.id,
+          bookingId: paymentRecord.booking_id,
+          patientName: paymentRecord.patient_name,
+          patientPhone: paymentRecord.patient_phone,
+          patientCountry: paymentRecord.patient_country,
+          amount: paymentRecord.amount,
+          currency: paymentRecord.currency,
+          razorpayOrderId: paymentRecord.razorpay_order_id,
+          razorpayPaymentId: paymentRecord.razorpay_payment_id,
+          paymentStatus: paymentRecord.payment_status,
+          consultationType: paymentRecord.consultation_type,
+          createdAt: paymentRecord.created_at,
+        } : null,
       });
     }
 
@@ -71,47 +173,36 @@ export async function GET(
       .eq('booking_id', bookingId)
       .order('created_at', { ascending: true });
 
-    // 5. Fetch the Razorpay payment record for this booking
-    let paymentRecord = null;
-    {
-      const { data } = await db
-        .from('booking_payments')
-        .select('id, booking_id, patient_name, patient_phone, patient_email, patient_country, amount, currency, razorpay_order_id, razorpay_payment_id, payment_status, consultation_type, created_at')
-        .eq('booking_id', bookingId)
-        .limit(1);
-      paymentRecord = data && data.length > 0 ? data[0] : null;
-    }
-
     return NextResponse.json({
       booking: booking ? {
         bookingId: booking.booking_id,
-        firstName: booking.first_name,
-        lastName: booking.last_name,
-        phone: booking.phone,
-        email: booking.email,
-        age: booking.age,
-        gender: booking.gender,
-        currentLocation: booking.current_location,
-        country: booking.country,
-        timezone: booking.timezone,
-        preferredLanguage: booking.preferred_language,
+        firstName: booking.first_name || paymentRecord?.patient_name || null,
+        lastName: booking.last_name || null,
+        phone: booking.phone || paymentRecord?.patient_phone || null,
+        email: booking.email || paymentRecord?.patient_email || null,
+        age: booking.age || null,
+        gender: booking.gender || null,
+        currentLocation: booking.current_location || null,
+        country: booking.country || paymentRecord?.patient_country || null,
+        timezone: booking.timezone || null,
+        preferredLanguage: booking.preferred_language || null,
         interpreterRequired: booking.interpreter_required,
-        consultationType: booking.consultation_type,
-        clinicId: booking.clinic_id,
-        bookingDate: booking.booking_date,
-        bookingTime: booking.booking_time,
-        reason: booking.reason,
-        complaints: booking.complaints,
-        currentMedications: booking.current_medications,
-        notes: booking.notes,
-        previousKidneyIssue: booking.previous_kidney_issue,
-        reportFiles: booking.report_files,
-        ultrasoundFile: booking.ultrasound_file,
-        consultationFee: booking.consultation_fee,
-        consultationFeeCurrency: booking.consultation_fee_currency,
-        paymentStatus: booking.payment_status,
-        paymentId: booking.payment_id,
-        razorpayOrderId: booking.razorpay_order_id,
+        consultationType: booking.consultation_type || paymentRecord?.consultation_type || null,
+        clinicId: booking.clinic_id || null,
+        bookingDate: booking.booking_date || null,
+        bookingTime: booking.booking_time || null,
+        reason: booking.reason || null,
+        complaints: booking.complaints || null,
+        currentMedications: booking.current_medications || null,
+        notes: booking.notes || null,
+        previousKidneyIssue: booking.previous_kidney_issue || null,
+        reportFiles: booking.report_files || null,
+        ultrasoundFile: booking.ultrasound_file || null,
+        consultationFee: booking.consultation_fee || paymentRecord?.amount || null,
+        consultationFeeCurrency: booking.consultation_fee_currency || paymentRecord?.currency || 'INR',
+        paymentStatus: paymentRecord?.payment_status || booking.payment_status,
+        paymentId: paymentRecord?.razorpay_payment_id || booking.payment_id,
+        razorpayOrderId: paymentRecord?.razorpay_order_id || booking.razorpay_order_id,
         doctorName: booking.doctor_name,
         status: booking.status,
         relationship: booking.relationship,

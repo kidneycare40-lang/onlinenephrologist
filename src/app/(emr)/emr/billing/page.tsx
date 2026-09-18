@@ -46,7 +46,7 @@ function apiInvoiceToEMR(apiInv: any): EMRInvoice {
   }
   const payments = apiInv.payments || [];
 
-  const totalAmount = apiInv.total_amount || apiInv.grandTotal || 0;
+  const totalAmount = apiInv.grand_total || apiInv.total_amount || apiInv.grandTotal || 0;
   const paidAmount = apiInv.paid_amount || apiInv.paidAmount || 0;
 
   return {
@@ -389,7 +389,6 @@ export default function BillingPage() {
 
   const handleSaveInvoice = async (invoice: EMRInvoice) => {
     if (editingInvoice) {
-      // Update existing
       try {
         await billingApi.update(invoice.id, invoice).catch(() => null);
       } catch {}
@@ -397,12 +396,27 @@ export default function BillingPage() {
       setInvoices(updated);
       await saveInvoicesToStorage(updated);
     } else {
-      // Create new
       try {
         const result = await billingApi.create(invoice).catch(() => null);
         if (result?.id) {
           invoice.id = result.id;
           invoice.invoiceNumber = result.invoice_number || invoice.invoiceNumber;
+
+          // Record payment in DB if invoice has payments
+          if (invoice.payments && invoice.payments.length > 0) {
+            for (const p of invoice.payments) {
+              if (p.amount > 0) {
+                await billingApi.recordPayment({
+                  invoice_id: result.id,
+                  patient_id: invoice.patientId,
+                  amount: p.amount,
+                  payment_method: p.method,
+                  reference_number: p.reference || p.notes || null,
+                  notes: p.notes || null,
+                }).catch(() => null);
+              }
+            }
+          }
         }
       } catch {}
       const updated = [invoice, ...invoices];
@@ -1551,6 +1565,76 @@ export default function BillingPage() {
                           <MessageCircle className="h-4 w-4" />
                           Open WhatsApp (Manual)
                         </a>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Create Invoice from Booking */}
+                  {selectedBookingDetail.booking?.bookingId && selectedBookingDetail.booking?.paymentStatus === 'CAPTURED' && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Billing</h3>
+                      <div className="bg-blue-50 rounded-xl p-4">
+                        <button
+                          onClick={async () => {
+                            const bk = selectedBookingDetail.booking;
+                            const fee = bk.consultationFee || bk.paymentRecord?.amount || 500;
+                            const newInvoice: EMRInvoice = {
+                              id: '',
+                              invoiceNumber: `INV-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(Math.floor(Math.random()*9000)+1000)}`,
+                              patientId: selectedBookingDetail.emrPatient?.id || '',
+                              patientName: bk.firstName ? `${bk.firstName} ${bk.lastName || ''}`.trim() : bk.paymentRecord?.patientName || 'Patient',
+                              patientPhone: bk.phone || bk.paymentRecord?.patientPhone || '',
+                              clinicId: bk.clinicId || 'online',
+                              doctorName: bk.doctorName || 'Dr. Rajesh Goel',
+                              date: new Date().toISOString().slice(0,10),
+                              dueDate: new Date().toISOString().slice(0,10),
+                              grandTotal: fee,
+                              paidAmount: fee,
+                              paymentMethod: 'RAZORPAY',
+                              balance: 0,
+                              status: 'PAID',
+                              subtotal: fee,
+                              discount: 0,
+                              discountType: 'FIXED' as const,
+                              gstRate: 0,
+                              gstAmount: 0,
+                              totalTax: 0,
+                              items: [{
+                                id: '',
+                                description: `${bk.consultationType === 'online' ? 'Online' : bk.consultationType === 'online_intl' ? 'International Online' : 'In-Clinic'} Consultation fee`,
+                                qty: 1,
+                                rate: fee,
+                                gstRate: 0,
+                                gstAmount: 0,
+                                amount: fee,
+                                total: fee,
+                              }],
+                              payments: [{
+                                id: '',
+                                amount: fee,
+                                method: 'RAZORPAY',
+                                date: new Date().toISOString(),
+                                reference: selectedBookingDetail.paymentRecord?.razorpayPaymentId || bk.paymentId || '',
+                                notes: `Booking: ${bk.bookingId}`,
+                              }],
+                              notes: `Auto-generated from booking ${bk.bookingId}`,
+                              createdAt: new Date().toISOString(),
+                              updatedAt: new Date().toISOString(),
+                            };
+                            try {
+                              await handleSaveInvoice(newInvoice);
+                              fetchBookingDetail(bk.bookingId);
+                              alert('Invoice created successfully!');
+                            } catch (err: any) {
+                              alert('Failed to create invoice: ' + (err?.message || 'Unknown error'));
+                            }
+                          }}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors"
+                        >
+                          <Receipt className="h-4 w-4" />
+                          Create Invoice for This Booking
+                        </button>
+                        <p className="text-xs text-blue-600 mt-2">Creates a PAID invoice for ₹{selectedBookingDetail.booking?.consultationFee || selectedBookingDetail.paymentRecord?.amount || 500}</p>
                       </div>
                     </section>
                   )}

@@ -21,7 +21,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://www.kidneycarecentre.in https://kidneycarecentre.in;",
+            value: "frame-ancestors 'self' https://www.kidneycarecentre.in https://kidneycarecentre.in https://www.onlinenephrologist.com https://onlinenephrologist.com https://www.psrihospital.com https://psrihospital.com;",
           },
         ],
       },
