@@ -215,6 +215,72 @@ export async function GET() {
       y += 54;
     }
 
+    // ===== EMERGENCY MEDICINES FOR VACCINATION REACTIONS =====
+    function drawVaccineReactionMeds() {
+      checkPage(60);
+      doc.setFillColor(254, 242, 242);
+      doc.roundedRect(LM, y, CW, 10, 2, 2, 'F');
+      font('bold', 10);
+      doc.setTextColor(180, 30, 30);
+      doc.text('Emergency Medicines for Vaccination Reactions', LM + 3, y + 4.5);
+      font('normal', 7);
+      doc.setTextColor(120, 80, 80);
+      doc.text('Common medicines for mild-to-moderate side effects after vaccination', LM + 3, y + 8.5);
+      y += 14;
+
+      const TABLE_W = CW - 4;
+      const tableX = LM + 2;
+      const colWidths = [36, 48, 38, TABLE_W - 36 - 48 - 38];
+      const headers = ['Reaction', 'Medicine', 'How to Take', 'Dose'];
+
+      doc.setFillColor(180, 30, 30);
+      doc.roundedRect(tableX, y, TABLE_W, 6, 1, 1, 'F');
+      font('bold', 6.5);
+      doc.setTextColor(255, 255, 255);
+      let x = tableX;
+      for (let i = 0; i < headers.length; i++) { doc.text(headers[i], x + 2, y + 4); x += colWidths[i]; }
+      y += 6;
+
+      const meds = [
+        ['Fever (Bukhar)', 'Tab Dolo 650 / Crocin 500 mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Body pain / Headache', 'Tab Paracetamol 500 mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Pain / Swelling at site', 'Tab Ibuprofen 400 mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Allergic rash / Itching', 'Tab Cetirizine 10 mg', 'After food (khane k bad)', '1 tab SOS'],
+        ['Vomiting / Nausea', 'Tab Emset 4mg / Ondem', 'Before food (khane s phle)', '1 tab SOS'],
+      ];
+
+      font('normal', 6.5);
+      for (let r = 0; r < meds.length; r++) {
+        if (r % 2 === 0) { doc.setFillColor(254, 248, 248); doc.rect(tableX, y, TABLE_W, 7, 'F'); }
+        doc.setDrawColor(230, 200, 200); doc.setLineWidth(0.1); doc.line(tableX, y + 7, tableX + TABLE_W, y + 7);
+        x = tableX;
+        for (let c = 0; c < meds[r].length; c++) {
+          if (c === 0) { doc.setFont('helvetica', 'bold'); doc.setTextColor(120, 20, 20); }
+          else { doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70); }
+          doc.text(meds[r][c], x + 2, y + 4.5);
+          x += colWidths[c];
+        }
+        y += 7;
+      }
+
+      font('bold', 5.5);
+      doc.setTextColor(180, 30, 30);
+      doc.text('SOS = As needed. For mild-to-moderate reactions only.', tableX, y + 3);
+      y += 6;
+
+      drawBox('Seek immediate medical attention if you experience:', [
+        'Difficulty breathing or wheezing, swelling of face/lips/tongue/throat',
+        'Severe dizziness, fainting, rapid heartbeat',
+        'High fever (>102 F / 39C) not responding to medicines',
+        'Severe allergic reaction (anaphylaxis) - call emergency services immediately',
+      ], [254, 242, 242], [220, 80, 80], [180, 30, 30]);
+
+      drawBox('Kidney patients: Always check with your nephrologist before taking any medicine.', [
+        'Some pain medicines (e.g., NSAIDs like Ibuprofen) may not be suitable',
+        'for advanced CKD or dialysis patients. Consult your doctor first.',
+      ], [255, 248, 225], [249, 168, 37], [200, 80, 0]);
+    }
+
     // ===== VACCINATION RECORD TABLE =====
     function drawRecordTable() {
       checkPage(50);
@@ -395,6 +461,9 @@ export async function GET() {
 
     // INJECTION DIAGRAM
     drawInjectionDiagram();
+
+    // VACCINE REACTION EMERGENCY MEDICINES
+    drawVaccineReactionMeds();
 
     // VACCINATION RECORD TABLE
     drawRecordTable();

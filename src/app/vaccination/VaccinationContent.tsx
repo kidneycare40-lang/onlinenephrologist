@@ -355,6 +355,81 @@ export default function VaccinationContent() {
           </div>
 
           {/* ============================================================ */}
+          {/* EMERGENCY MEDICINES FOR VACCINATION REACTIONS */}
+          {/* ============================================================ */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0"><AlertTriangle className="h-4 w-4 text-red-600" /></div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Emergency Medicines for Vaccination Reactions</h2>
+                <p className="text-sm text-gray-500 font-medium">Common medicines for mild-to-moderate side effects after vaccination</p>
+              </div>
+            </div>
+            <div className="ml-11 overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-[#B41E1E] text-white">
+                    <th className="px-3 py-2.5 text-left rounded-tl-lg">Reaction (प्रतिक्रिया)</th>
+                    <th className="px-3 py-2.5 text-left">Medicine (दवाई)</th>
+                    <th className="px-3 py-2.5 text-left">How to Take (कैसे लें)</th>
+                    <th className="px-3 py-2.5 text-left rounded-tr-lg">Dose (मात्रा)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100 bg-red-50/50">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Fever (बुखार)</td>
+                    <td className="px-3 py-2.5 font-medium">Tab Dolo 650 / Crocin 500 mg</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5">1 tab SOS</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Body pain / Headache<br/><span className="text-xs font-normal text-red-600">(शरीर दर्द / सिरदर्द)</span></td>
+                    <td className="px-3 py-2.5 font-medium">Tab Paracetamol 500 mg / Crocin</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5">1 tab SOS</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 bg-red-50/50">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Pain / Swelling at injection site<br/><span className="text-xs font-normal text-red-600">(टीके की जगह दर्द / सूजन)</span></td>
+                    <td className="px-3 py-2.5 font-medium">Tab Ibuprofen 400 mg / Combiflam</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5">1 tab SOS</td>
+                  </tr>
+                  <tr className="border-b border-gray-100">
+                    <td className="px-3 py-2.5 font-semibold text-red-800">Allergic rash / Itching<br/><span className="text-xs font-normal text-red-600">(एलर्जी की खुजली)</span></td>
+                    <td className="px-3 py-2.5 font-medium">Tab Cetirizine 10 mg / Levocetirizine</td>
+                    <td className="px-3 py-2.5">After food (खाने के बाद)</td>
+                    <td className="px-3 py-2.5">1 tab SOS</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2.5 font-semibold text-red-800 rounded-bl-lg">Vomiting / Nausea<br/><span className="text-xs font-normal text-red-600">(उल्टी / जी मिचलाना)</span></td>
+                    <td className="px-3 py-2.5 font-medium">Tab Emset 4mg / Ondem</td>
+                    <td className="px-3 py-2.5">Before food (खाने से पहले)</td>
+                    <td className="px-3 py-2.5 rounded-br-lg">1 tab SOS</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 ml-11 text-xs text-gray-500 italic">SOS = जरूरत पड़ने पर (As needed). These medicines are for mild-to-moderate reactions only.</p>
+
+            <div className="mt-4 ml-11 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="font-bold text-red-900 text-sm mb-1">Seek immediate medical attention if you experience:</p>
+              <ul className="text-red-800 text-sm space-y-1 list-disc ml-4">
+                <li>Difficulty breathing or wheezing</li>
+                <li>Swelling of face, lips, tongue or throat</li>
+                <li>Severe dizziness or fainting</li>
+                <li>Rapid heartbeat</li>
+                <li>High fever ({'>'}102°F / 39°C) not responding to medicines</li>
+                <li>Severe allergic reaction (anaphylaxis)</li>
+              </ul>
+              <p className="mt-2 text-red-700 text-xs font-semibold">Call emergency services or go to the nearest hospital immediately. Do not wait.</p>
+            </div>
+
+            <div className="mt-4 ml-11 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+              <p className="font-bold text-amber-900">Kidney patients: Always check with your nephrologist before taking any medicine, even over-the-counter drugs. Some pain medicines (e.g., NSAIDs like Ibuprofen) may not be suitable for advanced CKD or dialysis patients.</p>
+            </div>
+          </div>
+
+          {/* ============================================================ */}
           {/* WHEN TO DISCUSS VACCINATION */}
           {/* ============================================================ */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
