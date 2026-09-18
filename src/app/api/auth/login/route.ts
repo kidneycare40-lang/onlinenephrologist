@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const db = getDb();
     const { data: users, error } = await db
       .from('users')
-      .select('id, email, first_name, last_name, role, password_hash, is_active')
+      .select('id, email, first_name, last_name, role, password_hash, pin_hash, is_active')
       .eq('email', email.toLowerCase().trim())
       .limit(1);
 
@@ -41,14 +41,19 @@ export async function POST(request: NextRequest) {
     let valid = false;
 
     if (pin) {
-      if (user.password_hash) valid = await verifyPassword(pin, user.password_hash);
+      // Check pin_hash first, then fall back to password_hash for backwards compatibility
+      if (user.pin_hash) {
+        valid = await verifyPassword(pin, user.pin_hash);
+      } else if (user.password_hash) {
+        valid = await verifyPassword(pin, user.password_hash);
+      }
     } else if (password) {
       if (user.password_hash) valid = await verifyPassword(password, user.password_hash);
     }
 
     if (!valid) {
       logAudit({ userId: user.id, action: 'LOGIN', entityType: 'user_login', entityId: user.id, newValues: { status: 'failed' } });
-      if (!user.password_hash) {
+      if (!user.password_hash && !user.pin_hash) {
         return NextResponse.json({ error: 'Account has no credentials configured yet. Go to the /emr/setup page to set your PIN.', needsSetup: true }, { status: 403 });
       }
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
@@ -83,7 +88,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('LOGIN error:', error);
-    const detail = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: detail }, { status: 500 });
+    return NextResponse.json({ error: 'Login failed. Please try again.' }, { status: 500 });
   }
 }

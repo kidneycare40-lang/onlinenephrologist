@@ -28,7 +28,9 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
       ip_address: params.ipAddress || null,
       user_agent: params.userAgent || null,
     });
-  } catch {}
+  } catch (err) {
+    console.error('[audit] logAudit FAILED:', err instanceof Error ? err.message : String(err));
+  }
 }
 
 export function extractRequestContext(request: NextRequest): { ipAddress?: string; userAgent?: string } {

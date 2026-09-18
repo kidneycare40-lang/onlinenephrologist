@@ -552,7 +552,48 @@ function BookingForm() {
       });
     } catch (bookingErr) {
       console.error('[booking] Pre-create failed:', bookingErr);
-      // Continue anyway — webhook/verify will create it if needed
+      // Retry once after short delay
+      try {
+        await new Promise(r => setTimeout(r, 1000));
+        await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingId: id,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phone: cleanPhone,
+            email: formData.email || null,
+            age: formData.age || null,
+            gender: formData.gender || null,
+            currentLocation: formData.currentLocation || null,
+            country: formData.country || null,
+            timezone: formData.timezone || null,
+            countryCode: formData.countryCode || '+91',
+            preferredLanguage: formData.preferredLanguage || null,
+            interpreterRequired: formData.interpreterRequired || false,
+            consultationType: formData.consultationType || 'online',
+            clinicId: formData.clinicId || null,
+            date: formData.date || null,
+            time: formData.time || null,
+            reason: formData.reason || null,
+            complaints: formData.complaints,
+            currentMedications: formData.currentMedications || formData.medicines,
+            notes: formData.notes,
+            previousKidneyIssue: formData.previousKidneyIssue,
+            consultationFee: consultFee,
+            consultationFeeCurrency: consultCurrency,
+            doctorName: 'Dr Rajesh Goel',
+            status: 'pending',
+            patientAccountId: patientAccountId || undefined,
+            bookedByPatientAccountId: patientAccountId || undefined,
+            relationship: patientAccountId ? (bookingFor === 'family' ? relationship : 'self') : 'self',
+            siteId: siteConfig?.id || formData.siteId,
+          }),
+        });
+      } catch (retryErr) {
+        console.error('[booking] Pre-create retry also failed:', retryErr);
+      }
     }
 
     // Show payment gateway — booking row now exists in DB
@@ -620,7 +661,7 @@ function BookingForm() {
 
     // Save the booking to Supabase (primary storage)
     try {
-      await fetch('/api/bookings', {
+      const saveRes = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -630,7 +671,28 @@ function BookingForm() {
           razorpayOrderId: pData?.orderId || undefined,
         }),
       });
-    } catch {}
+      if (!saveRes.ok) {
+        console.error('[booking] Finalize save failed:', saveRes.status, await saveRes.text().catch(() => ''));
+        // Retry once
+        try {
+          await new Promise(r => setTimeout(r, 1000));
+          await fetch('/api/bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...bookingData,
+              patientId: `obp-${id}`,
+              paymentId: pData?.paymentId || undefined,
+              razorpayOrderId: pData?.orderId || undefined,
+            }),
+          });
+        } catch (retryErr) {
+          console.error('[booking] Finalize save retry also failed:', retryErr);
+        }
+      }
+    } catch (saveErr) {
+      console.error('[booking] Finalize save exception:', saveErr);
+    }
 
     // ─── INVOICE: handled by verify/route.ts + webhook/route.ts ───
     // Do NOT call auto-invoice here — verify already creates it with correct PAID status.

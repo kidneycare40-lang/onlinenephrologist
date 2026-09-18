@@ -531,3 +531,25 @@ export async function requireAuth(): Promise<{ patientAccountId: string } | { er
   }
   return { patientAccountId: patient.patientId };
 }
+
+export async function requireVerifiedAuth(): Promise<{ patientAccountId: string } | { error: string; status: number; emailVerified?: boolean }> {
+  const patient = await getPatientFromCookie();
+  if (!patient || patient.patientId === 'pending') {
+    return { error: 'Not authenticated', status: 401 };
+  }
+
+  // Check email verification status
+  const db = getDb();
+  const { data: account } = await db
+    .from('patient_accounts')
+    .select('email_verified')
+    .eq('id', patient.patientId)
+    .limit(1)
+    .single();
+
+  if (!account?.email_verified) {
+    return { error: 'Email verification required to access medical records. Please verify your email first.', status: 403, emailVerified: false };
+  }
+
+  return { patientAccountId: patient.patientId };
+}

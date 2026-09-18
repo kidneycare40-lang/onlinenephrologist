@@ -50,7 +50,7 @@ export function applyRateLimit(request: NextRequest, endpoint: string): NextResp
 }
 
 export function withAudit(action: string, entityType: string, userId?: string, entityId?: string, oldValues?: Record<string, unknown>, newValues?: Record<string, unknown>) {
-  logAudit({ userId, action: action as any, entityType, entityId, oldValues, newValues });
+  logAudit({ userId, action: action as any, entityType, entityId, oldValues, newValues }).catch(() => {});
 }
 
 export function apiError(message: string, status: number, details?: Record<string, unknown>) {
