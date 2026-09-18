@@ -53,33 +53,37 @@ export async function GET() {
       y = 40;
     }
 
+    // ===== TITLE =====
     function drawTitle() {
       doc.setFillColor(...BLUE);
       doc.roundedRect(LM, y, CW, 11, 2, 2, 'F');
       font('bold', 13);
       doc.setTextColor(255, 255, 255);
-      doc.text('VACCINATION RECORD', W / 2, y + 5, { align: 'center' });
+      doc.text('VACCINATION FOR KIDNEY PATIENTS', W / 2, y + 5, { align: 'center' });
       font('normal', 7);
       doc.setTextColor(220, 235, 250);
-      doc.text('Recommended vaccinations for chronic kidney disease patients', W / 2, y + 9, { align: 'center' });
+      doc.text('Essential vaccines for people with CKD, dialysis and kidney transplantation', W / 2, y + 9, { align: 'center' });
       y += 16;
     }
 
-    function drawNote() {
-      doc.setFillColor(255, 248, 225);
-      doc.roundedRect(LM, y, CW, 12, 2, 2, 'F');
-      doc.setDrawColor(249, 168, 37);
+    // ===== INTRO NOTE =====
+    function drawIntro() {
+      doc.setFillColor(240, 247, 255);
+      doc.roundedRect(LM, y, CW, 14, 2, 2, 'F');
+      doc.setDrawColor(...BLUE);
       doc.setLineWidth(0.3);
-      doc.roundedRect(LM, y, CW, 12, 2, 2, 'S');
+      doc.roundedRect(LM, y, CW, 14, 2, 2, 'S');
       font('bold', 7.5);
-      doc.setTextColor(200, 80, 0);
-      doc.text('Above doses applicable in case of chronic kidney disease', LM + 3, y + 4);
+      doc.setTextColor(...BLUE);
+      doc.text('Why is vaccination important in kidney disease?', LM + 3, y + 4);
       font('normal', 6.5);
-      doc.setTextColor(120, 70, 20);
-      doc.text('1. Anti HBs antibody titres to be done every 6 months.    2. Protective titres for kidney disease patients are >100 miu/ml.', LM + 3, y + 8.5);
-      y += 16;
+      doc.setTextColor(60, 60, 60);
+      doc.text('People with CKD, those on dialysis and kidney transplant recipients are at increased risk of infections due to', LM + 3, y + 8.5);
+      doc.text('altered immunity. Vaccination helps protect against serious infections. Ideally, review vaccination before dialysis or transplant.', LM + 3, y + 12);
+      y += 17;
     }
 
+    // ===== SECTION TITLE =====
     function sectionTitle(num: string, title: string, subtitle?: string) {
       checkPage(16);
       doc.setFillColor(240, 244, 248);
@@ -91,6 +95,7 @@ export async function GET() {
       y += subtitle ? 15 : 12;
     }
 
+    // ===== INFO LINE =====
     function infoLine(text: string) {
       font('normal', 7.5);
       doc.setTextColor(60, 60, 60);
@@ -98,6 +103,7 @@ export async function GET() {
       y += 4;
     }
 
+    // ===== DRAW TABLE =====
     function drawTable(headers: string[], rows: string[][], lastColWidth = 50) {
       const ROW_H = 8;
       const HEADER_H = 6;
@@ -130,36 +136,47 @@ export async function GET() {
       y += 4;
     }
 
-    // ===== INJECTION SITE DIAGRAM =====
+    // ===== HIGHLIGHT BOX =====
+    function drawBox(title: string, lines: string[], bgColor: [number, number, number], borderColor: [number, number, number], titleColor: [number, number, number]) {
+      const lineH = 4;
+      const boxH = 4 + lines.length * lineH + 4;
+      checkPage(boxH + 6);
+      doc.setFillColor(...bgColor);
+      doc.roundedRect(LM + 2, y, CW - 4, boxH, 2, 2, 'F');
+      doc.setDrawColor(...borderColor);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(LM + 2, y, CW - 4, boxH, 2, 2, 'S');
+      font('bold', 7.5);
+      doc.setTextColor(...titleColor);
+      doc.text(title, LM + 6, y + 4);
+      font('normal', 6.5);
+      doc.setTextColor(80, 60, 40);
+      let ly = y + 8;
+      for (const line of lines) { doc.text(line, LM + 6, ly); ly += lineH; }
+      y += boxH + 3;
+    }
+
+    // ===== INJECTION DIAGRAM =====
     function drawInjectionDiagram() {
       checkPage(55);
       doc.setFillColor(240, 247, 255);
       doc.roundedRect(LM, y, CW, 50, 3, 3, 'F');
-
       font('bold', 10);
       doc.setTextColor(...DARK);
       doc.text('How to Take Injection - Deltoid Muscle (Upper Arm)', LM + 3, y + 5);
-
-      // Shoulder outline
       const cx = LM + 35;
       const cy = y + 30;
       doc.setFillColor(253, 232, 208);
       doc.setDrawColor(212, 165, 116);
       doc.setLineWidth(0.5);
       doc.ellipse(cx, cy, 22, 24, 'FD');
-
-      // Deltoid muscle
       doc.setFillColor(232, 85, 85);
       doc.setDrawColor(200, 68, 68);
       doc.setLineWidth(0.4);
       doc.ellipse(cx, cy, 14, 18, 'FD');
-
-      // Bone
       doc.setFillColor(245, 240, 232);
       doc.setDrawColor(212, 196, 168);
       doc.rect(cx - 2, cy - 15, 4, 30, 'FD');
-
-      // Injection target
       doc.setFillColor(...BLUE);
       doc.circle(cx, cy, 3, 'F');
       doc.setDrawColor(...BLUE);
@@ -167,8 +184,6 @@ export async function GET() {
       doc.setLineDashPattern([2, 1.5], 0);
       doc.circle(cx, cy, 10, 'D');
       doc.setLineDashPattern([], 0);
-
-      // Syringe drawing
       doc.setFillColor(221, 221, 221);
       doc.setDrawColor(153, 153, 153);
       doc.setLineWidth(0.4);
@@ -179,13 +194,9 @@ export async function GET() {
       doc.setDrawColor(130, 130, 130);
       doc.setLineWidth(0.3);
       doc.triangle(cx + 43, cy - 5.5, cx + 43, cy - 4.5, cx + 48, cy - 5, 'FD');
-
-      // Arrow
       doc.setDrawColor(...BLUE);
       doc.setLineWidth(0.6);
       doc.line(cx + 22, cy - 3, cx + 12, cy - 1);
-
-      // Labels on right
       const lx = LM + 80;
       font('bold', 8);
       doc.setTextColor(...DARK);
@@ -193,7 +204,6 @@ export async function GET() {
       doc.text('Needle: 25-26 gauge, 1 inch (25mm) for adults', lx, y + 19);
       doc.text('Angle: 90 degrees perpendicular to skin', lx, y + 24);
       doc.text('Volume: 0.5 ml to 1.0 ml for adults', lx, y + 29);
-
       font('bold', 7);
       doc.setTextColor(200, 100, 0);
       doc.text('Important:', lx, y + 36);
@@ -202,31 +212,25 @@ export async function GET() {
       doc.text('- Use opposite arm of fistula/AV access (dialysis patients)', lx + 16, y + 36);
       doc.text('- Rotate injection sites if giving multiple vaccines', lx, y + 40.5);
       doc.text('- Inject into the muscle, NOT subcutaneous (under skin)', lx, y + 45);
-
       y += 54;
     }
 
-    // ===== EMERGENCY MEDICINES TABLE =====
-    function drawEmergency() {
+    // ===== VACCINATION RECORD TABLE =====
+    function drawRecordTable() {
       checkPage(50);
-      // Title
-      doc.setFillColor(254, 242, 242);
-      doc.roundedRect(LM, y, CW, 10, 2, 2, 'F');
+      doc.setFillColor(240, 244, 248);
+      doc.roundedRect(LM, y, CW, 9, 2, 2, 'F');
       font('bold', 10);
-      doc.setTextColor(180, 30, 30);
-      doc.text('Emergency Medicine for Adults with Kidney Diseases', LM + 3, y + 4.5);
-      font('normal', 7);
-      doc.setTextColor(120, 80, 80);
-      doc.text('Aapatkalin gurda rogiyon ke liye (SOS dawaiyan)', LM + 3, y + 8.5);
-      y += 14;
+      doc.setTextColor(...DARK);
+      doc.text('Vaccination Record', LM + 3, y + 4);
+      y += 11;
 
       const TABLE_W = CW - 4;
       const tableX = LM + 2;
-      const colWidths = [28, 55, 42, TABLE_W - 28 - 55 - 42];
-      const headers = ['Problem', 'Medicine', 'How to Take', 'Dose'];
+      const colWidths = [32, 35, 28, TABLE_W - 32 - 35 - 28];
+      const headers = ['Vaccine', 'Dose / Date', 'Next Due', 'Remarks'];
 
-      // Header row
-      doc.setFillColor(180, 30, 30);
+      doc.setFillColor(...BLUE);
       doc.roundedRect(tableX, y, TABLE_W, 6, 1, 1, 'F');
       font('bold', 6.5);
       doc.setTextColor(255, 255, 255);
@@ -234,85 +238,31 @@ export async function GET() {
       for (let i = 0; i < headers.length; i++) { doc.text(headers[i], x + 2, y + 4); x += colWidths[i]; }
       y += 6;
 
-      const meds = [
-        ['Fever (Bukhar)', 'Tab Dolo 650 / Crocin 500 mg', 'After food (khane k bad)', '1 tab SOS'],
-        ['Pain (Dard)', 'Tab Ultracet 37 mg / Cap Tramazac P 37.5 mg', 'After food (khane k bad)', '1 tab SOS'],
-        ['Vomiting (Ulti)', 'Tab Emset 4mg / Tab Zofer 4mg', 'Before food (khane s phle)', '1 tab SOS'],
-        ['Renal Colic (Pet dard)', 'Tab Drotin DS 80 mg / Inj Tramadol 100 mg IM', 'After food (khane k bad)', '1 tab / SOS'],
-        ['Swelling (Soojan)', 'Tab Tor 20 / Dtor 20 mg', 'After food (khane k bad)', '1 tab SOS'],
+      const rows = [
+        ['Hepatitis B', '___/___/______', '___/___/______', ''],
+        ['Influenza', '___/___/______', '___/___/______', ''],
+        ['Pneumococcal', '___/___/______', '___/___/______', ''],
+        ['COVID-19', '___/___/______', '___/___/______', ''],
+        ['Shingrix (Shingles)', '___/___/______', '___/___/______', ''],
+        ['Tdap / Td', '___/___/______', '___/___/______', ''],
+        ['Other: ________', '___/___/______', '___/___/______', ''],
       ];
 
       font('normal', 6.5);
-      for (let r = 0; r < meds.length; r++) {
-        if (r % 2 === 0) { doc.setFillColor(254, 248, 248); doc.rect(tableX, y, TABLE_W, 7, 'F'); }
-        doc.setDrawColor(230, 200, 200); doc.setLineWidth(0.1); doc.line(tableX, y + 7, tableX + TABLE_W, y + 7);
+      for (let r = 0; r < rows.length; r++) {
+        if (r % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(tableX, y, TABLE_W, 7, 'F'); }
+        doc.setDrawColor(220, 225, 230); doc.setLineWidth(0.1); doc.line(tableX, y + 7, tableX + TABLE_W, y + 7);
         x = tableX;
-        for (let c = 0; c < meds[r].length; c++) {
-          if (c === 0) { doc.setFont('helvetica', 'bold'); doc.setTextColor(120, 20, 20); }
-          else { doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70); }
-          doc.text(meds[r][c], x + 2, y + 4.5);
+        for (let c = 0; c < rows[r].length; c++) {
+          doc.setTextColor(c === 0 ? 30 : 180, c === 0 ? 30 : 180, c === 0 ? 30 : 180);
+          if (c === 0) doc.setFont('helvetica', 'bold');
+          else doc.setFont('helvetica', 'normal');
+          doc.text(rows[r][c], x + 2, y + 4.5);
           x += colWidths[c];
         }
         y += 7;
       }
-      font('bold', 5.5);
-      doc.setTextColor(180, 30, 30);
-      doc.text('SOS = Zarurat padne par (As needed)', tableX, y + 3);
-      y += 7;
-    }
-
-    // ===== COMMON MEDICINES TABLE =====
-    function drawMedicinesTable() {
-      checkPage(55);
-      doc.setFillColor(240, 248, 245);
-      doc.roundedRect(LM, y, CW, 10, 2, 2, 'F');
-      font('bold', 10);
-      doc.setTextColor(13, 148, 136);
-      doc.text('Other Common Medicines (Anya Samanya Dawaiyan)', LM + 3, y + 4.5);
-      font('normal', 7);
-      doc.setTextColor(100, 120, 110);
-      doc.text('Additional medicines for kidney patients - How to take', LM + 3, y + 8.5);
-      y += 14;
-
-      const TABLE_W = CW - 4;
-      const tableX = LM + 2;
-      const colWidths = [28, 55, 42, TABLE_W - 28 - 55 - 42];
-      const headers = ['Medicine (Dawai)', 'Use (Upyog)', 'How to Take (Kaise lein)', 'Dose (Matra)'];
-
-      // Header row
-      doc.setFillColor(13, 148, 136);
-      doc.roundedRect(tableX, y, TABLE_W, 6, 1, 1, 'F');
-      font('bold', 6.5);
-      doc.setTextColor(255, 255, 255);
-      let x = tableX;
-      for (let i = 0; i < headers.length; i++) { doc.text(headers[i], x + 2, y + 4); x += colWidths[i]; }
-      y += 6;
-
-      const medicines = [
-        ['Pan 40 / Razo', 'Acidity (Acidty)', 'Before breakfast (nashte s phle)', '1 tab daily'],
-        ['Telma 40 / Amlodac', 'BP (Uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
-        ['Dynapres / Telmikind', 'BP (Uchch raktchap)', 'Any time (kisi bhi smy)', '1 tab daily'],
-        ['Ondem / Zofer 4mg', 'Nausea (Ji michlana)', 'Before food (khane s phle)', '1 tab SOS'],
-        ['Duphaston', 'Hormone (Harmon)', 'After food (khane k bad)', 'As directed'],
-      ];
-
-      font('normal', 6.5);
-      for (let r = 0; r < medicines.length; r++) {
-        if (r % 2 === 0) { doc.setFillColor(245, 252, 250); doc.rect(tableX, y, TABLE_W, 7, 'F'); }
-        doc.setDrawColor(210, 225, 220); doc.setLineWidth(0.1); doc.line(tableX, y + 7, tableX + TABLE_W, y + 7);
-        x = tableX;
-        for (let c = 0; c < medicines[r].length; c++) {
-          if (c === 0) { doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 30, 30); }
-          else { doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70); }
-          doc.text(medicines[r][c], x + 2, y + 4.5);
-          x += colWidths[c];
-        }
-        y += 7;
-      }
-      font('normal', 5.5);
-      doc.setTextColor(150, 150, 150);
-      doc.text('SOS = Zarurat padne par (As needed)  |  Hamesha apne doctor ki salah se dawai lein (Always take medicines under doctor guidance)', tableX, y + 3);
-      y += 8;
+      y += 4;
     }
 
     // ===== FOOTER =====
@@ -336,56 +286,142 @@ export async function GET() {
       doc.text('www.onlinenephrologist.com', W - RM, footerY + 10.5, { align: 'right' });
       font('normal', 5.5);
       doc.setTextColor(180, 180, 180);
-      doc.text('This document is for informational purposes only. Always consult your treating nephrologist before starting any vaccination.', W / 2, footerY + 16, { align: 'center' });
+      doc.text('This document is for informational purposes only. Vaccination schedules may vary. Always consult your nephrologist.', W / 2, footerY + 16, { align: 'center' });
     }
 
-    // ===== BUILD PDF =====
+    // ================================================================
+    // BUILD PDF
+    // ================================================================
     drawHeader();
     drawTitle();
-    drawNote();
+    drawIntro();
 
-    sectionTitle('1', 'Hepatitis B', 'Engerix-B / Shanvac-B / Enivac B (or any brand)');
-    infoLine('Route: IM injection (upper arm for adults, thigh for infants)  |  Dose: 2 ml (40 mcg) IM each time');
+    // 1. HEPATITIS B
+    sectionTitle('1', 'Hepatitis B Vaccine', 'Engerix-B / Shanvac-B / Enivac B (or any approved brand)');
+    infoLine('Why important: Hepatitis B is a serious risk for advanced CKD and dialysis patients. Vaccination is key pre-dialysis care.');
+    infoLine('Route: IM injection (upper arm for adults)  |  Dose: 2 ml (40 mcg) IM each time');
     y += 1;
-    drawTable(['Dose', 'Schedule', 'Date Given'], [['1st Dose', 'Day 0', '___/___/______'], ['2nd Dose', '1st month', '___/___/______'], ['3rd Dose', '2nd month', '___/___/______'], ['4th Dose', '6th month', '___/___/______']], 50);
+    drawTable(['Dose', 'Schedule', 'Date Given'], [
+      ['1st Dose', 'Day 0', '___/___/______'],
+      ['2nd Dose', '1st month', '___/___/______'],
+      ['3rd Dose', '2nd month', '___/___/______'],
+      ['4th Dose', '6th month', '___/___/______'],
+    ], 50);
 
-    sectionTitle('2', 'Influenza Vaccine Inj.', 'Influvac (or any brand)');
-    infoLine('Dose: 0.5 ml I/M stat (once a year) - May/June');
+    drawBox('Anti-HBs Antibody Monitoring', [
+      'After completing the vaccination series, your nephrologist may check Anti-HBs levels.',
+      'In dialysis patients, Anti-HBs >=10 mIU/mL is generally considered protective.',
+      'Periodic monitoring and booster/revaccination may be required when immunity declines.',
+      'Vaccination should ideally be completed before dialysis or kidney transplantation.',
+    ], [255, 248, 225], [249, 168, 37], [200, 80, 0]);
+
+    // 2. INFLUENZA
+    sectionTitle('2', 'Influenza Vaccine', 'Seasonal flu vaccine (Influvac or any approved brand)');
+    infoLine('Why important: Kidney patients are at increased risk of complications from influenza.');
+    infoLine('Dose: 0.5 ml IM  |  Frequency: Once every year');
+    infoLine('When: Take the seasonal influenza vaccine at the recommended time for your region.');
     y += 1;
-    drawTable(['Dose', 'Schedule', 'Date Given'], [['Annual', 'Once a year (May/June)', '___/___/______']], 50);
+    drawTable(['Dose', 'Schedule', 'Date Given'], [
+      ['Annual', 'Once a year (as per local recommendations)', '___/___/______'],
+    ], 50);
 
+    // 3. PNEUMOCOCCAL
     sectionTitle('3', 'Pneumococcal Vaccine');
-    font('normal', 7); doc.setTextColor(80, 80, 80);
-    doc.text('A) Prevenar 20 (PCV 20) IM - No need to repeat', LM + 5, y); y += 4;
-    doc.text('B) If received Prevenar 13 on day 0, give Prevenar 20 after 1 year', LM + 5, y); y += 4;
-    doc.text('C) If received both Prevenar 13 + Pneumovax 23, no further vaccine needed', LM + 5, y); y += 5;
-    drawTable(['Vaccine Given', 'Date Given'], [['____________________', '___/___/______']], 50);
+    infoLine('Why important: CKD, nephrotic syndrome and kidney failure increase the risk of serious pneumococcal infection.');
+    infoLine('The appropriate vaccine and interval depend on age, CKD stage, dialysis status and previous vaccination.');
+    infoLine('Currently available options: PCV20, PCV21, PCV15, PPSV23.');
+    drawBox('Important — Your vaccination history matters', [
+      'If you have previously received PCV13, PPSV23, PCV15 or PCV20, your next dose may differ.',
+      'Do not assume you need another dose without reviewing your vaccination record.',
+      'Ask your nephrologist to review your previous vaccination before receiving any pneumococcal vaccine.',
+    ], [254, 242, 242], [220, 100, 100], [180, 30, 30]);
+    drawTable(['Vaccine Given', 'Date Given', 'Next Due'], [
+      ['____________________', '___/___/______', '___/___/______'],
+    ], 45);
 
-    sectionTitle('4', 'Varicella Zoster (Shingrix - 2 doses of 0.5 ml)');
-    infoLine('For: Adults above 50 years or above 18 in high-risk patients');
+    // 4. SHINGLES / SHINGRIX
+    sectionTitle('4', 'Shingles Vaccine (Shingrix)', 'Non-live recombinant zoster vaccine - 2 doses');
+    infoLine('Recommended for: Adults 50 years and older, and adults 19+ who are immunocompromised or at increased risk.');
+    infoLine('Schedule: Usually 2 doses. Interval may vary depending on immune status. Confirm timing with your nephrologist.');
     y += 1;
-    drawTable(['Dose', 'Schedule', 'Date Given'], [['1st Dose', 'Month 0', '___/___/______'], ['2nd Dose', '2-6 months after 1st', '___/___/______']], 50);
+    drawTable(['Dose', 'Schedule', 'Date Given'], [
+      ['1st Dose', 'Month 0', '___/___/______'],
+      ['2nd Dose', '2-6 months after 1st', '___/___/______'],
+    ], 50);
 
-    sectionTitle('5', 'Anti HBs Antibody Titres');
-    infoLine('Purpose: Check immune response to Hep B vaccine  |  Frequency: Every 6 months  |  Target: >100 miu/ml');
+    // 5. COVID-19
+    sectionTitle('5', 'COVID-19 Vaccine');
+    infoLine('Why important: Advanced CKD, dialysis and transplant patients may be at increased risk of severe COVID-19.');
+    infoLine('Keep COVID-19 vaccination up to date according to current age- and risk-based recommendations in your region.');
+    infoLine('Transplant patients: Follow your transplant team\'s vaccination schedule.');
     y += 1;
-    drawTable(['Date', 'Value (miu/ml)'], [['___/___/______', '_______________'], ['___/___/______', '_______________'], ['___/___/______', '_______________']], 45);
+    drawTable(['Vaccine', 'Dose / Date', 'Next Due'], [
+      ['COVID-19', '___/___/______', '___/___/______'],
+    ], 50);
 
-    // Injection Diagram
+    // 6. Tdap / Td
+    sectionTitle('6', 'Tetanus, Diphtheria & Pertussis (Tdap/Td)', 'Routine adult vaccination');
+    infoLine('Kidney patients should remain up to date with routine adult vaccinations including Tdap/Td.');
+    infoLine('Protects against: Tetanus (lockjaw), diphtheria and pertussis (whooping cough).');
+    infoLine('Your nephrologist can advise on the correct booster schedule.');
+    y += 1;
+    drawTable(['Vaccine', 'Date Given', 'Next Due'], [
+      ['Tdap / Td', '___/___/______', '___/___/______'],
+    ], 50);
+
+    // 7. OTHER VACCINES
+    sectionTitle('7', 'Other Vaccines — Depending on Age and Condition');
+    infoLine('Your nephrologist may recommend additional vaccines depending on your age, kidney disease, immune status,');
+    infoLine('travel plans and whether you are preparing for kidney transplantation.');
+    infoLine('These may include: Hepatitis A, MMR, Varicella, HPV, RSV, Meningococcal, Travel vaccines.');
+    infoLine('Do not assume you need every vaccine — your doctor will guide you based on your situation.');
+
+    // TRANSPLANT WARNING
+    drawBox('KIDNEY TRANSPLANT PATIENTS - IMPORTANT', [
+      'Vaccination planning should ideally be completed before kidney transplantation whenever possible.',
+      'After transplantation, immunosuppressive medicines can affect vaccine responses.',
+      'Do not receive a live vaccine after kidney transplantation unless specifically advised by your transplant team.',
+      'This includes MMR, Varicella and live shingles vaccines.',
+      'Vaccination status should be reviewed during transplant evaluation.',
+    ], [254, 242, 242], [220, 80, 80], [180, 30, 30]);
+
+    // VACCINES BEFORE TRANSPLANT
+    drawBox('Vaccines Before Kidney Transplant', [
+      'Transplant candidates should have vaccination status reviewed early during evaluation.',
+      'Some vaccines require multiple doses over several months.',
+      'Live vaccines (e.g., MMR, Varicella) must be given at least 4 weeks before transplantation.',
+      'Your transplant team will guide you on correct timing.',
+    ], [255, 248, 225], [249, 168, 37], [200, 80, 0]);
+
+    // INJECTION DIAGRAM
     drawInjectionDiagram();
 
-    // Emergency
-    drawEmergency();
+    // VACCINATION RECORD TABLE
+    drawRecordTable();
 
-    // Common Medicines
-    drawMedicinesTable();
+    // MEDICAL DISCLAIMER
+    checkPage(14);
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(LM, y, CW, 12, 2, 2, 'F');
+    font('bold', 6.5);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Medical Disclaimer:', LM + 3, y + 4);
+    font('normal', 6);
+    doc.setTextColor(140, 140, 140);
+    doc.text('This document provides general educational information and does not replace individual medical advice.', LM + 3, y + 8);
+    doc.text('Vaccination recommendations vary by age, CKD stage, dialysis status, transplant status and local guidelines. Consult your nephrologist.', LM + 3, y + 11.5);
+    y += 15;
 
-    // Footer
+    // FOOTER
     drawFooter();
 
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
     return new NextResponse(pdfBuffer, {
-      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="Vaccination-Record-Kidney-Patient.pdf"', 'Cache-Control': 'no-cache' },
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="Vaccination-Kidney-Patients.pdf"',
+        'Cache-Control': 'no-cache',
+      },
     });
   } catch (e) {
     console.error('[vaccination-pdf]', e);
