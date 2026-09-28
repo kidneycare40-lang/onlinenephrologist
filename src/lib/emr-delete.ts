@@ -33,6 +33,33 @@ export async function deleteAddedPatient(patientId: string): Promise<void> {
   } catch { /* ignore */ }
 }
 
+/**
+ * Hide every local copy of a patient without destroying it: adds each matching
+ * local id to the hidden list AND stops any pending server sync so a deleted
+ * patient is never re-created. The record itself is kept as a backup.
+ */
+export async function hideLocalPatientCopies(referenceId: string, phone?: string): Promise<void> {
+  try {
+    const patients = ((await getItem(ADDED_PATIENTS_KEY)) as any[]) || [];
+    const norm = (v?: string) => (v || '').replace(/\D/g, '');
+    const phoneN = norm(phone);
+    const deleted = await getDeletedPatientIds();
+    let changed = false;
+    for (const p of patients) {
+      if (!p || !p.id) continue;
+      const samePhone = phoneN.length >= 6 && norm(p.phone) === phoneN;
+      if (p.id === referenceId || p.serverId === referenceId || samePhone) {
+        if (p.pendingSync) { p.pendingSync = undefined; changed = true; }
+        if (!deleted.includes(p.id)) { deleted.push(p.id); changed = true; }
+      }
+    }
+    if (changed) {
+      await setItem(ADDED_PATIENTS_KEY, patients);
+      await setItem(DELETED_PATIENTS_KEY, deleted);
+    }
+  } catch { /* ignore */ }
+}
+
 export async function deleteOnlineBooking(bookingId: string): Promise<void> {
   console.log(`Booking ${bookingId} deletion should be handled via Supabase API. localStorage deletion is a no-op.`);
   // localStorage deletion is no longer needed — data lives in Supabase.

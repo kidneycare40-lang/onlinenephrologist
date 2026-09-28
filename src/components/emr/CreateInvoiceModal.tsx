@@ -8,6 +8,8 @@ import { patients as mockPatients } from '@/lib/data/emr-mock';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi } from '@/lib/api-client';
 import { getItem } from '@/lib/client-storage';
+import { upsertLocalPatient, retryPendingLocalPatients } from '@/lib/local-patients';
+import { filterDeletedPatients } from '@/lib/emr-delete';
 import { fetchBookings } from '@/lib/booking-data';
 import type { EMRInvoice, InvoiceItem, InvoiceStatus, PaymentMethod, VisitType } from '@/types/emr';
 
@@ -113,6 +115,9 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   }, [isOpen, existingInvoice]);
 
   const loadPatients = async () => {
+    // Push any patients that failed to save earlier before listing, so the
+    // just-created server rows appear in this search.
+    await retryPendingLocalPatients();
     let apiPatients: any[] = [];
     try {
       const res = await patientsApi.list();
@@ -200,7 +205,8 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
       }
       for (const p of consultOnlyPatients) { if (!combined.some((x: any) => x.id === p.id)) combined.push(p); }
       for (const p of apptOnlyPatients) { if (!combined.some((x: any) => x.id === p.id)) combined.push(p); }
-      setAllPatients(combined);
+      const visible = await filterDeletedPatients(combined);
+      setAllPatients(visible);
     } catch {}
   };
 
@@ -223,8 +229,22 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSave, existingIn
   };
 
   const selectCustomPatient = (name: string) => {
-    setSelectedPatient({ id: `custom-${Date.now()}`, name: name.trim(), phone: '', clinicId: clinic });
+    const id = `custom-${Date.now()}`;
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    setSelectedPatient({ id, name: name.trim(), phone: '', clinicId: clinic });
     setPatientSearch('');
+    // Persist immediately so a brand-new patient typed while billing is never
+    // lost — it shows up in EMR and in future invoice searches. The real
+    // server UUID is attached after the bill saves (ensureInvoicePatientLocal).
+    void upsertLocalPatient({
+      id,
+      firstName: parts[0] || name.trim(),
+      lastName: parts.slice(1).join(' '),
+      phone: '',
+      clinicId: clinic,
+      source: 'billing',
+      uhid: '',
+    });
   };
 
   useEffect(() => {

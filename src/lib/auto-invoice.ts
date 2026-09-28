@@ -35,7 +35,13 @@ let clinicUuidCache: Record<string, string> = {};
 let clinicsLoaded = false;
 let defaultDoctorId: string | null = null;
 
-async function resolveClinicUuid(db: ReturnType<typeof getDb>, shortName: string): Promise<string> {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: string | null | undefined): boolean {
+  return !!value && UUID_RE.test(value);
+}
+
+export async function resolveClinicUuid(db: ReturnType<typeof getDb>, shortName: string): Promise<string> {
   if (clinicUuidCache[shortName]) return clinicUuidCache[shortName];
 
   if (!clinicsLoaded) {
@@ -64,7 +70,7 @@ async function resolveClinicUuid(db: ReturnType<typeof getDb>, shortName: string
   return '';
 }
 
-async function resolveDoctorId(db: ReturnType<typeof getDb>): Promise<string> {
+export async function resolveDoctorId(db: ReturnType<typeof getDb>): Promise<string> {
   if (defaultDoctorId) return defaultDoctorId;
   const { data: doctors } = await db
     .from('users')
@@ -79,7 +85,7 @@ async function resolveDoctorId(db: ReturnType<typeof getDb>): Promise<string> {
   return '';
 }
 
-function mapClinicShortName(clinicId: string): string {
+export function mapClinicShortName(clinicId: string): string {
   const map: Record<string, string> = {
     'online': 'online', 'online-intl': 'online', 'online_intl': 'online',
     'faridabad': 'kcc-faridabad', 'kcc-faridabad': 'kcc-faridabad',
@@ -278,4 +284,75 @@ export async function autoCreateBookingInvoice(data: BookingInvoiceData): Promis
 
   console.log(`[auto-invoice] SUCCESS ${isPaid ? 'PAID' : 'PENDING'} invoice=${invoiceNumber} booking=${data.bookingId} patientId=${patientId} amount=${amount}`);
   return invoice.id;
+}
+
+/**
+ * Resolve a client-supplied patient reference to a real patients-table UUID.
+ * Manual invoices often carry non-UUID ids (custom-1699..., booking ids,
+ * consultation ids) which the UUID FK column rejects. This looks the patient
+ * up by id, then by phone, and finally creates a patients row so the invoice
+ * can always be persisted instead of living only in the browser.
+ */
+export async function resolveInvoicePatientId(
+  db: ReturnType<typeof getDb>,
+  candidateId: string | null | undefined,
+  patientName: string | null | undefined,
+  patientPhone: string | null | undefined,
+  clinicUuid: string | null | undefined
+): Promise<string | null> {
+  if (isUuid(candidateId)) {
+    const { data } = await db.from('patients').select('id').eq('id', candidateId!).limit(1);
+    if (data && data.length > 0) return data[0].id;
+  }
+
+  if (patientPhone) {
+    const raw = patientPhone.replace(/\D/g, '');
+    const variations: string[] = [];
+    if (raw) {
+      variations.push(raw);
+      if (raw.startsWith('91') && raw.length === 12) variations.push(raw.slice(2));
+      else if (raw.length === 10) variations.push(`91${raw}`);
+    }
+    const withPlus = patientPhone.replace(/^\+/, '');
+    if (withPlus && !variations.includes(withPlus)) variations.push(withPlus);
+
+    for (const phone of variations) {
+      const { data } = await db
+        .from('patients')
+        .select('id')
+        .eq('phone', phone)
+        .is('is_deleted', false)
+        .limit(1);
+      if (data && data.length > 0) return data[0].id;
+    }
+  }
+
+  if (patientName && patientName.trim()) {
+    const parts = patientName.trim().split(/\s+/);
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(' ');
+    const cleanPhone = patientPhone ? patientPhone.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '') : null;
+
+    const { data: created, error } = await db
+      .from('patients')
+      .insert({
+        uhid: `MAN-${Date.now().toString().slice(-9)}`,
+        first_name: firstName,
+        last_name: lastName || ' ',
+        phone: cleanPhone || null,
+        primary_clinic_id: clinicUuid || null,
+        is_active: true,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error(`[billing] resolveInvoicePatientId create failed | name=${patientName} | dbError=${error.message || JSON.stringify(error)}`);
+      return null;
+    }
+    return created?.id || null;
+  }
+
+  console.error(`[billing] resolveInvoicePatientId FAILED | candidateId=${candidateId} | error=no_resolvable_patient`);
+  return null;
 }

@@ -209,7 +209,7 @@ export class BillingService {
 
   async createInvoice(data: {
     patient_id: string;
-    doctor_id: string;
+    doctor_id: string | null;
     clinic_id: string;
     consultation_id?: string;
     items: InvoiceItemCreate[];
@@ -370,11 +370,13 @@ export class BillingService {
     } else if (totalPaid > 0) {
       status = 'PARTIAL';
     } else {
-      // Check if overdue (invoice date > 30 days ago)
+      // Check if overdue (invoice date > 30 days ago).
+      // NOTE: 'OVERDUE' is not in the invoice_status enum — keep PENDING so
+      // the update never fails; the UI treats unpaid invoices as pending.
       const invDate = new Date(invoice.invoice_date);
       const now = new Date();
       const daysDiff = Math.floor((now.getTime() - invDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysDiff > 30) status = 'OVERDUE';
+      if (daysDiff > 30) status = 'PENDING';
     }
 
     await this.invoiceRepo.update(invoiceId, {

@@ -448,14 +448,16 @@ export default function AddPatientPage() {
       createdAt: now.toISOString().split('T')[0],
       lastVisit: now.toISOString().split('T')[0],
       totalVisits: 1,
+      // Flag pendingSync until the server confirms — if the call fails the
+      // patient is still saved here and retried automatically on next EMR load.
+      pendingSync: true,
     };
-
     const existing = (await getItem('emr-added-patients')) as any[] || [];
     existing.push(newPatient);
     await setItem('emr-added-patients', existing);
 
-    // Also save to API for cross-browser persistence
-    patientsApi.create({
+    try {
+      const created = await patientsApi.create({
       first_name: formData.firstName.trim(),
       last_name: formData.lastName.trim(),
       phone: formData.phone.trim(),
@@ -479,9 +481,24 @@ export default function AddPatientPage() {
         phone: formData.emergencyContactPhone || '',
         relationship: formData.emergencyContactRelation || '',
       } : undefined,
-    }).catch(() => {});
+      });
+      if (created && created.id) {
+        try {
+          const latest = (await getItem('emr-added-patients')) as any[] || [];
+          const idx = latest.findIndex((p: any) => p.id === newPatient.id);
+          if (idx >= 0) {
+            latest[idx].pendingSync = undefined;
+            latest[idx].serverId = created.id;
+            await setItem('emr-added-patients', latest);
+          }
+        } catch {}
+      }
+    } catch {
+      // Server save failed — patient stays pendingSync in local store and is
+      // retried automatically on the next EMR load. Never silently lost.
+    }
 
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 400));
     setIsSubmitting(false);
     const clinicLabelText = clinicLabel(clinicId);
     toast.success('Patient added successfully!', { description: `${formData.firstName} ${formData.lastName} registered at ${clinicLabelText}.` });

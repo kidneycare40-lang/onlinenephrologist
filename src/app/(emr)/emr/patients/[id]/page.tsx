@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { patients, consultations, prescriptions, labOrders, timelineEvents } from '@/lib/data/emr-mock';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { EMRPatient, EMRConsultation } from '@/types/emr';
-import { deleteAddedPatient, markPatientDeleted } from '@/lib/emr-delete';
+import { hideLocalPatientCopies, markPatientDeleted } from '@/lib/emr-delete';
 import { getItem, setItem } from '@/lib/client-storage';
 import { fetchBookings } from '@/lib/booking-data';
 
@@ -290,10 +290,9 @@ export default function PatientDetailPage() {
 
   const handleDeletePatient = async () => {
     if (!patient) return;
-    const isAdded = addedPatients.some((p) => p.id === patient.id);
-    if (isAdded) {
-      await deleteAddedPatient(patient.id);
-    }
+    // Hide-only: server rows are soft-deleted (is_deleted), local copies are
+    // kept as a backup and only hidden — patient data is never destroyed.
+    await hideLocalPatientCopies(patient.id, patient.phone);
     await markPatientDeleted(patient.id);
     router.push('/emr/patients');
   };

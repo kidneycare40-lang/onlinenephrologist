@@ -332,6 +332,8 @@ export interface EMRInvoice {
   terms?: string;
   createdAt: string;
   updatedAt: string;
+  /** Bill saved on this device but not yet persisted to the server. */
+  pendingSync?: boolean;
 }
 
 export interface InvoiceTemplate {

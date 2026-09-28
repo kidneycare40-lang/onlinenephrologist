@@ -124,6 +124,8 @@ function NewPatientModal({ open, onClose }: { open: boolean; onClose: () => void
       allergies: [], medicalHistory: '', isChronic: false, isActive: true,
       source: 'emr' as const, createdAt: now.toISOString().split('T')[0],
       lastVisit: now.toISOString().split('T')[0], totalVisits: 1, familyMembers: [],
+      // Saved locally first; pushed to the server automatically on next EMR load.
+      pendingSync: true,
     };
     const existing = (await getItem('emr-added-patients')) as any[] || [];
     existing.push(newPatient);

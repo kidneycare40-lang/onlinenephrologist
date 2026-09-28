@@ -14,6 +14,7 @@ import { fetchBookings } from '@/lib/booking-data';
 import BillingInvoice from '@/components/emr/BillingInvoice';
 import CreateInvoiceModal from '@/components/emr/CreateInvoiceModal';
 import { billingApi, api } from '@/lib/api-client';
+import { ensureInvoicePatientLocal } from '@/lib/local-patients';
 import type { EMRInvoice, InvoiceStatus } from '@/types/emr';
 import type { BookingPayment } from '@/lib/db/types';
 
@@ -117,6 +118,62 @@ async function saveInvoicesToStorage(invoices: EMRInvoice[]) {
   } catch {}
 }
 
+/**
+ * Retry pushing bills that only exist on this device up to the server.
+ * On success the ORIGINAL invoice object is updated in place (server id,
+ * server invoice number, pendingSync cleared) so callers holding the same
+ * references see the update — and the bill is never re-sent (no duplicates).
+ * Still-failing bills keep pendingSync so they are never dropped.
+ */
+async function retryPendingSyncInvoices(pending: EMRInvoice[]): Promise<{ synced: EMRInvoice[]; stillPending: EMRInvoice[] }> {
+  const synced: EMRInvoice[] = [];
+  const stillPending: EMRInvoice[] = [];
+
+  for (const inv of pending) {
+    try {
+      const result = await billingApi.create(inv);
+      if (result?.id) {
+        if (inv.payments && inv.payments.length > 0) {
+          for (const p of inv.payments) {
+            if (p.amount > 0) {
+              await billingApi.recordPayment({
+                invoice_id: result.id,
+                patient_id: result.patient_id || inv.patientId,
+                amount: p.amount,
+                payment_method: p.method,
+                reference_number: p.reference || p.notes || null,
+                notes: p.notes || null,
+              }).catch(() => null);
+            }
+          }
+        }
+        const originalPatientId = inv.patientId;
+        inv.id = result.id;
+        inv.invoiceNumber = result.invoice_number || inv.invoiceNumber;
+        inv.patientId = result.patient_id || inv.patientId;
+        inv.pendingSync = undefined;
+        inv.updatedAt = new Date().toISOString();
+        await ensureInvoicePatientLocal({
+          previousLocalId: originalPatientId,
+          patientId: originalPatientId,
+          serverPatientId: result.patient_id,
+          fullName: inv.patientName,
+          phone: inv.patientPhone,
+          gender: inv.patientGender,
+          clinicId: inv.clinicId,
+        });
+        synced.push(inv);
+      } else {
+        stillPending.push(inv);
+      }
+    } catch {
+      stillPending.push(inv);
+    }
+  }
+
+  return { synced, stillPending };
+}
+
 async function enrichInvoicesWithAge(invoices: EMRInvoice[]): Promise<EMRInvoice[]> {
   const missingAge = invoices.filter(inv => !inv.patientAge && inv.patientId);
   if (missingAge.length === 0) return invoices;
@@ -205,6 +262,7 @@ export default function BillingPage() {
   const [deletingPayment, setDeletingPayment] = useState<string | null>(null);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [clearingMocks, setClearingMocks] = useState(false);
+  const pendingSyncCount = useMemo(() => invoices.filter((inv) => inv.pendingSync).length, [invoices]);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [selectedBookingDetail, setSelectedBookingDetail] = useState<any>(null);
   const [bookingDetailLoading, setBookingDetailLoading] = useState(false);
@@ -213,6 +271,30 @@ export default function BillingPage() {
   const refreshData = useCallback(async () => {
     setLoading(true);
     setInvoiceError(null);
+
+    // Load the local cache first — it may hold bills that never reached the server.
+    let localInvoices: EMRInvoice[] = [];
+    try {
+      localInvoices = await loadInvoicesFromStorage();
+    } catch {
+      localInvoices = [];
+    }
+
+    // Retry any bills that are still only on this device BEFORE reading the
+    // server list, so they are pushed up and never silently dropped.
+    let stillPending: EMRInvoice[] = [];
+    const pendingLocal = localInvoices.filter((inv) => inv.pendingSync);
+    if (pendingLocal.length > 0) {
+      try {
+        // Synced bills are updated in place (same object refs as localInvoices).
+        const { synced, stillPending: failed } = await retryPendingSyncInvoices(pendingLocal);
+        stillPending = failed;
+        if (synced.length > 0) {
+          await saveInvoicesToStorage(localInvoices);
+          setInvoiceError(null);
+        }
+      } catch {}
+    }
 
     try {
       const params: Record<string, string> = {};
@@ -227,25 +309,27 @@ export default function BillingPage() {
       }
 
       if (apiInvoices.length > 0) {
-        const enriched = await enrichInvoicesWithAge(apiInvoices);
+        // Merge: keep bills that exist ONLY on this device (not on the server)
+        // instead of overwriting the cache with the server list.
+        const serverIds = new Set(apiInvoices.map((i) => i.id));
+        const serverNumbers = new Set(apiInvoices.map((i) => i.invoiceNumber));
+        const unsyncedKept = stillPending.filter((i) => !serverIds.has(i.id) && !serverNumbers.has(i.invoiceNumber));
+        const merged = unsyncedKept.length > 0 ? [...unsyncedKept, ...apiInvoices] : apiInvoices;
+        const enriched = await enrichInvoicesWithAge(merged);
+        setInvoices(enriched);
+        await saveInvoicesToStorage(enriched);
+      } else if (localInvoices.length > 0) {
+        const enriched = await enrichInvoicesWithAge(localInvoices);
         setInvoices(enriched);
         await saveInvoicesToStorage(enriched);
       } else {
-        const storageInvoices = await loadInvoicesFromStorage();
-        const enriched = await enrichInvoicesWithAge(storageInvoices);
-        if (enriched.length > 0) {
-          setInvoices(enriched);
-          await saveInvoicesToStorage(enriched);
-        } else {
-          setInvoices([]);
-        }
+        setInvoices([]);
       }
     } catch (err: any) {
       const msg = err?.message || 'Failed to load invoices';
       setInvoiceError(msg);
       try {
-        const storageInvoices = await loadInvoicesFromStorage();
-        const enriched = await enrichInvoicesWithAge(storageInvoices);
+        const enriched = await enrichInvoicesWithAge(localInvoices);
         setInvoices(enriched.length > 0 ? enriched : []);
       } catch {
         setInvoices([]);
@@ -390,35 +474,68 @@ export default function BillingPage() {
   const handleSaveInvoice = async (invoice: EMRInvoice) => {
     if (editingInvoice) {
       try {
-        await billingApi.update(invoice.id, invoice).catch(() => null);
-      } catch {}
+        await billingApi.update(invoice.id, invoice);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        setInvoiceError(`Invoice ${invoice.invoiceNumber} changes not saved on server: ${msg}`);
+      }
       const updated = invoices.map((inv) => (inv.id === invoice.id ? invoice : inv));
       setInvoices(updated);
       await saveInvoicesToStorage(updated);
     } else {
+      let result: { id: string; invoice_number?: string; patient_id?: string } | null = null;
+      let errMsg = '';
       try {
-        const result = await billingApi.create(invoice).catch(() => null);
-        if (result?.id) {
-          invoice.id = result.id;
-          invoice.invoiceNumber = result.invoice_number || invoice.invoiceNumber;
+        result = await billingApi.create(invoice);
+      } catch (e) {
+        errMsg = e instanceof Error ? e.message : 'Network error';
+      }
+      if (result?.id) {
+        invoice.id = result.id;
+        invoice.invoiceNumber = result.invoice_number || invoice.invoiceNumber;
+        invoice.pendingSync = undefined;
 
-          // Record payment in DB if invoice has payments
-          if (invoice.payments && invoice.payments.length > 0) {
-            for (const p of invoice.payments) {
-              if (p.amount > 0) {
-                await billingApi.recordPayment({
-                  invoice_id: result.id,
-                  patient_id: invoice.patientId,
-                  amount: p.amount,
-                  payment_method: p.method,
-                  reference_number: p.reference || p.notes || null,
-                  notes: p.notes || null,
-                }).catch(() => null);
-              }
+        // The server created/resolved the patients row for this bill — make
+        // sure the local store knows it too so EMR never loses the patient.
+        await ensureInvoicePatientLocal({
+          patientId: invoice.patientId,
+          serverPatientId: result.patient_id,
+          fullName: invoice.patientName,
+          phone: invoice.patientPhone,
+          gender: invoice.patientGender,
+          clinicId: invoice.clinicId,
+        });
+
+        // Record payment in DB if invoice has payments
+        if (invoice.payments && invoice.payments.length > 0) {
+          for (const p of invoice.payments) {
+            if (p.amount > 0) {
+              await billingApi.recordPayment({
+                invoice_id: result.id,
+                patient_id: result.patient_id || invoice.patientId,
+                amount: p.amount,
+                payment_method: p.method,
+                reference_number: p.reference || p.notes || null,
+                notes: p.notes || null,
+              }).catch(() => null);
             }
           }
         }
-      } catch {}
+      } else {
+        // Server rejected the save — keep the bill safe on this device and flag it
+        // so refresh never drops it and the user sees it hasn't synced yet.
+        invoice.pendingSync = true;
+        // Keep the patient safe locally too — the pending retry will create the
+        // server patient when the bill finally syncs.
+        await ensureInvoicePatientLocal({
+          patientId: invoice.patientId,
+          fullName: invoice.patientName,
+          phone: invoice.patientPhone,
+          gender: invoice.patientGender,
+          clinicId: invoice.clinicId,
+        });
+        setInvoiceError(`Invoice ${invoice.invoiceNumber} is NOT yet saved on the server${errMsg ? ` — ${errMsg}` : ''}. It is kept safely on this device and will retry automatically.`);
+      }
       const updated = [invoice, ...invoices];
       setInvoices(updated);
       await saveInvoicesToStorage(updated);
@@ -612,17 +729,24 @@ export default function BillingPage() {
           </button>
           <button
             onClick={async () => {
-              if (!confirm('Clear cached billing data (including any dummy/mock data)? This will reload from the server on next refresh.')) return;
+              if (!confirm('Clear the cached billing list? It reloads from the server afterwards.\n\nBills NOT yet saved to the server are kept — nothing is ever deleted from the server.')) return;
               setClearingMocks(true);
               try {
-                await removeItem('billing-invoices');
+                const local = await loadInvoicesFromStorage();
+                const unsynced = local.filter((inv) => inv.pendingSync);
+                if (unsynced.length > 0) {
+                  // Keep unsynced bills — only drop the mirror copy of synced ones.
+                  await saveInvoicesToStorage(unsynced);
+                } else {
+                  await removeItem('billing-invoices');
+                }
               } catch {}
               setClearingMocks(false);
               refreshData();
             }}
             disabled={clearingMocks}
             className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors min-h-[44px]"
-            title="Clear cached mock data"
+            title="Clear cached billing list (unsynced bills are kept)"
           >
             <Trash2 className="h-3.5 w-3.5" />
             {clearingMocks ? 'Clearing...' : 'Clear Cache'}
@@ -645,12 +769,33 @@ export default function BillingPage() {
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800">Failed to load invoices from server</p>
+            <p className="text-sm font-medium text-red-800">Billing notice</p>
             <p className="text-xs text-red-600 mt-1">{invoiceError}</p>
-            <p className="text-xs text-red-500 mt-1">Showing cached data if available. Click Refresh to retry.</p>
           </div>
           <button onClick={() => setInvoiceError(null)} className="p-1 text-red-400 hover:text-red-600">
             <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Unsynced bills — kept safe locally, never deleted */}
+      {pendingSyncCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">
+              {pendingSyncCount} bill{pendingSyncCount > 1 ? 's' : ''} saved on this device — not yet on the server
+            </p>
+            <p className="text-xs text-amber-700 mt-1">
+              They are kept safe here and will retry automatically. Do not clear browser data until synced.
+            </p>
+          </div>
+          <button
+            onClick={() => refreshData()}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors"
+          >
+            {loading ? 'Syncing...' : 'Retry sync now'}
           </button>
         </div>
       )}

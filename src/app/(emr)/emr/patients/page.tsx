@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { filterDeletedPatients } from '@/lib/emr-delete';
+import { filterDeletedPatients, markPatientDeleted, hideLocalPatientCopies } from '@/lib/emr-delete';
+import { retryPendingLocalPatients } from '@/lib/local-patients';
 import {
   Search, Calendar, ChevronLeft, ChevronRight, Phone, Stethoscope,
   Bell, Trash2, RefreshCw, Users, Activity, Filter,
@@ -11,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useClinic } from '@/lib/emr-clinic-context';
 import { patientsApi, ApiError } from '@/lib/api-client';
 import { patients as mockPatients } from '@/lib/data/emr-mock';
-import { getItem, setItem } from '@/lib/client-storage';
+import { getItem } from '@/lib/client-storage';
 import { fetchBookings } from '@/lib/booking-data';
 
 function calculateAge(dob: string): number {
@@ -69,6 +70,10 @@ export default function PatientListPage() {
       if (fromDate) params.dateFrom = fromDate;
       if (toDate) params.dateTo = toDate;
 
+      // FIRST push any patients that failed to save earlier (pendingSync), so
+      // the list fetched below already includes the newly created server rows.
+      await retryPendingLocalPatients();
+
       const result = await patientsApi.list(params);
       let apiPatients = result.data || [];
 
@@ -80,18 +85,26 @@ export default function PatientListPage() {
         }
       }
 
-      // Also load localStorage patients and merge (avoid duplicates by phone)
+      // Merge local patients (avoid duplicates by phone, or by name when the
+      // patient has no phone — never drop a patient)
       try {
         const added = (await getItem('emr-added-patients')) as any[] || [];
         if (Array.isArray(added)) {
           const filtered = clinicFilter && clinicFilter !== 'all'
             ? added.filter((p: any) => !p.clinicId || p.clinicId === clinicFilter)
             : added;
-          const apiPhones = new Set(apiPatients.map((p: any) => (p.phone || '').replace(/\s/g, '')));
+          const apiPhones = new Set(apiPatients.map((p: any) => (p.phone || '').replace(/\D/g, '')));
+          const apiNames = new Set(apiPatients.map((p: any) =>
+            `${p.firstName || p.first_name || ''} ${p.lastName || p.last_name || ''}`.toLowerCase().replace(/\s+/g, ' ').trim()
+          ));
           for (const p of filtered) {
-            const phone = (p.phone || '').replace(/\s/g, '');
-            if (phone && !apiPhones.has(phone) && !apiPatients.some((ap: any) => ap.id === p.id)) {
-              apiPatients.push(p);
+            if (apiPatients.some((ap: any) => ap.id === p.id)) continue;
+            const phone = (p.phone || '').replace(/\D/g, '');
+            if (phone) {
+              if (!apiPhones.has(phone)) apiPatients.push(p);
+            } else {
+              const pName = `${p.firstName || ''} ${p.lastName || ''}`.toLowerCase().replace(/\s+/g, ' ').trim();
+              if (!pName || !apiNames.has(pName)) apiPatients.push(p);
             }
           }
         }
@@ -318,13 +331,14 @@ export default function PatientListPage() {
     if (!deleteTarget) return;
     try {
       await patientsApi.delete(deleteTarget.id);
+      await markPatientDeleted(deleteTarget.id);
+      await hideLocalPatientCopies(deleteTarget.id, deleteTarget.phone);
       setAllPatients((prev) => prev.filter((p: any) => p.id !== deleteTarget.id));
     } catch {
-      // Fallback: mark in localStorage
+      // Not on server yet — keep the record locally, just hide it everywhere.
       try {
-        const deleted = (await getItem('emr-deleted-patients')) as any[] || [];
-        deleted.push(deleteTarget.id);
-        await setItem('emr-deleted-patients', deleted);
+        await markPatientDeleted(deleteTarget.id);
+        await hideLocalPatientCopies(deleteTarget.id, deleteTarget.phone);
         setAllPatients((prev) => prev.filter((p: any) => p.id !== deleteTarget.id));
       } catch {}
     }

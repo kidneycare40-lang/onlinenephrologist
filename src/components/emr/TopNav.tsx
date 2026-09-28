@@ -344,24 +344,40 @@ export default function TopNav() {
       createdAt: now.toISOString().split('T')[0],
       lastVisit: now.toISOString().split('T')[0],
       totalVisits: 1,
+      // Flag pendingSync until the server confirms — retried automatically if it fails.
+      pendingSync: true,
     };
-
     const existing = ((await getItem('emr-added-patients')) as any[] || []);
     existing.push(newPatient);
     await setItem('emr-added-patients', existing);
 
-    patientsApi.create({
-      first_name: firstName,
-      last_name: lastName,
-      phone: patientPhone.trim(),
-      email: patientEmail.trim() || undefined,
-      date_of_birth: dob || undefined,
-      gender: patientGender === 'FEMALE' ? 'female' : patientGender === 'OTHER' ? 'other' : 'male',
-      blood_group: patientBloodGroup || undefined,
-      abha_number: patientAbha || undefined,
-      medical_history: patientHistory || undefined,
-      insurance_provider: patientInsurance || undefined,
-    }).catch(() => {});
+    try {
+      const created = await patientsApi.create({
+        first_name: firstName,
+        last_name: lastName,
+        phone: patientPhone.trim(),
+        email: patientEmail.trim() || undefined,
+        date_of_birth: dob || undefined,
+        gender: patientGender === 'FEMALE' ? 'female' : patientGender === 'OTHER' ? 'other' : 'male',
+        blood_group: patientBloodGroup || undefined,
+        abha_number: patientAbha || undefined,
+        medical_history: patientHistory || undefined,
+        insurance_provider: patientInsurance || undefined,
+      });
+      if (created && created.id) {
+        try {
+          const latest = ((await getItem('emr-added-patients')) as any[] || []);
+          const idx = latest.findIndex((p: any) => p.id === newPatient.id);
+          if (idx >= 0) {
+            latest[idx].pendingSync = undefined;
+            latest[idx].serverId = created.id;
+            await setItem('emr-added-patients', latest);
+          }
+        } catch {}
+      }
+    } catch {
+      // stays pendingSync — retried on next EMR load, never lost
+    }
 
     const redirect = action === 'bill'
       ? `/emr/billing`

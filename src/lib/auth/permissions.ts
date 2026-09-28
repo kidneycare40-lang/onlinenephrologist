@@ -50,7 +50,10 @@ export const ROLE_PERMISSIONS: Record<EMRRole, RolePermissions> = {
     appointments: { view: true, create: true, edit: true, cancel: false, reschedule: true },
     consultations: { view: true, create: true, edit: true, delete: false, complete: true },
     prescriptions: { view: true, create: true, edit: true, delete: false, finalize: true },
-    billing: { view: true, create: false, edit: false, delete: false, recordPayment: false, refund: false },
+    // The doctor runs this single-doctor clinic and creates bills from the
+    // billing page (the New Invoice button was never gated). The API must
+    // match the UI or every bill silently 403s and never saves.
+    billing: { view: true, create: true, edit: true, delete: false, recordPayment: true, refund: false },
     medicines: { view: true, create: true, edit: false, delete: false },
     reports: { view: true, export: true },
     settings: { view: true, edit: false },
@@ -130,8 +133,24 @@ export const ROLE_PERMISSIONS: Record<EMRRole, RolePermissions> = {
   },
 };
 
+/**
+ * Role aliases: accounts created via the register route get role 'admin'
+ * (its validRoles list), but ROLE_PERMISSIONS historically only knew
+ * 'super_admin' — which made checkPermission() deny EVERYTHING for 'admin'
+ * accounts (all API calls returned 403 and data silently never saved).
+ */
+const ROLE_ALIASES: Record<string, EMRRole> = {
+  admin: 'super_admin',
+  administrator: 'super_admin',
+  superadmin: 'super_admin',
+};
+
+function normalizeRole(role: string): EMRRole {
+  return ROLE_ALIASES[(role || '').toLowerCase()] || (role as EMRRole);
+}
+
 export function checkPermission(role: string, section: keyof RolePermissions, action: string): boolean {
-  const normalizedRole = role as EMRRole;
+  const normalizedRole = normalizeRole(role);
   const perms = ROLE_PERMISSIONS[normalizedRole];
   if (!perms) return false;
   const sectionPerms = perms[section];
@@ -140,7 +159,7 @@ export function checkPermission(role: string, section: keyof RolePermissions, ac
 }
 
 export function getPermissionsForRole(role: string): RolePermissions | null {
-  return ROLE_PERMISSIONS[role as EMRRole] || null;
+  return ROLE_PERMISSIONS[normalizeRole(role)] || null;
 }
 
 export const EMRRoleLabels: Record<EMRRole, string> = {

@@ -6,14 +6,15 @@ import {
   sendDoctorAppointmentAlert,
   type AppointmentNotificationData,
 } from '@/lib/whatsapp';
+import { sendWhatsAppViaCallMeBot, recordCallMeBotMessage } from '@/lib/callmebot';
 
-function buildDoctorWaMeUrl(data: BookingNotificationContext, phone: string): string {
+function buildDoctorMessageText(data: BookingNotificationContext): string {
   const typeLabel =
     data.consultationType === 'online_intl' ? 'International Online Video' :
     data.consultationType === 'online' ? 'Online Video' :
     data.consultationType === 'hospital' ? 'Hospital Visit' : 'In-Clinic';
   const amountLabel = (data.feeCurrency || 'INR') === 'USD' ? `$${data.fee}` : `₹${data.fee}`;
-  const message = [
+  return [
     `*NEW BOOKING — PAYMENT CONFIRMED*`,
     ``,
     `Booking ID: ${data.bookingId}`,
@@ -41,16 +42,19 @@ function buildDoctorWaMeUrl(data: BookingNotificationContext, phone: string): st
     `View EMR & Billing:`,
     data.emrBillingUrl || `https://www.onlinenephrologist.com/emr/billing`,
   ].filter(Boolean).join('\n');
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
-function buildPatientWaMeUrl(data: BookingNotificationContext, phone: string): string {
+function buildDoctorWaMeUrl(data: BookingNotificationContext, phone: string): string {
+  return `https://wa.me/${phone}?text=${encodeURIComponent(buildDoctorMessageText(data))}`;
+}
+
+function buildPatientMessageText(data: BookingNotificationContext): string {
   const typeLabel =
     data.consultationType === 'online_intl' ? 'International Online' :
     data.consultationType === 'online' ? 'Online Video' :
     data.consultationType === 'hospital' ? 'Hospital Visit' : 'In-Clinic';
   const amountLabel = (data.feeCurrency || 'INR') === 'USD' ? `$${data.fee}` : `₹${data.fee}`;
-  const message = [
+  return [
     `Dear ${data.patientName},`,
     ``,
     `Your appointment is confirmed!`,
@@ -68,7 +72,10 @@ function buildPatientWaMeUrl(data: BookingNotificationContext, phone: string): s
     ``,
     `For queries, reply to this message.`,
   ].filter(Boolean).join('\n');
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function buildPatientWaMeUrl(data: BookingNotificationContext, phone: string): string {
+  return `https://wa.me/${phone}?text=${encodeURIComponent(buildPatientMessageText(data))}`;
 }
 
 /**
@@ -219,13 +226,36 @@ export async function sendBookingNotifications(
         if (doctorResult.ok) {
           await updateNotificationStatus(ctx.bookingId, 'team_whatsapp', doctorPhone, 'sent', doctorResult.messageId);
           result.teamWhatsApp = true;
+          continue;
+        }
+
+        // Auto-send via CallMeBot (free, no Meta token needed)
+        const callMeBotResult = await sendWhatsAppViaCallMeBot(
+          doctorPhone,
+          buildDoctorMessageText(ctx)
+        );
+
+        if (callMeBotResult.ok) {
+          await updateNotificationStatus(ctx.bookingId, 'team_whatsapp', doctorPhone, 'sent', callMeBotResult.messageId);
+          await recordCallMeBotMessage({
+            bookingId: ctx.bookingId,
+            direction: 'outbound',
+            fromNumber: 'CallMeBot',
+            toNumber: doctorPhone,
+            content: `Doctor alert for booking ${ctx.bookingId}`,
+            status: 'sent',
+            errorMessage: callMeBotResult.error,
+          });
+          result.teamWhatsApp = true;
+          console.log(`[notifications] Doctor WhatsApp sent via CallMeBot → ${doctorPhone}`);
         } else {
           const waMeUrl = buildDoctorWaMeUrl(ctx, doctorPhone);
+          const cloudError = doctorResult.error || 'Cloud API unavailable';
           await updateNotificationStatus(
             ctx.bookingId, 'team_whatsapp', doctorPhone, 'failed',
-            undefined, `${doctorResult.error || 'Cloud API unavailable'} | wa.me: ${waMeUrl}`
+            undefined, `${cloudError} | CallMeBot: ${callMeBotResult.error || 'failed'} | wa.me: ${waMeUrl}`
           );
-          console.log(`[notifications] Doctor WhatsApp Cloud API failed → wa.me fallback: ${waMeUrl}`);
+          console.log(`[notifications] Doctor WhatsApp both providers failed → wa.me: ${waMeUrl}`);
         }
       }
     }
@@ -311,12 +341,36 @@ export async function sendBookingNotifications(
       result.patientWhatsApp = true;
     } else {
       const cleanPhone = ctx.patientPhone.replace(/\D/g, '');
-      const waMeUrl = buildPatientWaMeUrl(ctx, cleanPhone);
-      await updateNotificationStatus(
-        ctx.bookingId, 'patient_whatsapp', ctx.patientPhone, 'failed',
-        undefined, `${waResult.error || 'Cloud API unavailable'} | wa.me: ${waMeUrl}`
+      // Auto-send via CallMeBot (free, no Meta token needed)
+      const callMeBotResult = await sendWhatsAppViaCallMeBot(
+        cleanPhone,
+        buildPatientMessageText(ctx)
       );
-      console.log(`[notifications] Patient WhatsApp Cloud API failed → wa.me fallback: ${waMeUrl}`);
+
+      if (callMeBotResult.ok) {
+        await updateNotificationStatus(
+          ctx.bookingId, 'patient_whatsapp', ctx.patientPhone, 'sent', callMeBotResult.messageId
+        );
+        await recordCallMeBotMessage({
+          bookingId: ctx.bookingId,
+          direction: 'outbound',
+          fromNumber: 'CallMeBot',
+          toNumber: cleanPhone,
+          content: `Appointment confirmation for ${ctx.patientName}`,
+          status: 'sent',
+          errorMessage: callMeBotResult.error,
+        });
+        result.patientWhatsApp = true;
+        console.log(`[notifications] Patient WhatsApp sent via CallMeBot → ${cleanPhone}`);
+      } else {
+        const waMeUrl = buildPatientWaMeUrl(ctx, cleanPhone);
+        const cloudError = waResult.error || 'Cloud API unavailable';
+        await updateNotificationStatus(
+          ctx.bookingId, 'patient_whatsapp', ctx.patientPhone, 'failed',
+          undefined, `${cloudError} | CallMeBot: ${callMeBotResult.error || 'failed'} | wa.me: ${waMeUrl}`
+        );
+        console.log(`[notifications] Patient WhatsApp both providers failed → wa.me: ${waMeUrl}`);
+      }
     }
   }
 

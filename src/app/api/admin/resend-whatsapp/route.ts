@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
 import { sendDoctorAppointmentAlert, sendPatientAppointmentConfirmation, type AppointmentNotificationData } from '@/lib/whatsapp';
+import { sendWhatsAppViaCallMeBot } from '@/lib/callmebot';
 
 /**
  * POST /api/admin/resend-whatsapp
@@ -106,14 +107,25 @@ export async function POST(request: NextRequest) {
         emrUrl,
       ].filter(Boolean).join('\n');
 
+      // Auto-send via CallMeBot (free, no Meta token needed)
+      const callMeBotResult = await sendWhatsAppViaCallMeBot(doctorPhone, message);
+      if (callMeBotResult.ok) {
+        return NextResponse.json({
+          success: true,
+          method: 'callmebot',
+          messageId: callMeBotResult.messageId,
+          error: callMeBotResult.error,
+        });
+      }
+
       const waMeUrl = `https://wa.me/${doctorPhone}?text=${encodeURIComponent(message)}`;
 
       return NextResponse.json({
         success: false,
         method: 'wa_me_fallback',
         waMeUrl,
-        error: result.error,
-        message: 'Cloud API failed. Use this link to send via WhatsApp.',
+        error: `${result.error || 'Cloud API unavailable'} | CallMeBot: ${callMeBotResult.error || 'failed'}`,
+        message: 'Cloud API and CallMeBot failed. Use this link to send via WhatsApp.',
       });
     }
 
@@ -144,14 +156,25 @@ export async function POST(request: NextRequest) {
         `For queries, reply to this message.`,
       ].filter(Boolean).join('\n');
 
+      // Auto-send via CallMeBot
+      const callMeBotResult = await sendWhatsAppViaCallMeBot(cleanPhone, message);
+      if (callMeBotResult.ok) {
+        return NextResponse.json({
+          success: true,
+          method: 'callmebot',
+          messageId: callMeBotResult.messageId,
+          error: callMeBotResult.error,
+        });
+      }
+
       const waMeUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 
       return NextResponse.json({
         success: false,
         method: 'wa_me_fallback',
         waMeUrl,
-        error: result.error,
-        message: 'Cloud API failed. Use this link to send via WhatsApp.',
+        error: `${result.error || 'Cloud API unavailable'} | CallMeBot: ${callMeBotResult.error || 'failed'}`,
+        message: 'Cloud API and CallMeBot failed. Use this link to send via WhatsApp.',
       });
     }
 

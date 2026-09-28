@@ -72,9 +72,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const patientService = getPatientService();
 
-    if (!body.first_name || !body.last_name || !body.phone) {
-      return apiError('First name, last name, and phone are required', 400);
+    if (!body.first_name) {
+      return apiError('First name is required', 400);
     }
+    // Phone is optional (DB column is nullable) — never block saving a patient.
+    if (!body.last_name) body.last_name = '';
+    if (body.phone !== undefined) body.phone = String(body.phone).trim() || null;
 
     const patient = await patientService.create(body, user!.userId);
     if (!patient) return apiError('Failed to create patient', 500);
