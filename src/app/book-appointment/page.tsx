@@ -2293,8 +2293,8 @@ function BookingForm() {
 
               <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Reason for Consultation *</label>
-                  <select name="reason" required value={formData.reason} onChange={handleChange}
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Reason for Consultation</label>
+                  <select name="reason" value={formData.reason} onChange={handleChange}
                     className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors">
                     <option value="">Select reason</option>
                     <option>Chronic Kidney Disease (CKD)</option>
@@ -2344,15 +2344,15 @@ function BookingForm() {
                 <p className="text-xs text-slate-500 -mt-3">Helps Dr Goel prepare for your visit — reports go straight to the doctor</p>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">1. Patient&apos;s Complaints {formData.consultationType === 'online' || isOutsideIndia ? '*' : ''}</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">1. Patient&apos;s Complaints</label>
                   <p className="text-xs text-slate-400 mb-2">Describe symptoms, when they started, and triggers</p>
-                  <textarea name="complaints" required={formData.consultationType === 'online' || isOutsideIndia} value={formData.complaints} onChange={handleChange} rows={4}
+                  <textarea name="complaints" value={formData.complaints} onChange={handleChange} rows={4}
                       className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#0A75BB]/20 focus:border-[#0A75BB] transition-colors resize-none"
                       placeholder="e.g. Swelling in legs since 2 weeks, reduced urine output, fatigue..." />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">2. Recent Reports (2 main + Ultrasound) *</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">2. Recent Reports (2 main + Ultrasound)</label>
                     <p className="text-xs text-slate-400 mb-2">Upload blood tests (KFT, CBC, HbA1c, etc.)</p>
                     <div className="space-y-3">
                       <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:border-[#0A75BB] hover:bg-[#0A75BB]/5 transition-all">
@@ -2394,7 +2394,7 @@ function BookingForm() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">3. Current Medicines *</label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">3. Current Medicines</label>
                     <p className="text-xs text-slate-400 mb-2">Add each medicine you are currently taking</p>
                     <div className="space-y-2">
                       {bookingMedicines.map((med, idx) => (
