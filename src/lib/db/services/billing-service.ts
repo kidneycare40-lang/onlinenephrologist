@@ -221,6 +221,7 @@ export class BillingService {
     initial_status?: string;
     payment_method?: string;
     invoice_number?: string;
+    invoice_date?: string;
   }): Promise<InvoiceWithRelations | null> {
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => {
@@ -237,6 +238,7 @@ export class BillingService {
 
     const invoice = await this.invoiceRepo.create({
       invoice_number: invNumber,
+      invoice_date: data.invoice_date || new Date().toISOString().split('T')[0],
       patient_id: data.patient_id,
       doctor_id: data.doctor_id,
       clinic_id: data.clinic_id,

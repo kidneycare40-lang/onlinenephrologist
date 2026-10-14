@@ -110,13 +110,16 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       if (existing?.id) {
         const full = await billingService.getInvoice(existing.id);
-        return NextResponse.json(full || { id: existing.id, invoice_number: requestedNumber });
+        return NextResponse.json({ ...(full || { id: existing.id, invoice_number: requestedNumber }), alreadyExisted: true });
       }
     }
 
     const invoice = await billingService.createInvoice({
       ...body, patient_id: patientUuid, doctor_id: doctorUuid || null, clinic_id: clinicUuid,
       invoice_number: requestedNumber || undefined,
+      invoice_date: typeof (body.date || body.invoice_date) === 'string' && /^\d{4}-\d{2}-\d{2}/.test(body.date || body.invoice_date)
+        ? String(body.date || body.invoice_date).slice(0, 10)
+        : undefined,
       paid_amount: body.paidAmount || body.paid_amount || 0,
       payment_method: body.paymentMethod || body.payment_method
         ? normalizePayMethod(body.paymentMethod || body.payment_method)

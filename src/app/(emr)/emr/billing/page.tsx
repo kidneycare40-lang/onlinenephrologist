@@ -24,6 +24,9 @@ const clinicLabels: Record<string, string> = {
   'psri-delhi': 'PSRI Delhi',
   'online': 'Online',
   'online-intl': 'Online Intl',
+  'KCC-FBD': 'KCC Faridabad',
+  'KCC-SKT': 'KCC Saket',
+  'PSRI': 'PSRI Delhi',
 };
 
 const statusConfig: Record<InvoiceStatus, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -58,8 +61,8 @@ function apiInvoiceToEMR(apiInv: any): EMRInvoice {
     patientAge,
     patientGender: patient.gender || '',
     patientPhone: patient.phone || '',
-    clinicId: apiInv.clinic_id || '',
-    doctorName: '',
+    clinicId: apiInv.clinic?.short_name || apiInv.clinic?.name || apiInv.clinic_id || '',
+    doctorName: apiInv.doctor ? `${apiInv.doctor.first_name || ''} ${apiInv.doctor.last_name || ''}`.trim() : '',
     date: apiInv.invoice_date || apiInv.created_at || '',
     dueDate: apiInv.due_date || apiInv.invoice_date || '',
     grandTotal: totalAmount,
@@ -70,9 +73,9 @@ function apiInvoiceToEMR(apiInv: any): EMRInvoice {
     subtotal: apiInv.subtotal || totalAmount,
     discount: apiInv.discount || 0,
     discountType: 'FIXED' as const,
-    gstRate: apiInv.tax_rate || 0,
-    gstAmount: apiInv.tax_amount || 0,
-    totalTax: apiInv.tax_amount || 0,
+    gstRate: apiInv.gst_rate ?? apiInv.tax_rate ?? 0,
+    gstAmount: apiInv.gst_amount ?? apiInv.tax_amount ?? 0,
+    totalTax: apiInv.total_tax ?? apiInv.tax_amount ?? 0,
     items: items.map((item: any) => {
       const rate = item.unit_price || item.rate || 0;
       const qty = item.quantity || item.qty || 1;
@@ -133,7 +136,7 @@ async function retryPendingSyncInvoices(pending: EMRInvoice[]): Promise<{ synced
     try {
       const result = await billingApi.create(inv);
       if (result?.id) {
-        if (inv.payments && inv.payments.length > 0) {
+        if (!result.alreadyExisted && inv.payments && inv.payments.length > 0) {
           for (const p of inv.payments) {
             if (p.amount > 0) {
               await billingApi.recordPayment({
@@ -483,7 +486,7 @@ export default function BillingPage() {
       setInvoices(updated);
       await saveInvoicesToStorage(updated);
     } else {
-      let result: { id: string; invoice_number?: string; patient_id?: string } | null = null;
+      let result: { id: string; invoice_number?: string; patient_id?: string; alreadyExisted?: boolean } | null = null;
       let errMsg = '';
       try {
         result = await billingApi.create(invoice);
@@ -506,8 +509,9 @@ export default function BillingPage() {
           clinicId: invoice.clinicId,
         });
 
-        // Record payment in DB if invoice has payments
-        if (invoice.payments && invoice.payments.length > 0) {
+        // Record payment in DB if invoice has payments (skip when the server
+        // says this invoice already existed — replaying would double-count).
+        if (!result.alreadyExisted && invoice.payments && invoice.payments.length > 0) {
           for (const p of invoice.payments) {
             if (p.amount > 0) {
               await billingApi.recordPayment({
