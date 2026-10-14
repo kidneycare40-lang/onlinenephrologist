@@ -32,6 +32,10 @@ export async function GET(request: NextRequest) {
     const filters: FilterParams = {}; const pagination: PaginationParams = {}; const sort: SortParams = {};
     if (searchParams.get('search')) filters.search = searchParams.get('search')!;
     if (searchParams.get('clinicId')) filters.clinicId = searchParams.get('clinicId')!;
+    const statusFilter = searchParams.get('status');
+    if (statusFilter && statusFilter !== 'pending' && statusFilter !== 'overdue' && statusFilter !== 'ALL') {
+      filters.status = statusFilter as any;
+    }
     if (searchParams.get('page')) pagination.page = parseInt(searchParams.get('page')!);
     if (searchParams.get('limit')) pagination.limit = parseInt(searchParams.get('limit')!);
     return NextResponse.json(await billingService.listInvoices({ filters, pagination, sort }));
@@ -93,8 +97,26 @@ export async function POST(request: NextRequest) {
     );
     if (!patientUuid) return apiError('Could not save patient for this invoice. Provide patient name and phone.', 400);
 
+    // Idempotency: if this invoice number already exists (e.g. a retry after a
+    // failed response), return the existing row instead of creating a duplicate.
+    const requestedNumber = body.invoice_number || body.invoiceNumber;
+    if (requestedNumber) {
+      const { data: existing } = await db
+        .from('invoices')
+        .select('id')
+        .eq('invoice_number', requestedNumber)
+        .eq('is_deleted', false)
+        .limit(1)
+        .maybeSingle();
+      if (existing?.id) {
+        const full = await billingService.getInvoice(existing.id);
+        return NextResponse.json(full || { id: existing.id, invoice_number: requestedNumber });
+      }
+    }
+
     const invoice = await billingService.createInvoice({
       ...body, patient_id: patientUuid, doctor_id: doctorUuid || null, clinic_id: clinicUuid,
+      invoice_number: requestedNumber || undefined,
       paid_amount: body.paidAmount || body.paid_amount || 0,
       payment_method: body.paymentMethod || body.payment_method
         ? normalizePayMethod(body.paymentMethod || body.payment_method)

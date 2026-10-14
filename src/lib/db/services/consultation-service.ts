@@ -37,7 +37,7 @@ export class ConsultationRepository extends BaseRepository<Consultation> {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
-        doctor:users(id, first_name, last_name, qualification, registration_number),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name, qualification, registration_number),
         clinic:clinics(id, name, short_name),
         diagnoses:diagnoses(*),
         prescriptions:prescriptions(*, medicines:prescription_medicines(*)),
@@ -57,7 +57,7 @@ export class ConsultationRepository extends BaseRepository<Consultation> {
       .from('consultations')
       .select(`
         *,
-        doctor:users(id, first_name, last_name),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name),
         clinic:clinics(id, name),
         diagnoses:diagnoses(*),
         prescriptions:prescriptions(id, prescription_number, prescription_date, status, medicines:prescription_medicines(medicine_name, dosage, frequency))
@@ -150,7 +150,7 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
-        doctor:users(id, first_name, last_name, qualification, registration_number),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name, qualification, registration_number),
         clinic:clinics(id, name, short_name, parent_name),
         medicines:prescription_medicines(*),
         investigations:prescription_investigations(*)
@@ -168,7 +168,7 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .from('prescriptions')
       .select(`
         *,
-        doctor:users(id, first_name, last_name),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name),
         medicines:prescription_medicines(medicine_name, dosage, frequency, duration)
       `)
       .eq('patient_id', patientId)
@@ -186,7 +186,7 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
-        doctor:users(id, first_name, last_name, qualification),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name, qualification),
         medicines:prescription_medicines(*),
         investigations:prescription_investigations(*)
       `)
@@ -367,7 +367,7 @@ export class InvestigationRepository extends BaseRepository<InvestigationOrder> 
       .select(`
         *,
         patient:patients(id, first_name, last_name, uhid),
-        doctor:users(id, first_name, last_name),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name),
         items:investigation_items(*)
       `)
       .eq('id', id)
@@ -383,7 +383,7 @@ export class InvestigationRepository extends BaseRepository<InvestigationOrder> 
       .from('investigation_orders')
       .select(`
         *,
-        doctor:users(id, first_name, last_name),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name),
         items:investigation_items(test_name, result_value, unit, is_abnormal, status)
       `)
       .eq('patient_id', patientId)

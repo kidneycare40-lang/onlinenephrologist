@@ -28,10 +28,10 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
-        doctor:users(id, first_name, last_name),
+        doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
         clinic:clinics(id, name, short_name),
         items:invoice_items(*),
-        payments:payments(amount, payment_method, payment_date, reference_number, status)
+        payments:payments(amount, method, payment_date, reference, status)
       `)
       .eq('id', id)
       .eq('is_deleted', false)
@@ -46,9 +46,9 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
       .from('invoices')
       .select(`
         *,
-        doctor:users(id, first_name, last_name),
+        doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
         items:invoice_items(description, quantity, rate, amount, total, gst_rate, gst_amount),
-        payments:payments(amount, payment_method, payment_date)
+        payments:payments(amount, method, payment_date)
       `)
       .eq('patient_id', patientId)
       .eq('is_deleted', false)
@@ -65,9 +65,9 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
-        doctor:users(id, first_name, last_name),
+        doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
         items:invoice_items(description, quantity, rate, amount, total, gst_rate, gst_amount),
-        payments:payments(amount, payment_method, payment_date)
+        payments:payments(amount, method, payment_date)
       `)
       .eq('status', status)
       .eq('is_deleted', false)
@@ -166,9 +166,9 @@ export class BillingService {
       .select(`
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
-        doctor:users(id, first_name, last_name),
+        doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
         items:invoice_items(*),
-        payments:payments(amount, payment_method, payment_date, reference_number, status)
+        payments:payments(amount, method, payment_date, reference, status)
       `, { count: 'exact' })
       .eq('is_deleted', false);
 
@@ -220,6 +220,7 @@ export class BillingService {
     paid_amount?: number;
     initial_status?: string;
     payment_method?: string;
+    invoice_number?: string;
   }): Promise<InvoiceWithRelations | null> {
     // Calculate totals
     const subtotal = data.items.reduce((sum, item) => {
@@ -230,8 +231,9 @@ export class BillingService {
     const taxAmount = data.tax_rate ? subtotal * (data.tax_rate / 100) : 0;
     const totalAmount = subtotal + taxAmount - (data.discount || 0);
 
-    // Generate invoice number
-    const invNumber = await this.generateInvoiceNumber();
+    // Use the client's invoice number when provided (retry idempotency);
+    // otherwise generate a new one.
+    const invNumber = data.invoice_number || await this.generateInvoiceNumber();
 
     const invoice = await this.invoiceRepo.create({
       invoice_number: invNumber,

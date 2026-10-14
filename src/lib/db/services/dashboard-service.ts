@@ -90,7 +90,7 @@ export class DashboardService {
       .select(`
         id, appointment_time, type as appointment_type, status, reason,
         patient:patients(id, first_name, last_name, phone, uhid),
-        doctor:users(id, first_name, last_name),
+        doctor:users!appointments_doctor_id_fkey(id, first_name, last_name),
         clinic:clinics(id, name)
       `)
       .eq('is_deleted', false)
@@ -118,7 +118,7 @@ export class DashboardService {
       .select(`
         id, consultation_date, status, chief_complaint,
         patient:patients(id, first_name, last_name, uhid),
-        doctor:users(id, first_name, last_name),
+        doctor:users!consultations_doctor_id_fkey(id, first_name, last_name),
         diagnoses:diagnoses(name as diagnosis_name, is_primary)
       `)
       .eq('is_deleted', false)
