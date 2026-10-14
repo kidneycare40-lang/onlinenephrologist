@@ -30,8 +30,14 @@ export async function GET(req: NextRequest) {
     const keys = req.nextUrl.searchParams.get('keys');
 
     if (key) {
+      // Public keys are readable by anyone; private keys require EMR auth.
+      // (Previously private keys ALWAYS returned 401 here, so every getItem()
+      // for data like billing-invoices / emr-added-patients returned null —
+      // saved bills and patients vanished on refresh even though writes
+      // succeeded. Reads must work for authenticated staff, like the bulk path.)
       if (!PUBLIC_KEYS.has(key)) {
-        return kvAuthError();
+        const { error: authError } = await authenticateRequest(req);
+        if (authError) return kvAuthError();
       }
       const { data } = await db
         .from('app_kv_store')
