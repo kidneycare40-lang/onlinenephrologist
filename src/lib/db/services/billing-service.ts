@@ -47,6 +47,7 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
       .select(`
         *,
         doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
+        clinic:clinics(id, name, short_name),
         items:invoice_items(description, quantity, rate, amount, total, gst_rate, gst_amount),
         payments:payments(amount, method, payment_date)
       `)
@@ -66,6 +67,7 @@ export class InvoiceRepository extends BaseRepository<Invoice> {
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
         doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
+        clinic:clinics(id, name, short_name),
         items:invoice_items(description, quantity, rate, amount, total, gst_rate, gst_amount),
         payments:payments(amount, method, payment_date)
       `)
@@ -167,6 +169,7 @@ export class BillingService {
         *,
         patient:patients(id, first_name, last_name, phone, uhid, date_of_birth, gender),
         doctor:users!invoices_doctor_id_fkey(id, first_name, last_name),
+        clinic:clinics(id, name, short_name),
         items:invoice_items(*),
         payments:payments(amount, method, payment_date, reference, status)
       `, { count: 'exact' })
