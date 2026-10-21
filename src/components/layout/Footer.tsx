@@ -84,15 +84,15 @@ export function Footer() {
             <ul className="space-y-2.5 text-sm">
               <li>
                 <span className="text-white font-medium">Old Faridabad</span>
-                <br />Mon–Sat, 9:00 – 10:30 AM
+                <br />Mon–Sat, 9:00 AM – 10:30 AM
               </li>
               <li>
                 <span className="text-white font-medium">PSRI Hospital</span>
-                <br />Mon–Sat, 1:00 – 7:00 PM
+                <br />Mon–Sat, 1:00 PM – 7:00 PM
               </li>
               <li>
                 <span className="text-white font-medium">Saket</span>
-                <br />Mon–Sun, 9:00 – 11:00 PM
+                <br />Mon–Sun, 9:00 PM – 11:00 PM
               </li>
               <li>
                 <span className="text-white font-medium">Online Consultation</span>
