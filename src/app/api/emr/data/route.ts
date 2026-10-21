@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
+import { getDbOrNull } from '@/lib/db/client';
 
 export const dynamic = 'force-dynamic';
-
-async function getDb() {
-  try { const { getSupabase } = await import('@/lib/supabase'); return getSupabase(); }
-  catch { return null; }
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +11,7 @@ export async function GET(req: NextRequest) {
     const permError = requirePermission(user, 'settings', 'view'); if (permError) return permError;
 
     const key = req.nextUrl.searchParams.get('key');
-    const supabase = await getDb();
+    const supabase = getDbOrNull();
     if (!supabase) return NextResponse.json(key ? { value: null } : {});
 
     if (key) {
@@ -39,7 +35,7 @@ export async function POST(req: NextRequest) {
     const permError = requirePermission(user, 'settings', 'edit'); if (permError) return permError;
 
     const body = await req.json();
-    const supabase = await getDb();
+    const supabase = getDbOrNull();
     if (!supabase) return NextResponse.json({ ok: true, note: 'no database' });
 
     if (body.flush && body.queue) {

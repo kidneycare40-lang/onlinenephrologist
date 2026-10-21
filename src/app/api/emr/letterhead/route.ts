@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase';
+import { getDbOrNull } from '@/lib/db/client';
 import { authenticateRequest, requirePermission, applyRateLimit, apiError } from '@/lib/auth/middleware';
 
 export const dynamic = 'force-dynamic';
-
-function getDb() { try { return getSupabase(); } catch { return null; } }
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +11,7 @@ export async function GET(req: NextRequest) {
 
     const clinicId = req.nextUrl.searchParams.get('clinicId');
     if (!clinicId) return apiError('clinicId required', 400);
-    const supabase = getDb();
+    const supabase = getDbOrNull();
     if (!supabase) return NextResponse.json({ header: '', footer: '' });
 
     const result: { header?: string; footer?: string } = {};
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (!clinicId || !type) return apiError('clinicId and type required', 400);
     if (type !== 'header' && type !== 'footer') return apiError('type must be header or footer', 400);
 
-    const supabase = getDb();
+    const supabase = getDbOrNull();
     if (!supabase) return NextResponse.json({ ok: true, note: 'no database' });
     const key = `letterhead_${type}_${clinicId}`;
     const syncKey = `emr_custom_rx_${type}_${clinicId}`;
